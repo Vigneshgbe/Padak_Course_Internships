@@ -23,7 +23,12 @@ $domains = [];
 $dr = $db->query("SELECT DISTINCT domain_interest FROM internship_students WHERE is_active=1 AND domain_interest IS NOT NULL AND domain_interest!=''");
 if ($dr) while ($r = $dr->fetch_assoc()) $domains[] = $r['domain_interest'];
 
-$myPts = (int)$student['total_points'];
+// $myPts = (int)$student['total_points'];
+
+// Calculate total points from points log
+$pointsResult = $db->query("SELECT COALESCE(SUM(points), 0) as total FROM student_points_log WHERE student_id=$sid");
+$totalPoints = (int)$pointsResult->fetch_assoc()['total'];
+$myPts = $totalPoints;
 $myRank = '-';
 foreach ($students as $i => $s) { if ($s['id'] == $sid) { $myRank = $i + 1; break; } }
 

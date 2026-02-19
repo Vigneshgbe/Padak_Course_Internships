@@ -32,6 +32,9 @@ $formData = ['email' => '', 'rememberMe' => false];
 $successMessage = '';
 $generalError = '';
 
+// Check for logout message
+$logoutSuccess = isset($_GET['logout']) && $_GET['logout'] === 'success';
+
 // Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
@@ -448,6 +451,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer">
+    <?php if ($logoutSuccess): ?>
+    <div class="toast toast-success" id="toast-logout">
+        <div class="toast-inner">
+            <i class="fas fa-check-circle"></i>
+            <span>You've been successfully logged out. Come back soon! 👋</span>
+        </div>
+        <button class="toast-close" onclick="removeToast('toast-logout')"><i class="fas fa-times"></i></button>
+    </div>
+    <?php endif; ?>
+    
     <?php if (!empty($successMessage)): ?>
     <div class="toast toast-success" id="toast-success">
         <div class="toast-inner">
@@ -457,6 +470,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="toast-close" onclick="removeToast('toast-success')"><i class="fas fa-times"></i></button>
     </div>
     <?php endif; ?>
+    
     <?php if (!empty($generalError) && empty($errors)): ?>
     <div class="toast toast-error" id="toast-general-err">
         <div class="toast-inner">

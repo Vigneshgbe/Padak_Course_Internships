@@ -13,7 +13,11 @@ $sid = (int)$student['id'];
 $activePage = 'dashboard';
 
 // --- Stats ---
-$totalPoints = (int)$student['total_points'];
+// $totalPoints = (int)$student['total_points'];
+
+// Calculate total points from points log
+$pointsResult = $db->query("SELECT COALESCE(SUM(points), 0) as total FROM student_points_log WHERE student_id=$sid");
+$totalPoints = (int)$pointsResult->fetch_assoc()['total'];
 
 // Tasks
 $taskStats = $db->query("SELECT
