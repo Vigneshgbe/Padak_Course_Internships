@@ -39,7 +39,7 @@ $navMain = [
 ];
 $navInternship = [
     ['key'=>'tasks',        'label'=>'My Tasks',       'icon'=>'fas fa-tasks',        'href'=>'tasks.php',     'badge'=>$pendingTasks],
-    ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
+    // ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
     ['key'=>'certificate',  'label'=>'My Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
     ['key'=>'game',  'label'=>'Game Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
@@ -65,22 +65,26 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 
 <aside class="student-sidebar" id="studentSidebar">
     <div class="sb-logo">
-        <!-- <div class="sb-logo-mark">
+        <div class="sb-logo-mark">
             <img src="https://github.com/Sweety-Vigneshg/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true"
                  alt="P" onerror="this.style.display='none';document.getElementById('sbLogoFallback').style.display='flex';">
             <div id="sbLogoFallback" style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:800;font-size:17px;color:#fff;">P</div>
-        </div> -->
+        </div>
         <div class="sb-logo-text">
-            <!-- <span class="sb-brand">Padak</span> -->
-            <span class="sb-tagline">Padak Internship Portal</span>
+            <span class="sb-brand">Padak</span>
+            <span class="sb-tagline">Internship Portal</span>
         </div>
         <button class="sb-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
     </div>
 
     <div class="sb-profile">
         <div class="sb-avatar-wrap">
-            <?php if (!empty($student['profile_photo']) && file_exists($student['profile_photo'])): ?>
-                <img src="<?php echo htmlspecialchars($student['profile_photo']); ?>" alt="" class="sb-avatar-img">
+            <?php if (!empty($student['profile_photo'])): ?>
+                <img src="<?php echo htmlspecialchars($student['profile_photo']); ?>" 
+                     alt="" 
+                     class="sb-avatar-img"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <div class="sb-avatar-letter" style="display:none;"><?php echo $initials; ?></div>
             <?php else: ?>
                 <div class="sb-avatar-letter"><?php echo $initials; ?></div>
             <?php endif; ?>
@@ -193,7 +197,7 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 .sb-profile { display:flex; align-items:center; gap:9px; padding:12px 16px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--sb-border); flex-shrink:0; }
 .sb-avatar-wrap { position:relative; flex-shrink:0; }
 .sb-avatar-img, .sb-avatar-letter { width:40px; height:40px; border-radius:50%; border:2px solid rgba(249,115,22,0.45); }
-.sb-avatar-img { object-fit:cover; }
+.sb-avatar-img { object-fit:cover; display:block; }
 .sb-avatar-letter { background:linear-gradient(135deg,var(--o5),var(--o4)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:1rem; }
 .sb-online-dot { position:absolute; bottom:1px; right:1px; width:9px; height:9px; border-radius:50%; background:#22c55e; border:2px solid var(--sb-bg); }
 .sb-user-info { flex:1; min-width:0; }
