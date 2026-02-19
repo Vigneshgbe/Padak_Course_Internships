@@ -19,9 +19,6 @@
             --or6: #ea580c;
             --or1: #fff7ed;
             --or2: #ffedd5;
-            --sb-width: 260px;
-            --sb-collapsed: 70px;
-            --transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         body {
@@ -29,94 +26,12 @@
             background: linear-gradient(135deg, #fff7ed 0%, #fff 60%, #ffedd5 100%);
             min-height: 100vh;
             color: #111827;
-        }
-        
-        .student-layout {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        .main-content {
-            flex: 1;
-            margin-left: var(--sb-width);
-            transition: margin-left var(--transition);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        body.sidebar-collapsed .main-content {
-            margin-left: var(--sb-collapsed);
-        }
-        
-        .topbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(249, 115, 22, 0.1);
-            padding: 0 28px;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-        }
-        
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        
-        .mobile-menu-btn {
-            display: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 8px;
-            border: none;
-            background: var(--or2);
-            color: var(--or6);
-            cursor: pointer;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-        
-        .topbar-breadcrumb {
-            font-size: 0.8125rem;
-            color: #6b7280;
-        }
-        
-        .topbar-breadcrumb span {
-            color: #111827;
-            font-weight: 600;
-        }
-        
-        .topbar-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--or5), var(--or4));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8125rem;
-            font-weight: 700;
-            color: #fff;
-            text-decoration: none;
-            border: 2px solid rgba(249, 115, 22, 0.3);
-        }
-        
-        .page-content {
-            padding: 28px;
-            flex: 1;
+            padding: 20px;
         }
         
         .container {
             max-width: 700px;
-            margin: 0 auto;
+            margin: 40px auto;
         }
         
         .header {
@@ -423,17 +338,9 @@
             margin-right: 8px;
         }
         
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .page-content {
-                padding: 16px;
-            }
-            
-            .mobile-menu-btn {
-                display: flex !important;
+        @media (max-width: 640px) {
+            .container {
+                margin: 20px auto;
             }
             
             .verify-card, .result-card {
@@ -456,20 +363,7 @@
     </style>
 </head>
 <body>
-    <div class="student-layout">
-        <?php include 'sidebar.php'; ?>
-        <div class="main-content">
-            <header class="topbar">
-                <div class="topbar-left">
-                    <button class="mobile-menu-btn" onclick="openMobileSidebar()"><i class="fas fa-bars"></i></button>
-                    <div class="topbar-breadcrumb">Padak &rsaquo; <span>Certificate Verification</span></div>
-                </div>
-                <div class="topbar-right">
-                    <a href="profile.php" class="topbar-avatar">CV</a>
-                </div>
-            </header>
-            <div class="page-content">
-                <div class="container">
+    <div class="container">
         <div class="header">
             <div class="logo">
                 <i class="fas fa-certificate"></i>
@@ -523,23 +417,9 @@
                 <i class="fas fa-rotate-right"></i> Verify Another Certificate
             </button>
         </div>
-                </div>
-            </div>
-        </div>
     </div>
     
     <script>
-        const sb = document.getElementById('mainSidebar');
-        function syncBodyClass() {
-            document.body.classList.toggle('sidebar-collapsed', sb.classList.contains('collapsed'));
-        }
-        window.toggleSidebar = function() {
-            sb.classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? '1' : '0');
-            syncBodyClass();
-        };
-        syncBodyClass();
-        
         // Allow Enter key to submit
         document.getElementById('certNumber').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
