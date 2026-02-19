@@ -576,7 +576,7 @@ $todayDate = date('Y-m-d');
                     <option value="">Choose a batch...</option>
                     <?php foreach ($batches as $batch): ?>
                     <option value="<?php echo $batch['id']; ?>" <?php echo $selectedBatchId === $batch['id'] ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($batch['batch_name']); ?> (<?php echo ucfirst($batch['status']); ?>)
+                        <?php echo htmlspecialchars($batch['batch_name']); ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
