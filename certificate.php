@@ -41,6 +41,17 @@ $statsQuery = $db->query("SELECT
     WHERE student_id = $sid
 ");
 $stats = $statsQuery->fetch_assoc();
+
+// Set default values if no certificates exist
+if (!$stats || $stats['total'] == 0) {
+    $stats = [
+        'total' => 0,
+        'issued' => 0,
+        'outstanding' => 0,
+        'excellent' => 0,
+        'total_points' => 0
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -367,11 +378,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                     </div>
                 </div>
                 <div class="cert-body">
-                    <?php if ($cert['batch_name']): ?>
+                    <?php if (!empty($cert['batch_name'])): ?>
                     <div class="cert-batch"><?php echo htmlspecialchars($cert['batch_name']); ?></div>
                     <?php endif; ?>
                     
-                    <?php if ($cert['certificate_number']): ?>
+                    <?php if (!empty($cert['certificate_number'])): ?>
                     <div class="cert-number">
                         <i class="fas fa-id-card fa-sm" style="color:var(--text3);"></i>
                         <?php echo htmlspecialchars($cert['certificate_number']); ?>
@@ -379,7 +390,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                     <?php endif; ?>
                     
                     <div class="cert-details">
-                        <?php if ($cert['issued_date']): ?>
+                        <?php if (!empty($cert['issued_date'])): ?>
                         <div class="cert-detail-item">
                             <div class="cert-detail-icon"><i class="fas fa-calendar"></i></div>
                             <div class="cert-detail-text">
@@ -389,6 +400,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                         </div>
                         <?php endif; ?>
                         
+                        <?php if (!empty($cert['completion_grade'])): ?>
                         <div class="cert-detail-item">
                             <div class="cert-detail-icon"><i class="fas fa-star"></i></div>
                             <div class="cert-detail-text">
@@ -400,26 +412,29 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                                 </div>
                             </div>
                         </div>
+                        <?php endif; ?>
                         
                         <div class="cert-detail-item">
                             <div class="cert-detail-icon"><i class="fas fa-coins"></i></div>
                             <div class="cert-detail-text">
                                 <div class="cert-detail-label">Points Earned</div>
-                                <div class="cert-detail-value"><?php echo number_format($cert['total_points_earned']); ?> points</div>
+                                <div class="cert-detail-value"><?php echo number_format($cert['total_points_earned'] ?? 0); ?> points</div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="cert-actions">
                         <?php if ($cert['is_issued']): ?>
-                            <?php if ($cert['certificate_url']): ?>
-                            <a href="<?php echo htmlspecialchars($cert['certificate_url']); ?>" target="_blank" class="btn-cert btn-download">
+                            <?php if (!empty($cert['certificate_file'])): ?>
+                            <a href="<?php echo htmlspecialchars($cert['certificate_file']); ?>" target="_blank" class="btn-cert btn-download">
                                 <i class="fas fa-download"></i> Download
                             </a>
                             <?php endif; ?>
+                            <?php if (!empty($cert['certificate_number'])): ?>
                             <button class="btn-cert btn-verify" onclick="openVerifyModal('<?php echo htmlspecialchars($cert['certificate_number']); ?>')">
                                 <i class="fas fa-shield-alt"></i> Verify
                             </button>
+                            <?php endif; ?>
                         <?php else: ?>
                             <button class="btn-cert btn-pending" disabled>
                                 <i class="fas fa-clock"></i> Certificate Pending
@@ -455,7 +470,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         
         <div class="verify-result error" id="verifyError">
             <i class="fas fa-times-circle fa-lg"></i>
-            <div>Invalid or not found. Please check the certificate number.</div>
+            <div>Please check the verify certificate section!</div>
         </div>
         
         <div class="modal-actions">
