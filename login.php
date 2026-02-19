@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'padak_student_config.php';
+require_once 'config.php';
 
 $auth = new StudentAuth();
 

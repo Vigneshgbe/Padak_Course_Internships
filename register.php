@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'padak_student_config.php';
+require_once 'config.php';
 
 $auth = new StudentAuth();
 
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result['success']) {
             $successMessage = 'Account created successfully! Redirecting to login...';
-            header('Refresh: 2; URL=student_login.php?registered=1');
+            header('Refresh: 2; URL=login.php?registered=1');
             $formData = array_fill_keys(array_keys($formData), ''); // clear form
         } else {
             $generalError = $result['message'];
