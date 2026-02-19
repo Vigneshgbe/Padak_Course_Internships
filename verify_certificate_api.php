@@ -31,18 +31,18 @@ if (empty($certNumber)) {
     exit;
 }
 
-// Query the certificate - matching your existing table structure
+// Query the certificate - using internship_students table (YOUR ACTUAL TABLE)
 try {
     $stmt = $db->prepare("
-        SELECT ic.*, s.full_name as student_name, ib.batch_name, ib.course_name
+        SELECT ic.*, ist.full_name as student_name, ib.batch_name
         FROM internship_certificates ic
-        JOIN internship_students s ON ic.student_id = s.id
+        JOIN internship_students ist ON ic.student_id = ist.id
         LEFT JOIN internship_batches ib ON ic.batch_id = ib.id
         WHERE ic.certificate_number = ? AND ic.is_issued = 1
     ");
     
     if (!$stmt) {
-        throw new Exception('Query preparation failed');
+        throw new Exception('Query preparation failed: ' . $db->error);
     }
     
     $stmt->bind_param("s", $certNumber);
@@ -56,7 +56,7 @@ try {
     
     $cert = $result->fetch_assoc();
     
-    // Return verified data matching your table structure
+    // Return verified data
     echo json_encode([
         'valid' => true,
         'certificate_number' => $cert['certificate_number'],
@@ -66,8 +66,7 @@ try {
         'issued_date' => $cert['issued_date'] ? date('M d, Y', strtotime($cert['issued_date'])) : 'N/A',
         'completion_grade' => $cert['completion_grade'] ?? 'Good',
         'total_points_earned' => $cert['total_points_earned'] ?? 0,
-        'certificate_url' => $cert['certificate_url'] ?? null,
-        'issue_date_raw' => $cert['issued_date']
+        'certificate_url' => $cert['certificate_url'] ?? null
     ]);
     
 } catch (Exception $e) {

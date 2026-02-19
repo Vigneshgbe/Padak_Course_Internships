@@ -136,12 +136,12 @@
             gap: 10px;
         }
         
-        .verify-btn:hover {
+        .verify-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(249, 115, 22, 0.3);
         }
         
-        .verify-btn:active {
+        .verify-btn:active:not(:disabled) {
             transform: translateY(0);
         }
         
