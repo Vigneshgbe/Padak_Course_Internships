@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_score'])) {
                 VALUES ($sid, '$game_type', $score, $level)");
 }
 
-// Get leaderboard - simplified to avoid table structure issues
+// Get leaderboard - just show student IDs to avoid table issues
 $leaderboard = [];
 $res = $db->query("SELECT student_id, MAX(score) as best_score 
                    FROM game_scores 
@@ -38,15 +38,13 @@ $res = $db->query("SELECT student_id, MAX(score) as best_score
                    ORDER BY best_score DESC LIMIT 10");
 if ($res) {
     while ($r = $res->fetch_assoc()) {
-        // Try to get student name, fallback to ID if table doesn't exist
-        $nameRes = $db->query("SELECT first_name, last_name FROM students WHERE id = " . (int)$r['student_id']);
-        if ($nameRes && $nameRow = $nameRes->fetch_assoc()) {
-            $r['first_name'] = $nameRow['first_name'];
-            $r['last_name'] = $nameRow['last_name'];
+        // Check if this is the current player
+        if ($r['student_id'] == $sid) {
+            $r['display_name'] = 'You';
         } else {
-            $r['first_name'] = 'Player';
-            $r['last_name'] = $r['student_id'];
+            $r['display_name'] = 'Student #' . $r['student_id'];
         }
+        $r['best_score'] = (int)$r['best_score'];
         $leaderboard[] = $r;
     }
 }
@@ -253,7 +251,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
                             <?php foreach ($leaderboard as $i => $leader): ?>
                             <div class="leader-item">
                                 <div class="leader-rank"><?php echo $i+1; ?></div>
-                                <div class="leader-name"><?php echo htmlspecialchars($leader['first_name'].' '.$leader['last_name']); ?></div>
+                                <div class="leader-name"><?php echo htmlspecialchars($leader['display_name']); ?></div>
                                 <div class="leader-score"><?php echo $leader['best_score']; ?></div>
                             </div>
                             <?php endforeach; ?>
