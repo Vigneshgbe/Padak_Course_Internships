@@ -65,14 +65,14 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 
 <aside class="student-sidebar" id="studentSidebar">
     <div class="sb-logo">
-        <div class="sb-logo-mark">
+        <!-- <div class="sb-logo-mark">
             <img src="https://github.com/Sweety-Vigneshg/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true"
                  alt="P" onerror="this.style.display='none';document.getElementById('sbLogoFallback').style.display='flex';">
             <div id="sbLogoFallback" style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:800;font-size:17px;color:#fff;">P</div>
-        </div>
+        </div> -->
         <div class="sb-logo-text">
-            <span class="sb-brand">Padak</span>
-            <span class="sb-tagline">Internship Portal</span>
+            <!-- <span class="sb-brand">Padak</span> -->
+            <span class="sb-tagline">Padak Internship Portal</span>
         </div>
         <button class="sb-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
     </div>
