@@ -24,6 +24,9 @@ $points = (int)($student['total_points'] ?? 0);
 $certThreshold = 500;
 $progress = min(100, round(($points / $certThreshold) * 100));
 
+// Check if user is admin (adjust this condition based on your database structure)
+// $isAdmin = isset($student['is_admin']) && $student['is_admin'] == 1;
+
 $navMain = [
     ['key'=>'dashboard',    'label'=>'Dashboard',     'icon'=>'fas fa-home',         'href'=>'dashboard.php'],
     ['key'=>'messenger',    'label'=>'Messenger',      'icon'=>'fas fa-comments',     'href'=>'messenger.php', 'badge'=>$msgCount],
@@ -39,6 +42,19 @@ $navAccount = [
     ['key'=>'profile',         'label'=>'My Profile',     'icon'=>'fas fa-user-circle',  'href'=>'profile.php'],
     ['key'=>'notifications',   'label'=>'Notifications',  'icon'=>'fas fa-bell',         'href'=>'notifications.php', 'badge'=>$notifCount],
 ];
+
+$navAdmin = [
+        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+];
+
+// Admin navigation (only shown to admins)
+// $navAdmin = [];
+// if ($isAdmin) {
+//     $navAdmin = [
+//         ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+//     ];
+// }
+
 $firstName = explode(' ', trim($student['full_name']))[0] ?? $student['full_name'];
 $initials = strtoupper(substr($student['full_name'], 0, 1));
 ?>
@@ -96,6 +112,7 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             </a>
             <?php endforeach; ?>
         </div>
+        
         <div class="sb-nav-group">
             <span class="sb-group-label">ACCOUNT</span>
             <?php foreach ($navAccount as $item): $active = $activePage === $item['key']; ?>
@@ -106,6 +123,19 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             </a>
             <?php endforeach; ?>
         </div>
+        
+        <?php if (!empty($navAdmin)): ?>
+        <div class="sb-nav-group">
+            <span class="sb-group-label">ADMIN</span>
+            <?php foreach ($navAdmin as $item): $active = $activePage === $item['key']; ?>
+            <a href="<?php echo $item['href']; ?>" class="sb-nav-item <?php echo $active ? 'active' : ''; ?>">
+                <i class="<?php echo $item['icon']; ?> sb-nav-icon"></i>
+                <span><?php echo $item['label']; ?></span>
+                <?php if (!empty($item['badge']) && $item['badge'] > 0): ?><span class="sb-badge"><?php echo min($item['badge'],99); ?></span><?php endif; ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </nav>
 
     <div class="sb-cert-card">
