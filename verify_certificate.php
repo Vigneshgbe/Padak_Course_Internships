@@ -452,7 +452,7 @@
                 const formData = new FormData();
                 formData.append('certificate_number', certNumber);
                 
-                const response = await fetch('certificate_verify_api.php', {
+                const response = await fetch('verify_certificate_api.php', {
                     method: 'POST',
                     body: formData
                 });
