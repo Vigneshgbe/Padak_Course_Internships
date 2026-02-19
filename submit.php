@@ -556,7 +556,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             <i class="fas fa-clipboard-check"></i>
             <h3>Nothing to submit right now</h3>
             <p>All tasks are either submitted or awaiting coordinator review.</p>
-            <a href="tasks.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Tasks</a>
+            <a href="tasks.php" class="btn btn-secondary"> <!-- <i class="fas fa-arrow-left"></i> -->
+             ← Back to Tasks</a>
         </div>
 
         <?php else: ?>
