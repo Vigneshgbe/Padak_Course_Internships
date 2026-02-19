@@ -8,6 +8,11 @@ if (!$auth->isLoggedIn()) { header('Location: login.php'); exit; }
 $student = $auth->getCurrentStudent();
 $db = getPadakDB();
 $sid = (int)$student['id'];
+
+// Fetch complete student data including total_points
+$studentQuery = $db->query("SELECT * FROM internship_students WHERE id = $sid");
+$student = $studentQuery->fetch_assoc();
+
 $activePage = 'profile';
 
 $errors = [];
@@ -112,7 +117,7 @@ $stats = $statsQuery->fetch_assoc();
 // Get recent activity
 $recentActivity = [];
 $activityQuery = $db->query("
-    SELECT 'task' as type, t.title as title, ts.created_at as date 
+    SELECT 'task' as type, t.title as title, ts.submitted_at as date 
     FROM task_submissions ts 
     JOIN internship_tasks t ON t.id = ts.task_id 
     WHERE ts.student_id = $sid 
@@ -444,7 +449,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             </div>
             <div class="stat-card blue">
                 <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-value"><?php echo $stats['completed_tasks'] ?? 0; ?></div>
+                <div class="stat-value"><?php echo number_format($student['total_points'] ?? 0); ?></div>
                 <div class="stat-label">Tasks Completed</div>
             </div>
             <div class="stat-card green">
