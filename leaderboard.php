@@ -111,8 +111,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
     <div class="main-content">
         <div class="lb-hero">
             <div class="lb-hero-title"><i class="fas fa-trophy"></i> Marks Leaderboard</div>
-            <div class="lb-hero-sub">Rankings based on total points earned. 500+ points = FREE internship certificate. Top 3 earn Outstanding grade!</div>
-            <div class="my-rank-chip"><i class="fas fa-medal"></i> Your rank: #<?php echo $myRank; ?> &bull; <?php echo number_format($myPts); ?> pts<?php if ($myPts>=500): ?> &bull; 🎓 Cert Eligible<?php endif; ?></div>
+            <div class="lb-hero-sub">Rankings based on total points earned. 1200+ points = FREE internship certificate. Top 3 earn Outstanding grade!</div>
+            <div class="my-rank-chip"><i class="fas fa-medal"></i> Your rank: #<?php echo $myRank; ?> &bull; <?php echo number_format($myPts); ?> pts<?php if ($myPts>=1200): ?> &bull; 🎓 Cert Eligible<?php endif; ?></div>
         </div>
 
         <?php if (count($students) >= 3): ?>
@@ -148,7 +148,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
         <div class="lb-card">
             <div class="lb-head"><div>Rank</div><div>Student</div><div class="hide2">Domain</div><div class="hide2">Tasks Done</div><div>Points</div></div>
             <?php foreach ($students as $i => $s):
-                $pos=$i+1; $isMe=$s['id']==$sid; $certEl=$s['total_points']>=500; $tc=$taskScores[$s['id']]??0;
+                $pos=$i+1; $isMe=$s['id']==$sid; $certEl=$s['total_points']>=2000; $tc=$taskScores[$s['id']]??0;
             ?>
             <div class="lb-row <?php echo $isMe?'me':''; ?>">
                 <div><div class="rn <?php echo $pos<=3?'r'.$pos:''; ?>"><?php echo $pos; ?></div></div>

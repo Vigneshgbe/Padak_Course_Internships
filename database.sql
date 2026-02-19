@@ -244,5 +244,5 @@ INSERT IGNORE INTO internship_batches (batch_name, domain, start_date, end_date,
 INSERT IGNORE INTO announcements (title, content, type, target_all) VALUES
 ('Welcome to Padak Internship Program!', 'We are thrilled to have you join. Please complete your profile and review your assigned tasks to get started. Your journey to a free internship certificate begins here!', 'general', 1),
 ('First Task Released', 'Your first internship task has been assigned. Please check the Tasks section and submit before the deadline. Early submissions get bonus points!', 'task', 1),
-('Certificate Policy Update', 'Students who earn 500+ points and complete all mandatory tasks will receive a FREE internship completion certificate. Top 3 earners get Outstanding grade certificates.', 'certificate', 1),
+('Certificate Policy Update', 'Students who earn 1200+ points and complete all mandatory tasks will receive a FREE internship completion certificate. Top 3 earners get Outstanding grade certificates.', 'certificate', 1),
 ('Team Formation Open', 'You can now create or join teams for group tasks. Navigate to the Messenger section to collaborate with your teammates.', 'general', 1);

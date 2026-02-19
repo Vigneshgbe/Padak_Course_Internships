@@ -27,7 +27,7 @@ $db->query("UPDATE internship_students SET total_points=$points WHERE id=$sid AN
 $rankResult = $db->query("SELECT COUNT(*)+1 as rnk FROM internship_students WHERE total_points > $points AND is_active=1");
 $rank = $rankResult ? (int)$rankResult->fetch_assoc()['rnk'] : '-';
 
-$certThreshold = 500;
+$certThreshold = 2000;
 $progress = min(100, round(($points / $certThreshold) * 100));
 
 // Check if user is admin (adjust this condition based on your database structure)

@@ -42,7 +42,7 @@ $rank = (int)($rankRow['rnk'] ?? 1);
 $totalStudents = (int)$db->query("SELECT COUNT(*) as c FROM internship_students WHERE is_active=1")->fetch_assoc()['c'];
 
 // Certificate eligibility
-$certEligible = ($totalPoints >= 500 && $completedCount >= 3);
+$certEligible = ($totalPoints >= 2000 && $completedCount >= 10);
 $certRow = $db->query("SELECT * FROM internship_certificates WHERE student_id=$sid")->fetch_assoc();
 
 // Recent tasks (5)
@@ -397,10 +397,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
             </div>
             <div class="stat-card purple">
                 <div class="stat-icon"><i class="fas fa-certificate"></i></div>
-                <div class="stat-value"><?php echo $certEligible ? '✓' : $totalPoints.'/500'; ?></div>
+                <div class="stat-value"><?php echo $certEligible ? '✓' : $totalPoints.'/2000'; ?></div>
                 <div class="stat-label">Certificate Status</div>
                 <div class="stat-change <?php echo $certEligible?'up':'warn'; ?>">
-                    <?php echo $certEligible ? '<i class="fas fa-check fa-xs"></i> Eligible!' : '<i class="fas fa-arrow-up fa-xs"></i> '.max(0,500-$totalPoints).' pts to go'; ?>
+                    <?php echo $certEligible ? '<i class="fas fa-check fa-xs"></i> Eligible!' : '<i class="fas fa-arrow-up fa-xs"></i> '.max(0,2000-$totalPoints).' pts to go'; ?>
                 </div>
             </div>
         </div>
@@ -412,8 +412,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                 <div class="pb-value"><?php echo $progressPct; ?>% Complete &mdash; <?php echo $completedCount; ?> / <?php echo $totalTaskCount; ?> Tasks</div>
                 <div class="pb-bar-bg"><div class="pb-bar" style="width:<?php echo $progressPct; ?>%"></div></div>
                 <div class="pb-meta">
-                    <?php $certPoints = min(100, round(($totalPoints/500)*100)); ?>
-                    Certificate: <?php echo $certPoints; ?>% &bull; <?php echo max(0, 500 - $totalPoints); ?> more points needed for free certificate
+                    <?php $certPoints = min(100, round(($totalPoints/2000)*100)); ?>
+                    Certificate: <?php echo $certPoints; ?>% &bull; <?php echo max(0, 2000 - $totalPoints); ?> more points needed for free certificate
                 </div>
             </div>
             <div class="pb-right">
@@ -606,8 +606,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                     <?php else: ?>
                         <div class="cert-elig-title">Earn your Free Certificate</div>
                         <div class="cert-elig-sub">
-                            Earn <strong>500+ points</strong> & complete at least <strong>3 tasks</strong> to unlock a free internship completion certificate.
-                            You need <strong><?php echo max(0,500-$totalPoints); ?> more points</strong> and <strong><?php echo max(0,3-$completedCount); ?> more approved tasks</strong>.
+                            Earn <strong>1200+ points</strong> & complete at least <strong>10 tasks</strong> to unlock a free internship completion certificate.
+                            You need <strong><?php echo max(0,2000-$totalPoints); ?> more points</strong> and <strong><?php echo max(0,10-$completedCount); ?> more approved tasks</strong>.
                         </div>
                     <?php endif; ?>
                 </div>
