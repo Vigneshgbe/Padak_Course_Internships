@@ -274,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
             
             if ($exists) {
                 // Update existing record
-                $db->query("UPDATE student_attendance SET status='$statusEsc', completion_date=NOW() WHERE id={$exists['id']}");
+                $db->query("UPDATE student_attendance SET status='$statusEsc', enrolled_date=NOW() WHERE id={$exists['id']}");
             } else {
                 // Insert new attendance record (batch_id can be NULL for daily attendance)
                 $db->query("INSERT INTO student_attendance (student_id, batch_id, date, status, enrolled_date) 

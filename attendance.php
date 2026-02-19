@@ -9,21 +9,23 @@ $student = $auth->getCurrentStudent();
 $db = getPadakDB();
 
 $sid = (int)$student['id'];
-$er = $db->query("SELECT se.batch_id, ib.batch_name FROM student_attendance se JOIN internship_batches ib ON se.batch_id=ib.id WHERE se.student_id=$sid AND se.status='active' LIMIT 1");
-$enrollment = $er ? $er->fetch_assoc() : null;
-$batchId = $enrollment ? (int)$enrollment['batch_id'] : 0;
 
+// Get attendance logs directly from student_attendance table where date is not null
 $attLogs = [];
-if ($batchId) {
-    $ar = $db->query("SELECT * FROM attendance WHERE student_id=$sid AND batch_id=$batchId ORDER BY date DESC LIMIT 60");
-    while ($ar && $row = $ar->fetch_assoc()) $attLogs[] = $row;
+$ar = $db->query("SELECT * FROM student_attendance WHERE student_id=$sid AND date IS NOT NULL AND status IN ('present','absent','late') ORDER BY date DESC LIMIT 60");
+while ($ar && $row = $ar->fetch_assoc()) {
+    $attLogs[] = $row;
 }
+
 $total = count($attLogs);
 $present = count(array_filter($attLogs, fn($a) => $a['status']==='present'));
 $absent = count(array_filter($attLogs, fn($a) => $a['status']==='absent'));
 $late = count(array_filter($attLogs, fn($a) => $a['status']==='late'));
 $pct = $total > 0 ? round(($present/$total)*100) : 0;
 $initials = strtoupper(substr($student['full_name'],0,1).(str_contains($student['full_name'],' ')?substr(explode(' ',$student['full_name'])[1],0,1):''));
+
+// Get student's domain for display
+$domain = $student['domain_interest'] ?? 'Your domain';
 ?>
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -77,7 +79,7 @@ body.sidebar-collapsed .main-content{margin-left:var(--sb-collapsed);}
     <div class="page-content">
         <div class="page-header">
             <h1><i class="fas fa-calendar-check" style="color:var(--or5);margin-right:8px;"></i>Attendance</h1>
-            <p style="color:#6b7280;font-size:0.875rem;"><?php echo $enrollment['batch_name'] ?? 'Your attendance record'; ?></p>
+            <p style="color:#6b7280;font-size:0.875rem;"><?php echo htmlspecialchars($domain); ?> - Your attendance record</p>
         </div>
         <div class="stats-row">
             <div class="stat-box"><div class="val" style="color:#111827;"><?php echo $total; ?></div><div class="lbl">Total Sessions</div></div>
