@@ -349,7 +349,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             <h3>No Certificates Yet</h3>
             <p>Complete your internship tasks to earn certificates!</p>
             <a href="tasks.php" class="btn-primary">
-                <i class="fas fa-tasks"></i> View Tasks
+                <!-- <i class="fas fa-tasks"></i> --> View Tasks
             </a>
         </div>
         <?php else: ?>
