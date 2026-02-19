@@ -311,7 +311,56 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 $studentsRes = $db->query("SELECT id, full_name, email FROM internship_students WHERE is_active=1 ORDER BY full_name");
 $students = [];
 while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
+
+// ── Handle attendance marking ─────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
+    $batchId = (int)($_POST['batch_id'] ?? 0);
+    $attendanceDate = $_POST['attendance_date'] ?? '';
+    $attendanceData = $_POST['attendance'] ?? [];
+    
+    if (!$batchId || !$attendanceDate || empty($attendanceData)) {
+        $error = 'Please select batch, date, and mark at least one student';
+    } else {
+        $dateEsc = $db->real_escape_string($attendanceDate);
+        $successCount = 0;
+        
+        foreach ($attendanceData as $studentId => $status) {
+            $studentId = (int)$studentId;
+            $statusEsc = $db->real_escape_string($status);
+            
+            $exists = $db->query("SELECT id FROM attendance WHERE student_id=$studentId AND batch_id=$batchId AND date='$dateEsc'")->fetch_assoc();
+            
+            if ($exists) {
+                $db->query("UPDATE attendance SET status='$statusEsc', updated_at=NOW() WHERE id={$exists['id']}");
+            } else {
+                $db->query("INSERT INTO attendance (student_id, batch_id, date, status, marked_by, created_at, updated_at) 
+                           VALUES ($studentId, $batchId, '$dateEsc', '$statusEsc', 'Admin', NOW(), NOW())");
+            }
+            $successCount++;
+        }
+        
+        $success = "Attendance marked for $successCount students on " . date('M d, Y', strtotime($attendanceDate));
+    }
+}
+
+$batchesRes = $db->query("SELECT id, batch_name, start_date, end_date FROM internship_batches ORDER BY start_date DESC");
+$batches = [];
+while ($row = $batchesRes->fetch_assoc()) $batches[] = $row;
+
+$selectedBatchId = (int)($_GET['batch_id'] ?? 0);
+$batchStudents = [];
+if ($selectedBatchId) {
+    $batchStudentsRes = $db->query("SELECT s.id, s.full_name, s.email
+        FROM internship_students s
+        JOIN student_attendance sa ON sa.student_id = s.id
+        WHERE sa.batch_id=$selectedBatchId AND sa.status='active'
+        ORDER BY s.full_name");
+    while ($row = $batchStudentsRes->fetch_assoc()) $batchStudents[] = $row;
+}
+
+$todayDate = date('Y-m-d');
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -420,6 +469,18 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         .filter-btn:hover{border-color:var(--o5);color:var(--o5);}
         .filter-btn.active{background:var(--o5);border-color:var(--o5);color:#fff;}
         @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.form-grid{grid-template-columns:1fr;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
+        .sc-icon.yellow{background:rgba(234,179,8,0.1);color:#ca8a04;}
+        .badge-present{background:rgba(34,197,94,0.12);color:#16a34a;}
+        .badge-absent{background:rgba(239,68,68,0.12);color:#dc2626;}
+        .badge-late{background:rgba(234,179,8,0.12);color:#854d0e;}
+        .ar-btn{padding:6px 12px;border:1.5px solid var(--border);background:var(--card);border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit;}
+        .ar-btn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+        .ar-btn.selected-present{background:rgba(34,197,94,0.15);border-color:#22c55e;color:#16a34a;}
+        .ar-btn.selected-absent{background:rgba(239,68,68,0.15);border-color:#ef4444;color:#dc2626;}
+        .ar-btn.selected-late{background:rgba(234,179,8,0.15);border-color:#eab308;color:#854d0e;}
+        @media(max-width:768px){
+            .ar-btn{padding:8px 10px;font-size:.7rem;}
+        }
     </style>
 </head>
 <body>
@@ -490,6 +551,110 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
     <div id="taskModal" class="modal"><div class="modal-content"><div class="modal-header"><div class="mh-title" id="modalTitle">Create New Task</div><button class="modal-close" onclick="closeModal('taskModal')">&times;</button></div><form method="POST" id="taskForm"><div class="modal-body"><input type="hidden" name="task_id" id="task_id"><div class="form-group"><label class="form-label">Task Title <span class="required">*</span></label><input type="text" name="title" id="task_title" class="form-input" placeholder="e.g., Build a React Calculator App" required></div><div class="form-group"><label class="form-label">Description</label><textarea name="description" id="task_description" class="form-textarea" placeholder="Detailed task requirements, deliverables, and instructions..."></textarea></div><div class="form-grid"><div class="form-group"><label class="form-label">Task Type</label><select name="task_type" id="task_type" class="form-select"><option value="individual">Individual</option><option value="team">Team</option></select></div><div class="form-group"><label class="form-label">Priority</label><select name="priority" id="task_priority" class="form-select"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div><div class="form-group"><label class="form-label">Max Points</label><input type="number" name="max_points" id="task_points" class="form-input" value="100" min="0" step="10"></div><div class="form-group"><label class="form-label">Due Date</label><input type="date" name="due_date" id="task_due_date" class="form-input"></div><div class="form-group full"><label class="form-label">Resources URL <span style="font-weight:400;color:var(--text3);">(optional)</span></label><input type="url" name="resources_url" id="task_resources" class="form-input" placeholder="https://docs.example.com/task-guide"><div class="form-hint">Link to documentation, tutorials, or reference materials</div></div><div class="form-group full"><label class="form-label">Assign to Student <span style="font-weight:400;color:var(--text3);">(optional - leave blank for all students)</span></label><select name="assigned_to_student" id="task_assigned" class="form-select"><option value="">All Students</option><?php foreach ($students as $student): ?><option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['full_name']); ?> (<?php echo htmlspecialchars($student['email']); ?>)</option><?php endforeach; ?></select></div><div class="form-group full" id="statusGroup" style="display:none;"><label class="form-label">Status</label><select name="status" id="task_status" class="form-select"><option value="active">Active</option><option value="archived">Archived</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('taskModal')">Cancel</button><button type="submit" name="create_task" id="submitBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Create Task</button></div></form></div></div>
     <div id="reviewModal" class="modal"><div class="modal-content"><div class="modal-header"><div class="mh-title">Review Submission</div><button class="modal-close" onclick="closeModal('reviewModal')">&times;</button></div><form method="POST"><div class="modal-body"><input type="hidden" name="submission_id" id="review_sub_id"><div id="reviewTaskInfo" style="padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px;"></div><div class="form-group"><label class="form-label">Review Status <span class="required">*</span></label><select name="review_status" id="review_status" class="form-select" required><option value="under_review">Under Review</option><option value="approved">Approve</option><option value="revision_requested">Request Revision</option><option value="rejected">Reject</option></select></div><div class="form-group"><label class="form-label">Points Earned</label><input type="number" name="points_earned" id="review_points" class="form-input" min="0" placeholder="Leave blank if not approving"><div class="form-hint">Required when approving the submission</div></div><div class="form-group"><label class="form-label">Feedback</label><textarea name="feedback" id="review_feedback" class="form-textarea" placeholder="Provide constructive feedback to the student..." style="min-height:120px;"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('reviewModal')">Cancel</button><button type="submit" name="review_submission" class="btn btn-primary"><i class="fas fa-check"></i> Submit Review</button></div></form></div></div>
     <div id="viewDetailsModal" class="modal"><div class="modal-content"><div class="modal-header"><div class="mh-title">Submission Details</div><button class="modal-close" onclick="closeModal('viewDetailsModal')">&times;</button></div><div class="modal-body"><div id="fullSubmissionContent"></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('viewDetailsModal')">Close</button></div></div></div>
+    
+    <div class="stat-card">
+        <div class="sc-top">
+        <div class="sc-icon yellow"><i class="fas fa-layer-group"></i></div>
+    </div>
+        <div class="sc-value"><?php echo $stats['active_batches'] ?? 0; ?></div>
+        <div class="sc-label">Active Batches</div>
+    </div>
+
+    <button class="tab" onclick="showTab('attendance')">
+        <i class="fas fa-calendar-check"></i> Attendance Management
+    </button>
+
+    <div id="tab-attendance" class="tab-content" style="display:none;">
+    <div class="section">
+        <div class="section-header">
+            <div class="sh-title"><i class="fas fa-calendar-check"></i>Mark Attendance</div>
+        </div>
+        <div class="section-body">
+            <div style="background:#fff7ed;border:1px solid #ffedd5;border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <label style="font-weight:700;font-size:.875rem;"><i class="fas fa-layer-group"></i> Select Batch:</label>
+                <select class="form-select" style="max-width:350px;" onchange="window.location.href='?batch_id='+this.value+'#tab-attendance'">
+                    <option value="">Choose a batch...</option>
+                    <?php foreach ($batches as $batch): ?>
+                    <option value="<?php echo $batch['id']; ?>" <?php echo $selectedBatchId === $batch['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($batch['batch_name']); ?> (<?php echo ucfirst($batch['status']); ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <?php if ($selectedBatchId && !empty($batchStudents)): ?>
+            <form method="POST">
+                <input type="hidden" name="mark_attendance" value="1">
+                <input type="hidden" name="batch_id" value="<?php echo $selectedBatchId; ?>">
+                
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-calendar"></i> Attendance Date <span class="required">*</span></label>
+                    <input type="date" name="attendance_date" class="form-input" value="<?php echo $todayDate; ?>" required style="max-width:250px;">
+                </div>
+                
+                <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-sm" style="background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.25);color:#22c55e;" onclick="markAllStatus('present')">
+                        <i class="fas fa-check-circle"></i> Mark All Present
+                    </button>
+                    <button type="button" class="btn btn-sm" style="background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.25);color:#ef4444;" onclick="markAllStatus('absent')">
+                        <i class="fas fa-times-circle"></i> Mark All Absent
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllStatus()">
+                        <i class="fas fa-eraser"></i> Clear All
+                    </button>
+                </div>
+                
+                <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
+                    <i class="fas fa-users"></i> Students (<?php echo count($batchStudents); ?>)
+                </h3>
+                
+                <?php foreach ($batchStudents as $student): ?>
+                <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;background:var(--bg);gap:12px;">
+                    <div>
+                        <div style="font-weight:700;font-size:.9rem;"><?php echo htmlspecialchars($student['full_name']); ?></div>
+                        <div style="font-size:.75rem;color:var(--text3);"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($student['email']); ?></div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" class="ar-btn" data-student="<?php echo $student['id']; ?>" data-status="present" onclick="selectStatus(this)">
+                            <i class="fas fa-check"></i> Present
+                        </button>
+                        <button type="button" class="ar-btn" data-student="<?php echo $student['id']; ?>" data-status="absent" onclick="selectStatus(this)">
+                            <i class="fas fa-times"></i> Absent
+                        </button>
+                        <button type="button" class="ar-btn" data-student="<?php echo $student['id']; ?>" data-status="late" onclick="selectStatus(this)">
+                            <i class="fas fa-clock"></i> Late
+                        </button>
+                    </div>
+                    <input type="hidden" name="attendance[<?php echo $student['id']; ?>]" id="status-<?php echo $student['id']; ?>" value="">
+                </div>
+                <?php endforeach; ?>
+                
+                <div style="margin-top:24px;display:flex;gap:12px;">
+                    <button type="submit" class="btn btn-primary" onclick="return validateAttendance()">
+                        <i class="fas fa-save"></i> Save Attendance
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearAllStatus()">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </form>
+            <?php elseif ($selectedBatchId): ?>
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <h3>No students enrolled</h3>
+                <p>There are no active students in this batch</p>
+            </div>
+            <?php else: ?>
+            <div class="empty-state">
+                <i class="fas fa-layer-group"></i>
+                <h3>Select a batch</h3>
+                <p>Choose a batch from the dropdown above to mark attendance</p>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
     <script>
         function showTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');event.target.closest('.tab').classList.add('active');document.getElementById('tab-'+tab).style.display='block';}
         function closeModal(id){document.getElementById(id).classList.remove('active');}
@@ -499,6 +664,73 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         function viewFullSubmission(sub){let content='<div style="line-height:1.8;"><h3 style="color:var(--o5);margin-bottom:16px;font-size:1.2rem;"><i class="fas fa-clipboard-list"></i> '+sub.task_title+'</h3>';content+='<div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;"><strong style="color:var(--text);"><i class="fas fa-user"></i> Student:</strong> '+sub.student_name+' <span style="color:var(--text3);">('+sub.student_email+')</span><br><strong style="color:var(--text);"><i class="fas fa-clock"></i> Submitted:</strong> '+sub.submitted_at+'<br><strong style="color:var(--text);"><i class="fas fa-star"></i> Max Points:</strong> '+sub.max_points+' pts<br><strong style="color:var(--text);"><i class="fas fa-info-circle"></i> Status:</strong> <span class="badge badge-'+sub.status+'">'+(sub.status==='under_review'?'In Review':'Submitted')+'</span></div>';if(sub.submission_text){content+='<div style="margin-bottom:16px;"><strong style="color:var(--text);display:block;margin-bottom:8px;"><i class="fas fa-align-left"></i> Description:</strong><div style="background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;color:var(--text2);font-size:.9rem;line-height:1.6;">'+sub.submission_text+'</div></div>';}if(sub.github_link){content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fab fa-github"></i> GitHub:</strong><br><a href="'+sub.github_link+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.github_link+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';}if(sub.submission_url){content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-globe"></i> Live URL:</strong><br><a href="'+sub.submission_url+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.submission_url+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';}if(sub.file_name){content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-file"></i> Attached File:</strong><br><a href="'+sub.file_path+'" download style="color:var(--blue);"><i class="fas fa-download"></i> '+sub.file_name+'</a></div>';}content+='</div>';document.getElementById('fullSubmissionContent').innerHTML=content;document.getElementById('viewDetailsModal').classList.add('active');}
         document.querySelectorAll('.modal').forEach(modal=>{modal.addEventListener('click',function(e){if(e.target===this){this.classList.remove('active');}});});
         setTimeout(()=>{document.querySelectorAll('.alert').forEach(alert=>{alert.style.opacity='0';setTimeout(()=>alert.remove(),300);});},5000);
+    
+        function selectStatus(btn) {
+    const studentId = btn.dataset.student;
+    const status = btn.dataset.status;
+    const inputField = document.getElementById('status-' + studentId);
+    const allBtns = document.querySelectorAll(`[data-student="${studentId}"]`);
+    
+    allBtns.forEach(b => {
+        b.classList.remove('selected-present', 'selected-absent', 'selected-late');
+    });
+    
+    if (inputField.value === status) {
+        inputField.value = '';
+    } else {
+        inputField.value = status;
+        btn.classList.add('selected-' + status);
+    }
+}
+
+function markAllStatus(status) {
+    const allInputs = document.querySelectorAll('[name^="attendance["]');
+    allInputs.forEach(input => {
+        const studentId = input.id.replace('status-', '');
+        input.value = status;
+        
+        const allBtns = document.querySelectorAll(`[data-student="${studentId}"]`);
+        allBtns.forEach(btn => {
+            btn.classList.remove('selected-present', 'selected-absent', 'selected-late');
+            if (btn.dataset.status === status) {
+                btn.classList.add('selected-' + status);
+            }
+        });
+    });
+}
+
+function clearAllStatus() {
+    const allInputs = document.querySelectorAll('[name^="attendance["]');
+    allInputs.forEach(input => {
+        input.value = '';
+    });
+    document.querySelectorAll('.ar-btn').forEach(btn => {
+        btn.classList.remove('selected-present', 'selected-absent', 'selected-late');
+    });
+}
+
+function validateAttendance() {
+    const allInputs = document.querySelectorAll('[name^="attendance["]');
+    let hasSelection = false;
+    
+    allInputs.forEach(input => {
+        if (input.value !== '') {
+            hasSelection = true;
+        }
+    });
+    
+    if (!hasSelection) {
+        alert('Please mark attendance for at least one student before saving.');
+        return false;
+    }
+    
+    return confirm('Save attendance for the selected date?');
+}
+
+// Handle tab hash on load
+if (window.location.hash && window.location.hash === '#tab-attendance') {
+    document.querySelector('.tab[onclick*="attendance"]').click();
+}
     </script>
 </body>
 </html>
