@@ -112,6 +112,7 @@ if (!$isLoggedIn) {
 $success = '';
 $error = '';
 
+// Handle Task Creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
     $title = trim($_POST['title'] ?? '');
     $desc = trim($_POST['description'] ?? '');
@@ -143,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
     }
 }
 
+// Handle Task Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     $taskId = (int)$_POST['task_id'];
     $title = trim($_POST['title'] ?? '');
@@ -185,6 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     }
 }
 
+// Handle Submission Review
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission'])) {
     $subId = (int)$_POST['submission_id'];
     $reviewStatus = $_POST['review_status'];
@@ -240,13 +243,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission']))
     }
 }
 
+// Handle Attendance Marking (Domain-based)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
-    $batchId = (int)($_POST['batch_id'] ?? 0);
+    $domainInterest = $_POST['domain_interest'] ?? '';
     $attendanceDate = $_POST['attendance_date'] ?? '';
     $attendanceData = $_POST['attendance'] ?? [];
     
-    if (!$batchId || !$attendanceDate || empty($attendanceData)) {
-        $error = 'Please select batch, date, and mark at least one student';
+    if (!$domainInterest || !$attendanceDate || empty($attendanceData)) {
+        $error = 'Please select domain, date, and mark at least one student';
     } else {
         $dateEsc = $db->real_escape_string($attendanceDate);
         $successCount = 0;
@@ -255,13 +259,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
             $studentId = (int)$studentId;
             $statusEsc = $db->real_escape_string($status);
             
-            $exists = $db->query("SELECT id FROM attendance WHERE student_id=$studentId AND batch_id=$batchId AND date='$dateEsc'")->fetch_assoc();
+            // Check if attendance already exists for this student on this date
+            $exists = $db->query("SELECT id FROM attendance WHERE student_id=$studentId AND date='$dateEsc'")->fetch_assoc();
             
             if ($exists) {
-                $db->query("UPDATE attendance SET status='$statusEsc', updated_at=NOW() WHERE id={$exists['id']}");
+                $db->query("UPDATE attendance SET status='$statusEsc', updated_at=NOW(), marked_by='Admin' WHERE id={$exists['id']}");
             } else {
-                $db->query("INSERT INTO attendance (student_id, batch_id, date, status, marked_by, created_at, updated_at) 
-                           VALUES ($studentId, $batchId, '$dateEsc', '$statusEsc', 'Admin', NOW(), NOW())");
+                $db->query("INSERT INTO attendance (student_id, date, status, marked_by, created_at, updated_at) 
+                           VALUES ($studentId, '$dateEsc', '$statusEsc', 'Admin', NOW(), NOW())");
             }
             $successCount++;
         }
@@ -270,6 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
     }
 }
 
+// Get Statistics
 $statsRes = $db->query("SELECT 
     (SELECT COUNT(*) FROM internship_tasks WHERE status='active') as active_tasks,
     (SELECT COUNT(*) FROM task_submissions WHERE status='submitted' OR status='under_review') as pending_reviews,
@@ -278,6 +284,7 @@ $statsRes = $db->query("SELECT
 ");
 $stats = $statsRes->fetch_assoc();
 
+// Get Tasks
 $filterStatus = $_GET['filter'] ?? 'active';
 $whereClause = $filterStatus === 'all' ? "1=1" : "t.status='$filterStatus'";
 
@@ -293,6 +300,7 @@ $tasksRes = $db->query("SELECT t.*,
 $tasks = [];
 while ($row = $tasksRes->fetch_assoc()) $tasks[] = $row;
 
+// Get Pending Submissions
 $pendingSubsRes = $db->query("SELECT ts.*, t.title as task_title, t.max_points, s.full_name as student_name, s.email as student_email
     FROM task_submissions ts
     JOIN internship_tasks t ON t.id = ts.task_id
@@ -303,23 +311,30 @@ $pendingSubsRes = $db->query("SELECT ts.*, t.title as task_title, t.max_points, 
 $pendingSubs = [];
 while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 
-$studentsRes = $db->query("SELECT id, full_name, email FROM internship_students WHERE is_active=1 ORDER BY full_name");
+// Get All Active Students
+$studentsRes = $db->query("SELECT id, full_name, email, domain_interest FROM internship_students WHERE is_active=1 ORDER BY full_name");
 $students = [];
 while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
 
-$batchesRes = $db->query("SELECT id, batch_name, start_date, end_date FROM internship_batches ORDER BY start_date DESC");
-$batches = [];
-while ($row = $batchesRes->fetch_assoc()) $batches[] = $row;
+// Get Unique Domain Interests
+$domainsRes = $db->query("SELECT DISTINCT domain_interest FROM internship_students WHERE is_active=1 AND domain_interest IS NOT NULL AND domain_interest != '' ORDER BY domain_interest");
+$domains = [];
+while ($row = $domainsRes->fetch_assoc()) {
+    if (!empty($row['domain_interest'])) {
+        $domains[] = $row['domain_interest'];
+    }
+}
 
-$selectedBatchId = (int)($_GET['batch_id'] ?? 0);
-$batchStudents = [];
-if ($selectedBatchId) {
-    $batchStudentsRes = $db->query("SELECT s.id, s.full_name, s.email
+// Get Students by Selected Domain
+$selectedDomain = $_GET['domain'] ?? '';
+$domainStudents = [];
+if ($selectedDomain) {
+    $domainEsc = $db->real_escape_string($selectedDomain);
+    $domainStudentsRes = $db->query("SELECT s.id, s.full_name, s.email, s.domain_interest
         FROM internship_students s
-        JOIN student_attendance sa ON sa.student_id = s.id
-        WHERE sa.batch_id=$selectedBatchId AND sa.status='active'
+        WHERE s.is_active=1 AND s.domain_interest='$domainEsc'
         ORDER BY s.full_name");
-    while ($row = $batchStudentsRes->fetch_assoc()) $batchStudents[] = $row;
+    while ($row = $domainStudentsRes->fetch_assoc()) $domainStudents[] = $row;
 }
 
 $todayDate = date('Y-m-d');
@@ -434,6 +449,9 @@ $todayDate = date('Y-m-d');
         .ar-btn.selected-present{background:rgba(34,197,94,0.15);border-color:#22c55e;color:#16a34a;}
         .ar-btn.selected-absent{background:rgba(239,68,68,0.15);border-color:#ef4444;color:#dc2626;}
         .ar-btn.selected-late{background:rgba(234,179,8,0.15);border-color:#eab308;color:#854d0e;}
+        .domain-selector{background:var(--o1);border:1px solid var(--o2);border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+        .domain-selector label{font-weight:700;font-size:.875rem;}
+        .domain-selector select{max-width:350px;}
         @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.form-grid{grid-template-columns:1fr;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
     </style>
 </head>
@@ -514,22 +532,22 @@ $todayDate = date('Y-m-d');
                     <div class="sh-title"><i class="fas fa-calendar-check"></i>Mark Attendance</div>
                 </div>
                 <div class="section-body">
-                    <div style="background:var(--o1);border:1px solid var(--o2);border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <label style="font-weight:700;font-size:.875rem;"><i class="fas fa-layer-group"></i> Select Batch:</label>
-                        <select class="form-select" style="max-width:350px;" onchange="window.location.href='?batch_id='+this.value+'#tab-attendance'">
-                            <option value="">Choose a batch...</option>
-                            <?php foreach ($batches as $batch): ?>
-                            <option value="<?php echo $batch['id']; ?>" <?php echo $selectedBatchId === $batch['id'] ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($batch['batch_name']); ?>
+                    <div class="domain-selector">
+                        <label><i class="fas fa-lightbulb"></i> Select Domain:</label>
+                        <select class="form-select" onchange="window.location.href='?domain='+encodeURIComponent(this.value)+'#tab-attendance'">
+                            <option value="">Choose a domain...</option>
+                            <?php foreach ($domains as $domain): ?>
+                            <option value="<?php echo htmlspecialchars($domain); ?>" <?php echo $selectedDomain === $domain ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($domain); ?>
                             </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     
-                    <?php if ($selectedBatchId && !empty($batchStudents)): ?>
+                    <?php if ($selectedDomain && !empty($domainStudents)): ?>
                     <form method="POST">
                         <input type="hidden" name="mark_attendance" value="1">
-                        <input type="hidden" name="batch_id" value="<?php echo $selectedBatchId; ?>">
+                        <input type="hidden" name="domain_interest" value="<?php echo htmlspecialchars($selectedDomain); ?>">
                         
                         <div class="form-group">
                             <label class="form-label"><i class="fas fa-calendar"></i> Attendance Date <span class="required">*</span></label>
@@ -549,10 +567,10 @@ $todayDate = date('Y-m-d');
                         </div>
                         
                         <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
-                            <i class="fas fa-users"></i> Students (<?php echo count($batchStudents); ?>)
+                            <i class="fas fa-users"></i> Students in <?php echo htmlspecialchars($selectedDomain); ?> (<?php echo count($domainStudents); ?>)
                         </h3>
                         
-                        <?php foreach ($batchStudents as $student): ?>
+                        <?php foreach ($domainStudents as $student): ?>
                         <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;background:var(--bg);gap:12px;">
                             <div>
                                 <div style="font-weight:700;font-size:.9rem;"><?php echo htmlspecialchars($student['full_name']); ?></div>
@@ -582,17 +600,17 @@ $todayDate = date('Y-m-d');
                             </button>
                         </div>
                     </form>
-                    <?php elseif ($selectedBatchId): ?>
+                    <?php elseif ($selectedDomain): ?>
                     <div class="empty-state">
                         <i class="fas fa-users-slash"></i>
-                        <h3>No students enrolled</h3>
-                        <p>There are no active students in this batch</p>
+                        <h3>No students found</h3>
+                        <p>There are no active students in this domain</p>
                     </div>
                     <?php else: ?>
                     <div class="empty-state">
-                        <i class="fas fa-layer-group"></i>
-                        <h3>Select a batch</h3>
-                        <p>Choose a batch from the dropdown above to mark attendance</p>
+                        <i class="fas fa-lightbulb"></i>
+                        <h3>Select a domain</h3>
+                        <p>Choose a domain from the dropdown above to mark attendance</p>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -619,7 +637,7 @@ $todayDate = date('Y-m-d');
         function validateAttendance(){const allInputs=document.querySelectorAll('[name^="attendance["]');let hasSelection=false;allInputs.forEach(input=>{if(input.value!==''){hasSelection=true;}});if(!hasSelection){alert('Please mark attendance for at least one student before saving.');return false;}return confirm('Save attendance for the selected date?');}
         document.querySelectorAll('.modal').forEach(modal=>{modal.addEventListener('click',function(e){if(e.target===this){this.classList.remove('active');}});});
         setTimeout(()=>{document.querySelectorAll('.alert').forEach(alert=>{alert.style.opacity='0';setTimeout(()=>alert.remove(),300);});},5000);
-        if(window.location.hash&&window.location.hash==='#tab-attendance'){document.querySelector('.tab[onclick*="attendance"]').click();}
+        if(window.location.hash){const hash=window.location.hash.replace('#','');if(hash.startsWith('tab-')){const tabName=hash.replace('tab-','');const tabBtn=document.querySelector(`.tab[onclick*="${tabName}"]`);if(tabBtn)tabBtn.click();}}
     </script>
 </body>
 </html>
