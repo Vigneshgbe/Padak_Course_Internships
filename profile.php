@@ -5,11 +5,10 @@ require_once 'config.php';
 $auth = new StudentAuth();
 if (!$auth->isLoggedIn()) { header('Location: login.php'); exit; }
 
-$student = $auth->getCurrentStudent();
 $db = getPadakDB();
-$sid = (int)$student['id'];
+$sid = (int)$auth->getCurrentStudent()['id'];
 
-// Fetch complete student data including total_points
+// Fetch complete student data
 $studentQuery = $db->query("SELECT * FROM internship_students WHERE id = $sid");
 $student = $studentQuery->fetch_assoc();
 
@@ -21,14 +20,14 @@ $generalError = '';
 
 // Predefined avatar options
 $avatarOptions = [
-    'avatar1.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4',
-    'avatar2.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede',
-    'avatar3.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jasmine&backgroundColor=ffd5dc',
-    'avatar4.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&backgroundColor=ffdfbf',
-    'avatar5.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&backgroundColor=d1f4dd',
-    'avatar6.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie&backgroundColor=ffeaa7',
-    'avatar7.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Oliver&backgroundColor=74b9ff',
-    'avatar8.png' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie&backgroundColor=fab1a0',
+    'avatar1.png' => 'https://png.pngtree.com/png-vector/20231019/ourmid/pngtree-avatar-of-a-brunette-man-png-image_10214158.png',
+    'avatar2.png' => 'https://png.pngtree.com/png-clipart/20231020/original/pngtree-avatar-of-a-brunette-man-png-image_13379741.png',
+    'avatar3.png' => 'https://static.vecteezy.com/system/resources/previews/048/216/761/non_2x/modern-male-avatar-with-black-hair-and-hoodie-illustration-free-png.png',
+    'avatar4.png' => 'https://png.pngtree.com/png-clipart/20230927/original/pngtree-man-avatar-image-for-profile-png-image_13001884.png',
+    'avatar5.png' => 'https://png.pngtree.com/png-clipart/20250612/original/pngtree-icon-of-a-female-developer-relations-evangelist-in-clipart-style-png-image_21179292.png',
+    'avatar6.png' => 'https://png.pngtree.com/png-clipart/20250612/original/pngtree-icon-of-a-latino-female-developer-relations-evangelist-in-clipart-style-png-image_21179291.png',
+    'avatar7.png' => 'https://png.pngtree.com/png-clipart/20250612/original/pngtree-latino-female-developer-relations-evangelist-icon-clipart-png-image_21179293.png',
+    'avatar8.png' => 'https://png.pngtree.com/png-clipart/20241117/original/pngtree-business-women-avatar-png-image_17163554.png',
 ];
 
 $domainOptions = [
