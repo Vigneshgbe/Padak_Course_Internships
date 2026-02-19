@@ -9,7 +9,7 @@ $student = $auth->getCurrentStudent();
 $db = getPadakDB();
 $sid = (int)$student['id'];
 
-$er = $db->query("SELECT se.batch_id FROM student_enrollments se WHERE se.student_id=$sid AND se.status='active' LIMIT 1");
+$er = $db->query("SELECT se.batch_id FROM student_attendance se WHERE se.student_id=$sid AND se.status='active' LIMIT 1");
 $enrollment = $er ? $er->fetch_assoc() : null;
 $batchId = $enrollment ? (int)$enrollment['batch_id'] : 0;
 
