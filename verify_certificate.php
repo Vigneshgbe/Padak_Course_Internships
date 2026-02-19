@@ -1,3 +1,15 @@
+<?php
+session_start();
+require_once 'config.php';
+
+$auth = new StudentAuth();
+if (!$auth->isLoggedIn()) { header('Location: login.php'); exit; }
+
+$student = $auth->getCurrentStudent();
+if (!$student) { header('Location: logout.php'); exit; }
+
+$activePage = 'certificates';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,24 +26,72 @@
         }
         
         :root {
+            --sbw: 258px;
             --or5: #f97316;
             --or4: #fb923c;
             --or6: #ea580c;
             --or1: #fff7ed;
             --or2: #ffedd5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text2: #475569;
+            --text3: #94a3b8;
+            --border: #e2e8f0;
         }
         
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #fff7ed 0%, #fff 60%, #ffedd5 100%);
+            background: linear-gradient(135deg, #fff7ed 0%, var(--bg) 60%, #ffedd5 100%);
             min-height: 100vh;
             color: #111827;
-            padding: 20px;
+        }
+        
+        .page-wrap {
+            margin-left: var(--sbw);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(248, 250, 252, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .topbar-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text2);
+            padding: 6px;
+            border-radius: 7px;
+        }
+        
+        .topbar-hamburger:hover {
+            background: rgba(249, 115, 22, 0.08);
+        }
+        
+        .topbar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            flex: 1;
         }
         
         .container {
             max-width: 700px;
             margin: 40px auto;
+            padding: 20px;
         }
         
         .header {
@@ -338,9 +398,18 @@
             margin-right: 8px;
         }
         
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+            .page-wrap {
+                margin-left: 0;
+            }
+            
+            .topbar-hamburger {
+                display: flex;
+            }
+            
             .container {
                 margin: 20px auto;
+                padding: 16px;
             }
             
             .verify-card, .result-card {
@@ -363,59 +432,71 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <i class="fas fa-certificate"></i>
-            </div>
-            <h1>Certificate Verification</h1>
-            <p>Verify the authenticity of Padak internship certificates</p>
+    <?php include 'sidebar.php'; ?>
+    
+    <div class="page-wrap">
+        <!-- Topbar -->
+        <div class="topbar">
+            <button class="topbar-hamburger" onclick="toggleSidebar()">
+                <i class="fas fa-bars fa-sm"></i>
+            </button>
+            <div class="topbar-title">Certificate Verification</div>
         </div>
         
-        <div class="verify-card" id="verifyCard">
-            <div class="input-group">
-                <label for="certNumber">Certificate Number</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-hashtag"></i>
-                    <input 
-                        type="text" 
-                        id="certNumber" 
-                        placeholder="Enter certificate number (e.g., PADAK2024001)"
-                        autocomplete="off"
-                    >
+        <div class="container">
+            <div class="header">
+                <div class="logo">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <h1>Certificate Verification</h1>
+                <p>Verify the authenticity of Padak internship certificates</p>
+            </div>
+            
+            <div class="verify-card" id="verifyCard">
+                <div class="input-group">
+                    <label for="certNumber">Certificate Number</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-hashtag"></i>
+                        <input 
+                            type="text" 
+                            id="certNumber" 
+                            placeholder="Enter certificate number (e.g., PADAK2024001)"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+                
+                <button class="verify-btn" id="verifyBtn" onclick="verifyCertificate()">
+                    <i class="fas fa-shield-check"></i>
+                    <span id="btnText">Verify Certificate</span>
+                    <span id="btnSpinner" style="display: none;" class="spinner"></span>
+                </button>
+                
+                <div class="error-message" id="errorMessage"></div>
+                
+                <div class="info-box">
+                    <p>
+                        <i class="fas fa-info-circle"></i>
+                        Enter the unique certificate number found on your Padak internship certificate to verify its authenticity and view details.
+                    </p>
                 </div>
             </div>
             
-            <button class="verify-btn" id="verifyBtn" onclick="verifyCertificate()">
-                <i class="fas fa-shield-check"></i>
-                <span id="btnText">Verify Certificate</span>
-                <span id="btnSpinner" style="display: none;" class="spinner"></span>
-            </button>
-            
-            <div class="error-message" id="errorMessage"></div>
-            
-            <div class="info-box">
-                <p>
-                    <i class="fas fa-info-circle"></i>
-                    Enter the unique certificate number found on your Padak internship certificate to verify its authenticity and view details.
-                </p>
-            </div>
-        </div>
-        
-        <div class="result-card" id="resultCard">
-            <div class="result-header">
-                <div class="status-icon" id="statusIcon">
-                    <i class="fas fa-check-circle"></i>
+            <div class="result-card" id="resultCard">
+                <div class="result-header">
+                    <div class="status-icon" id="statusIcon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2 id="statusTitle">Certificate Verified</h2>
+                    <p id="statusMessage">This certificate is authentic and valid</p>
                 </div>
-                <h2 id="statusTitle">Certificate Verified</h2>
-                <p id="statusMessage">This certificate is authentic and valid</p>
+                
+                <div id="certificateDetails"></div>
+                
+                <button class="verify-another-btn" onclick="verifyAnother()">
+                    <i class="fas fa-rotate-right"></i> Verify Another Certificate
+                </button>
             </div>
-            
-            <div id="certificateDetails"></div>
-            
-            <button class="verify-another-btn" onclick="verifyAnother()">
-                <i class="fas fa-rotate-right"></i> Verify Another Certificate
-            </button>
         </div>
     </div>
     
@@ -498,7 +579,7 @@
                         Certificate Number
                     </div>
                     <div class="detail-value">
-                        <div class="cert-number-display">${data.certificate_number}</div>
+                        <div class="cert-number-display">${escapeHtml(data.certificate_number)}</div>
                     </div>
                 </div>
                 <div class="detail-row">
@@ -506,43 +587,51 @@
                         <i class="fas fa-user"></i>
                         Student Name
                     </div>
-                    <div class="detail-value">${data.student_name}</div>
+                    <div class="detail-value">${escapeHtml(data.student_name)}</div>
                 </div>
+                ${data.course_name ? `
                 <div class="detail-row">
                     <div class="detail-label">
                         <i class="fas fa-book"></i>
                         Course
                     </div>
-                    <div class="detail-value">${data.course_name}</div>
+                    <div class="detail-value">${escapeHtml(data.course_name)}</div>
                 </div>
+                ` : ''}
+                ${data.batch_name ? `
                 <div class="detail-row">
                     <div class="detail-label">
                         <i class="fas fa-layer-group"></i>
                         Batch
                     </div>
-                    <div class="detail-value">${data.batch_name}</div>
+                    <div class="detail-value">${escapeHtml(data.batch_name)}</div>
                 </div>
+                ` : ''}
                 <div class="detail-row">
                     <div class="detail-label">
                         <i class="fas fa-calendar"></i>
                         Issued Date
                     </div>
-                    <div class="detail-value">${data.issued_date}</div>
+                    <div class="detail-value">${escapeHtml(data.issued_date)}</div>
                 </div>
+                ${data.completion_grade ? `
                 <div class="detail-row">
                     <div class="detail-label">
                         <i class="fas fa-trophy"></i>
                         Grade
                     </div>
-                    <div class="detail-value">${data.completion_grade}</div>
+                    <div class="detail-value">${escapeHtml(data.completion_grade)}</div>
                 </div>
+                ` : ''}
+                ${data.total_points_earned ? `
                 <div class="detail-row">
                     <div class="detail-label">
                         <i class="fas fa-star"></i>
                         Points Earned
                     </div>
-                    <div class="detail-value">${data.total_points_earned}</div>
+                    <div class="detail-value">${escapeHtml(data.total_points_earned)}</div>
                 </div>
+                ` : ''}
             `;
             
             detailsDiv.innerHTML = detailsHTML;
@@ -574,6 +663,18 @@
             
             // Focus input
             certNumberInput.focus();
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     </script>
 </body>
