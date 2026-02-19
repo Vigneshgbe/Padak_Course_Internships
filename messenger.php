@@ -8,9 +8,14 @@ $db = getPadakDB();
 $sid = (int)$student['id'];
 $activePage = 'messenger';
 
-// Handle send message (AJAX)
+// Update online status
+$db->query("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id=$sid");
+
+// === AJAX HANDLERS ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
+    
+    // Send message
     if ($_POST['action'] === 'send') {
         $roomId = (int)($_POST['room_id'] ?? 0);
         $msg = trim($_POST['message'] ?? '');
@@ -31,61 +36,148 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         echo json_encode(['success'=>false]); exit;
     }
+    
+    // Fetch new messages
     if ($_POST['action'] === 'fetch') {
         $roomId = (int)($_POST['room_id'] ?? 0);
         $since = (int)($_POST['since_id'] ?? 0);
         $msgs = [];
-        $stmt = $db->prepare("SELECT cm.id, cm.message, cm.created_at, cm.sender_id, s.full_name
+        $stmt = $db->prepare("SELECT cm.id, cm.message, cm.created_at, cm.sender_id, s.full_name, s.profile_photo
             FROM chat_messages cm JOIN internship_students s ON s.id=cm.sender_id
             WHERE cm.room_id=? AND cm.id>? AND cm.is_deleted=0 ORDER BY cm.id ASC LIMIT 50");
         $stmt->bind_param("ii",$roomId,$since);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($r = $res->fetch_assoc()) $msgs[] = $r;
+        
         // Update last read
         $upd = $db->prepare("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=? AND student_id=?");
         $upd->bind_param("ii",$roomId,$sid);
         $upd->execute();
-        echo json_encode($msgs); exit;
+        
+        echo json_encode(['messages'=>$msgs, 'typing'=>[]]); exit;
     }
-    if ($_POST['action'] === 'create_room') {
-        $name = trim($_POST['room_name'] ?? '');
-        $type = in_array($_POST['room_type']??'',['group','direct'])?$_POST['room_type']:'group';
-        if ($name) {
+    
+    // Start direct message
+    if ($_POST['action'] === 'start_dm') {
+        $targetId = (int)($_POST['target_id'] ?? 0);
+        if ($targetId && $targetId != $sid) {
+            // Check if DM already exists
+            $pair = $db->query("SELECT room_id FROM direct_message_pairs 
+                WHERE (student1_id=$sid AND student2_id=$targetId) 
+                OR (student1_id=$targetId AND student2_id=$sid)")->fetch_assoc();
+            
+            if ($pair) {
+                echo json_encode(['success'=>true,'room_id'=>$pair['room_id']]); exit;
+            }
+            
+            // Create new DM room
+            $targetUser = $db->query("SELECT full_name FROM internship_students WHERE id=$targetId")->fetch_assoc();
+            $roomName = $targetUser['full_name'];
+            
             $stmt = $db->prepare("INSERT INTO chat_rooms (room_name, room_type, created_by) VALUES (?,?,?)");
-            $stmt->bind_param("ssi",$name,$type,$sid);
+            $type = 'direct';
+            $stmt->bind_param("ssi",$roomName,$type,$sid);
             if ($stmt->execute()) {
                 $roomId = $db->insert_id;
-                $addMe = $db->prepare("INSERT IGNORE INTO chat_room_members (room_id,student_id) VALUES (?,?)");
-                $addMe->bind_param("ii",$roomId,$sid);
-                $addMe->execute();
+                
+                // Add both users as members
+                $addStmt = $db->prepare("INSERT INTO chat_room_members (room_id, student_id) VALUES (?,?)");
+                $addStmt->bind_param("ii",$roomId,$sid);
+                $addStmt->execute();
+                $addStmt->bind_param("ii",$roomId,$targetId);
+                $addStmt->execute();
+                
+                // Record the pair
+                $pairStmt = $db->prepare("INSERT INTO direct_message_pairs (room_id, student1_id, student2_id) VALUES (?,?,?)");
+                $pairStmt->bind_param("iii",$roomId,$sid,$targetId);
+                $pairStmt->execute();
+                
                 echo json_encode(['success'=>true,'room_id'=>$roomId]); exit;
             }
         }
         echo json_encode(['success'=>false]); exit;
     }
+    
+    // Create group chat
+    if ($_POST['action'] === 'create_group') {
+        $name = trim($_POST['room_name'] ?? '');
+        $memberIds = json_decode($_POST['member_ids'] ?? '[]', true);
+        
+        if ($name && is_array($memberIds) && count($memberIds) > 0) {
+            $stmt = $db->prepare("INSERT INTO chat_rooms (room_name, room_type, created_by) VALUES (?,?,?)");
+            $type = 'group';
+            $stmt->bind_param("ssi",$name,$type,$sid);
+            if ($stmt->execute()) {
+                $roomId = $db->insert_id;
+                
+                // Add creator
+                $addStmt = $db->prepare("INSERT IGNORE INTO chat_room_members (room_id, student_id) VALUES (?,?)");
+                $addStmt->bind_param("ii",$roomId,$sid);
+                $addStmt->execute();
+                
+                // Add members
+                foreach ($memberIds as $mid) {
+                    $mid = (int)$mid;
+                    if ($mid > 0 && $mid != $sid) {
+                        $addStmt->bind_param("ii",$roomId,$mid);
+                        $addStmt->execute();
+                    }
+                }
+                
+                echo json_encode(['success'=>true,'room_id'=>$roomId]); exit;
+            }
+        }
+        echo json_encode(['success'=>false]); exit;
+    }
+    
+    // Search users
+    if ($_POST['action'] === 'search_users') {
+        $query = trim($_POST['query'] ?? '');
+        $users = [];
+        if (strlen($query) >= 2) {
+            $q = '%'.$query.'%';
+            $stmt = $db->prepare("SELECT id, full_name, email, profile_photo, domain_interest, is_online 
+                FROM internship_students 
+                WHERE id!=$sid AND is_active=1 
+                AND (full_name LIKE ? OR email LIKE ?) 
+                LIMIT 20");
+            $stmt->bind_param("ss",$q,$q);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($r = $res->fetch_assoc()) $users[] = $r;
+        }
+        echo json_encode($users); exit;
+    }
+    
     echo json_encode(['success'=>false]); exit;
 }
 
-// Get rooms this student is in
+// === GET CONVERSATIONS ===
 $rooms = [];
 $res = $db->query("SELECT cr.*, 
     (SELECT cm2.message FROM chat_messages cm2 WHERE cm2.room_id=cr.id AND cm2.is_deleted=0 ORDER BY cm2.id DESC LIMIT 1) as last_msg,
     (SELECT cm2.created_at FROM chat_messages cm2 WHERE cm2.room_id=cr.id AND cm2.is_deleted=0 ORDER BY cm2.id DESC LIMIT 1) as last_msg_time,
-    (SELECT COUNT(*) FROM chat_messages cm2 JOIN chat_room_members crm2 ON crm2.room_id=cm2.room_id AND crm2.student_id=$sid WHERE cm2.room_id=cr.id AND cm2.sender_id!=$sid AND cm2.is_deleted=0 AND (crm2.last_read_at IS NULL OR cm2.created_at > crm2.last_read_at)) as unread
+    (SELECT COUNT(*) FROM chat_messages cm2 
+        JOIN chat_room_members crm2 ON crm2.room_id=cm2.room_id AND crm2.student_id=$sid 
+        WHERE cm2.room_id=cr.id AND cm2.sender_id!=$sid AND cm2.is_deleted=0 
+        AND (crm2.last_read_at IS NULL OR cm2.created_at > crm2.last_read_at)) as unread,
+    (SELECT s.full_name FROM internship_students s 
+        JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id) 
+        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_name,
+    (SELECT s.is_online FROM internship_students s 
+        JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id) 
+        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_online
     FROM chat_rooms cr
     JOIN chat_room_members crm ON crm.room_id=cr.id AND crm.student_id=$sid
-    ORDER BY last_msg_time DESC LIMIT 30");
-if ($res) while ($r = $res->fetch_assoc()) $rooms[] = $r;
-
-// If no rooms, auto-create a General room
-if (empty($rooms)) {
-    $db->query("INSERT IGNORE INTO chat_rooms (room_name, room_type, created_by) VALUES ('General', 'group', $sid)");
-    $newRoomId = $db->insert_id;
-    if ($newRoomId) {
-        $db->query("INSERT IGNORE INTO chat_room_members (room_id, student_id) VALUES ($newRoomId, $sid)");
-        $rooms = [['id'=>$newRoomId,'room_name'=>'General','room_type'=>'group','last_msg'=>null,'last_msg_time'=>null,'unread'=>0]];
+    WHERE cr.is_active=1
+    ORDER BY COALESCE(last_msg_time, cr.created_at) DESC LIMIT 50");
+if ($res) while ($r = $res->fetch_assoc()) {
+    // For DMs, use partner's name
+    if ($r['room_type'] === 'direct' && $r['dm_partner_name']) {
+        $r['room_name'] = $r['dm_partner_name'];
     }
+    $rooms[] = $r;
 }
 
 $activeRoomId = (int)($_GET['room'] ?? ($rooms[0]['id'] ?? 0));
@@ -94,19 +186,38 @@ foreach ($rooms as $r) { if ($r['id'] == $activeRoomId) { $activeRoom = $r; brea
 
 // Load messages for active room
 $messages = [];
+$lastMsgId = 0;
 if ($activeRoomId) {
-    $res = $db->query("SELECT cm.*, s.full_name FROM chat_messages cm JOIN internship_students s ON s.id=cm.sender_id WHERE cm.room_id=$activeRoomId AND cm.is_deleted=0 ORDER BY cm.created_at ASC LIMIT 100");
-    if ($res) while ($r = $res->fetch_assoc()) $messages[] = $r;
-    // Mark read
+    $res = $db->query("SELECT cm.*, s.full_name, s.profile_photo FROM chat_messages cm 
+        JOIN internship_students s ON s.id=cm.sender_id 
+        WHERE cm.room_id=$activeRoomId AND cm.is_deleted=0 
+        ORDER BY cm.created_at ASC LIMIT 100");
+    if ($res) while ($r = $res->fetch_assoc()) {
+        $messages[] = $r;
+        $lastMsgId = max($lastMsgId, $r['id']);
+    }
+    
+    // Mark as read
     $db->query("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=$activeRoomId AND student_id=$sid");
 }
 
 // Room members
 $roomMembers = [];
 if ($activeRoomId) {
-    $rm = $db->query("SELECT s.id, s.full_name, s.domain_interest FROM internship_students s JOIN chat_room_members crm ON crm.student_id=s.id WHERE crm.room_id=$activeRoomId");
+    $rm = $db->query("SELECT s.id, s.full_name, s.domain_interest, s.profile_photo, s.is_online, s.last_seen 
+        FROM internship_students s 
+        JOIN chat_room_members crm ON crm.student_id=s.id 
+        WHERE crm.room_id=$activeRoomId ORDER BY s.full_name");
     if ($rm) while ($r = $rm->fetch_assoc()) $roomMembers[] = $r;
 }
+
+// Get all students for starting new chats
+$allStudents = [];
+$allRes = $db->query("SELECT id, full_name, email, domain_interest, profile_photo, is_online 
+    FROM internship_students WHERE id!=$sid AND is_active=1 ORDER BY full_name LIMIT 100");
+if ($allRes) while ($r = $allRes->fetch_assoc()) $allStudents[] = $r;
+
+$initials = strtoupper(substr($student['full_name'], 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -117,71 +228,108 @@ if ($activeRoomId) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-:root{--sbw:258px;--o5:#f97316;--o4:#fb923c;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;}
+:root{--sbw:258px;--o5:#f97316;--o4:#fb923c;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--green:#22c55e;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
 .page-wrap{margin-left:var(--sbw);height:100vh;display:flex;flex-direction:column;}
-.topbar{flex-shrink:0;background:rgba(248,250,252,0.95);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;}
+.topbar{flex-shrink:0;background:rgba(248,250,252,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;}
 .topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;}
-.topbar-title{font-size:1rem;font-weight:600;color:var(--text);}
-.chat-layout{flex:1;display:grid;grid-template-columns:280px 1fr;min-height:0;}
-/* Sidebar rooms */
+.topbar-title{font-size:1rem;font-weight:600;color:var(--text);flex:1;}
+.btn-new-chat{background:var(--o5);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:opacity .2s;}
+.btn-new-chat:hover{opacity:.9;}
+.chat-layout{flex:1;display:grid;grid-template-columns:320px 1fr;min-height:0;}
+
+/* Sidebar */
 .rooms-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--card);overflow:hidden;}
-.rooms-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.rooms-head-title{font-size:.9rem;font-weight:700;color:var(--text);}
-.btn-new-room{background:var(--o5);border:none;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s;}
-.btn-new-room:hover{opacity:.85;}
-.rooms-list{flex:1;overflow-y:auto;padding:6px;}
-.room-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:9px;cursor:pointer;transition:background .15s;text-decoration:none;}
+.search-box{padding:12px;border-bottom:1px solid var(--border);}
+.search-input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;outline:none;font-family:inherit;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27a6.5 6.5 0 001.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 00-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 005.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat 12px center/18px;}
+.search-input:focus{border-color:var(--o5);}
+
+.rooms-list{flex:1;overflow-y:auto;padding:4px;}
+.room-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;transition:background .15s;text-decoration:none;position:relative;}
 .room-item:hover{background:#f1f5f9;text-decoration:none;}
-.room-item.active{background:rgba(249,115,22,0.1);}
-.room-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;}
-.room-icon.group{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;}
-.room-icon.direct{background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;}
-.room-icon.team{background:linear-gradient(135deg,#8b5cf6,#a78bfa);color:#fff;}
+.room-item.active{background:rgba(249,115,22,0.09);}
+
+.room-avatar-wrap{position:relative;flex-shrink:0;}
+.room-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;}
+.room-avatar.group{background:linear-gradient(135deg,var(--o5),var(--o4));}
+.room-avatar.direct{background:linear-gradient(135deg,#3b82f6,#60a5fa);}
+.room-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.online-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:var(--green);border:2px solid var(--card);border-radius:50%;}
+
 .room-info{flex:1;min-width:0;}
-.room-name{font-size:.84rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.room-last{font-size:.72rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-.room-badge{background:var(--o5);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:9px;flex-shrink:0;}
+.room-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.room-name{font-size:.88rem;font-weight:600;color:var(--text);}
+.room-time{font-size:.7rem;color:var(--text3);}
+.room-last{font-size:.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.room-badge{position:absolute;top:10px;right:10px;background:var(--o5);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:10px;}
+
 /* Chat area */
 .chat-area{display:flex;flex-direction:column;background:var(--bg);}
 .chat-head{flex-shrink:0;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;gap:12px;}
-.chat-head-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.chat-room-name{font-size:.95rem;font-weight:700;color:var(--text);}
+.chat-head-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;flex-shrink:0;position:relative;}
+.chat-head-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.chat-room-name{font-size:.98rem;font-weight:700;color:var(--text);}
 .chat-room-meta{font-size:.74rem;color:var(--text3);}
-.chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;}
-.msg-group{display:flex;gap:9px;align-items:flex-end;}
+
+.chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+.msg-group{display:flex;gap:9px;align-items:flex-start;}
 .msg-group.mine{flex-direction:row-reverse;}
-.msg-ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#64748b,#475569);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0;}
+.msg-ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#64748b,#475569);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;flex-shrink:0;}
+.msg-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .msg-group.mine .msg-ava{background:linear-gradient(135deg,var(--o5),var(--o4));}
-.msg-bubble-wrap{max-width:65%;}
-.msg-sender-name{font-size:.7rem;color:var(--text3);margin-bottom:3px;padding-left:2px;}
-.msg-group.mine .msg-sender-name{text-align:right;}
-.msg-bubble{padding:10px 14px;border-radius:14px;font-size:.88rem;line-height:1.55;word-break:break-word;}
-.msg-bubble.other{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text);}
-.msg-bubble.mine-b{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;border-bottom-right-radius:4px;}
-.msg-time{font-size:.65rem;color:var(--text3);margin-top:3px;padding:0 2px;}
-.msg-group.mine .msg-time{text-align:right;}
-.no-msgs{text-align:center;padding:40px;color:var(--text3);}
-.no-msgs i{font-size:2rem;margin-bottom:10px;display:block;opacity:.3;}
+.msg-bubble-wrap{max-width:65%;display:flex;flex-direction:column;gap:2px;}
+.msg-group.mine .msg-bubble-wrap{align-items:flex-end;}
+.msg-sender-name{font-size:.72rem;color:var(--text3);padding:0 4px;}
+.msg-bubble{padding:10px 14px;border-radius:14px;font-size:.88rem;line-height:1.5;word-break:break-word;}
+.msg-bubble.other{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+.msg-bubble.mine-b{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;border-bottom-right-radius:4px;box-shadow:0 2px 8px rgba(249,115,22,0.25);}
+.msg-time{font-size:.68rem;color:var(--text3);padding:0 4px;}
+
+.no-msgs{text-align:center;padding:60px 20px;color:var(--text3);}
+.no-msgs i{font-size:3rem;margin-bottom:12px;display:block;opacity:.2;}
+
 /* Input */
-.chat-input-area{flex-shrink:0;padding:12px 20px;border-top:1px solid var(--border);background:var(--card);}
+.chat-input-area{flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border);background:var(--card);}
 .chat-form{display:flex;gap:10px;align-items:flex-end;}
 .chat-input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;resize:none;max-height:120px;transition:border-color .2s;}
 .chat-input:focus{border-color:var(--o5);}
-.send-btn{width:42px;height:42px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;}
+.send-btn{width:42px;height:42px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;box-shadow:0 4px 12px rgba(249,115,22,0.3);}
 .send-btn:hover{opacity:.9;}
-/* New room modal */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;}
+.send-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* Modals */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .modal-bg.open{display:flex;}
-.modal{background:var(--card);border-radius:14px;padding:24px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
-.modal h3{font-size:1rem;font-weight:700;margin-bottom:16px;}
+.modal{background:var(--card);border-radius:14px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.modal h3{font-size:1.1rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .modal-label{display:block;font-size:.84rem;font-weight:600;margin-bottom:6px;color:var(--text);}
-.modal-input,.modal-select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit;outline:none;margin-bottom:14px;appearance:none;}
-.modal-input:focus,.modal-select:focus{border-color:var(--o5);}
+.modal-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit;outline:none;margin-bottom:14px;}
+.modal-input:focus{border-color:var(--o5);}
+
+.user-list{display:flex;flex-direction:column;gap:4px;max-height:350px;overflow-y:auto;margin-bottom:14px;}
+.user-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s;border:1.5px solid transparent;}
+.user-item:hover{background:#f1f5f9;}
+.user-item.selected{background:rgba(249,115,22,0.08);border-color:var(--o5);}
+.user-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;position:relative;}
+.user-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:.86rem;font-weight:600;color:var(--text);}
+.user-email{font-size:.72rem;color:var(--text3);}
+.user-check{width:20px;height:20px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;}
+.user-item.selected .user-check{background:var(--o5);border-color:var(--o5);display:flex;align-items:center;justify-content:center;color:#fff;}
+
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;}
-.modal-btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:.84rem;font-weight:600;font-family:inherit;}
+.modal-btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:.86rem;font-weight:600;font-family:inherit;transition:opacity .2s;}
 .modal-btn.cancel{background:var(--bg);border:1px solid var(--border);color:var(--text2);}
 .modal-btn.create{background:var(--o5);color:#fff;}
+.modal-btn:hover{opacity:.9;}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);padding:40px;}
+.empty-state i{font-size:3.5rem;opacity:.15;margin-bottom:16px;}
+.empty-state h3{font-size:1.1rem;font-weight:600;margin-bottom:6px;}
+.empty-state p{font-size:.88rem;}
+
 @media(max-width:768px){
     .page-wrap{margin-left:0;}
     .topbar-hamburger{display:flex;}
@@ -197,159 +345,468 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     <div class="topbar">
         <button class="topbar-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars fa-sm"></i></button>
         <div class="topbar-title">Messenger</div>
+        <button class="btn-new-chat" onclick="openNewChatModal()">
+            <i class="fas fa-plus fa-sm"></i> New Chat
+        </button>
     </div>
+    
     <div class="chat-layout">
-        <!-- Rooms list -->
+        <!-- Conversations List -->
         <div class="rooms-panel">
-            <div class="rooms-head">
-                <span class="rooms-head-title">Conversations</span>
-                <button class="btn-new-room" onclick="document.getElementById('newRoomModal').classList.add('open')" title="New room"><i class="fas fa-plus fa-xs"></i></button>
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="Search conversations..." id="searchConvo">
             </div>
-            <div class="rooms-list">
-                <?php foreach ($rooms as $r): ?>
+            <div class="rooms-list" id="roomsList">
+                <?php if (empty($rooms)): ?>
+                <div style="padding:40px 20px;text-align:center;color:var(--text3);">
+                    <i class="fas fa-comments" style="font-size:2rem;opacity:.2;display:block;margin-bottom:10px;"></i>
+                    <p style="font-size:.85rem;">No conversations yet.<br>Start a new chat!</p>
+                </div>
+                <?php else: ?>
+                <?php foreach ($rooms as $r): 
+                    $isOnline = ($r['room_type'] === 'direct' && $r['dm_partner_online']);
+                    $lastTime = $r['last_msg_time'] ? date('h:i A', strtotime($r['last_msg_time'])) : '';
+                ?>
                 <a href="?room=<?php echo $r['id']; ?>" class="room-item <?php echo $r['id']==$activeRoomId?'active':''; ?>">
-                    <div class="room-icon <?php echo $r['room_type']; ?>">
-                        <i class="fas <?php echo $r['room_type']==='group'?'fa-users':($r['room_type']==='team'?'fa-layer-group':'fa-user'); ?>"></i>
+                    <div class="room-avatar-wrap">
+                        <div class="room-avatar <?php echo $r['room_type']; ?>">
+                            <?php if ($r['room_type']==='group'): ?>
+                                <i class="fas fa-users"></i>
+                            <?php else: ?>
+                                <?php echo strtoupper(substr($r['room_name'],0,1)); ?>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($isOnline): ?><div class="online-dot"></div><?php endif; ?>
                     </div>
                     <div class="room-info">
-                        <div class="room-name"><?php echo htmlspecialchars($r['room_name']?:ucfirst($r['room_type'])); ?></div>
-                        <div class="room-last"><?php echo $r['last_msg'] ? htmlspecialchars(substr($r['last_msg'],0,40)) : 'No messages yet'; ?></div>
+                        <div class="room-top">
+                            <div class="room-name"><?php echo htmlspecialchars($r['room_name']); ?></div>
+                            <div class="room-time"><?php echo $lastTime; ?></div>
+                        </div>
+                        <div class="room-last"><?php echo $r['last_msg'] ? htmlspecialchars(substr($r['last_msg'],0,40)) : 'Start a conversation'; ?></div>
                     </div>
                     <?php if ($r['unread'] > 0): ?><span class="room-badge"><?php echo $r['unread']; ?></span><?php endif; ?>
                 </a>
                 <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
 
-        <!-- Chat area -->
+        <!-- Chat Area -->
         <div class="chat-area">
             <?php if ($activeRoom): ?>
             <div class="chat-head">
-                <div class="chat-head-icon"><i class="fas <?php echo $activeRoom['room_type']==='group'?'fa-users':'fa-user'; ?>"></i></div>
-                <div>
-                    <div class="chat-room-name"><?php echo htmlspecialchars($activeRoom['room_name']); ?></div>
-                    <div class="chat-room-meta"><?php echo count($roomMembers); ?> members &bull; <?php echo ucfirst($activeRoom['room_type']); ?> chat</div>
+                <div class="chat-head-avatar">
+                    <?php if ($activeRoom['room_type']==='group'): ?>
+                        <i class="fas fa-users"></i>
+                    <?php else: ?>
+                        <?php echo strtoupper(substr($activeRoom['room_name'],0,1)); ?>
+                    <?php endif; ?>
+                    <?php if ($activeRoom['room_type']==='direct' && $activeRoom['dm_partner_online']): ?>
+                        <div class="online-dot"></div>
+                    <?php endif; ?>
                 </div>
-                <div style="margin-left:auto;display:flex;gap:6px;">
-                    <?php foreach (array_slice($roomMembers,0,4) as $m): ?>
-                    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;border:2px solid var(--bg);" title="<?php echo htmlspecialchars($m['full_name']); ?>"><?php echo strtoupper(substr($m['full_name'],0,1)); ?></div>
-                    <?php endforeach; ?>
+                <div style="flex:1;">
+                    <div class="chat-room-name"><?php echo htmlspecialchars($activeRoom['room_name']); ?></div>
+                    <div class="chat-room-meta">
+                        <?php if ($activeRoom['room_type']==='direct'): ?>
+                            <?php echo $activeRoom['dm_partner_online'] ? 'Online' : 'Offline'; ?>
+                        <?php else: ?>
+                            <?php echo count($roomMembers); ?> members
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
+            
             <div class="chat-messages" id="chatMessages">
                 <?php if (empty($messages)): ?>
-                <div class="no-msgs"><i class="fas fa-comments"></i><p>No messages yet. Say hello!</p></div>
+                <div class="no-msgs">
+                    <i class="fas fa-comments"></i>
+                    <p>No messages yet. Start the conversation!</p>
+                </div>
                 <?php else: ?>
-                <?php $lastMsgId = 0; foreach ($messages as $msg):
+                <?php foreach ($messages as $msg):
                     $isMe = $msg['sender_id'] == $sid;
-                    $lastMsgId = max($lastMsgId, $msg['id']);
                 ?>
                 <div class="msg-group <?php echo $isMe?'mine':''; ?>">
-                    <div class="msg-ava"><?php echo strtoupper(substr($msg['full_name'],0,1)); ?></div>
+                    <div class="msg-ava">
+                        <?php if ($msg['profile_photo']): ?>
+                            <img src="<?php echo htmlspecialchars($msg['profile_photo']); ?>" alt="">
+                        <?php else: ?>
+                            <?php echo strtoupper(substr($msg['full_name'],0,1)); ?>
+                        <?php endif; ?>
+                    </div>
                     <div class="msg-bubble-wrap">
-                        <?php if (!$isMe): ?><div class="msg-sender-name"><?php echo htmlspecialchars(explode(' ',$msg['full_name'])[0]); ?></div><?php endif; ?>
-                        <div class="msg-bubble <?php echo $isMe?'mine-b':'other'; ?>"><?php echo nl2br(htmlspecialchars($msg['message'])); ?></div>
+                        <?php if (!$isMe && $activeRoom['room_type']==='group'): ?>
+                            <div class="msg-sender-name"><?php echo htmlspecialchars(explode(' ',$msg['full_name'])[0]); ?></div>
+                        <?php endif; ?>
+                        <div class="msg-bubble <?php echo $isMe?'mine-b':'other'; ?>">
+                            <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
+                        </div>
                         <div class="msg-time"><?php echo date('h:i A', strtotime($msg['created_at'])); ?></div>
                     </div>
                 </div>
                 <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+            
             <div class="chat-input-area">
                 <div class="chat-form">
                     <textarea class="chat-input" id="msgInput" placeholder="Type a message…" rows="1"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-                    <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane fa-sm"></i></button>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane fa-sm"></i>
+                    </button>
                 </div>
             </div>
             <?php else: ?>
-            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);">
-                <div style="text-align:center;"><i class="fas fa-comments" style="font-size:2.5rem;opacity:.2;display:block;margin-bottom:12px;"></i><p>Select a room to start chatting</p></div>
+            <div class="empty-state">
+                <i class="fas fa-comments"></i>
+                <h3>No conversation selected</h3>
+                <p>Choose a conversation or start a new one</p>
             </div>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- New Room Modal -->
-<div class="modal-bg" id="newRoomModal" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal">
-        <h3><i class="fas fa-plus-circle" style="color:var(--o5)"></i> Create New Room</h3>
-        <label class="modal-label">Room Name</label>
-        <input type="text" id="newRoomName" class="modal-input" placeholder="e.g. Project Alpha">
-        <label class="modal-label">Type</label>
-        <select id="newRoomType" class="modal-select">
-            <option value="group">Group Chat</option>
-            <option value="direct">Direct Message</option>
-        </select>
+<!-- New Chat Modal -->
+<div class="modal-bg" id="newChatModal" onclick="if(event.target===this)closeNewChatModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h3><i class="fas fa-comment-dots" style="color:var(--o5)"></i> Start New Chat</h3>
+        
+        <div style="margin-bottom:16px;">
+            <input type="text" id="userSearch" class="modal-input" placeholder="Search by name or email..." oninput="searchUsers(this.value)">
+        </div>
+        
+        <div id="userListContainer">
+            <div class="user-list" id="userList">
+                <?php if (empty($allStudents)): ?>
+                <div style="padding:20px;text-align:center;color:var(--text3);">No other students found</div>
+                <?php else: ?>
+                <?php foreach (array_slice($allStudents, 0, 10) as $u): ?>
+                <div class="user-item" onclick="startDirectMessage(<?php echo $u['id']; ?>)">
+                    <div class="user-ava">
+                        <?php if ($u['profile_photo']): ?>
+                            <img src="<?php echo htmlspecialchars($u['profile_photo']); ?>" alt="">
+                        <?php else: ?>
+                            <?php echo strtoupper(substr($u['full_name'],0,1)); ?>
+                        <?php endif; ?>
+                        <?php if ($u['is_online']): ?><div class="online-dot"></div><?php endif; ?>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name"><?php echo htmlspecialchars($u['full_name']); ?></div>
+                        <div class="user-email"><?php echo htmlspecialchars($u['domain_interest'] ?: $u['email']); ?></div>
+                    </div>
+                    <i class="fas fa-comment" style="color:var(--o5);"></i>
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px;">
+            <button class="modal-btn create" style="width:100%;" onclick="openGroupChatModal()">
+                <i class="fas fa-users"></i> Create Group Chat
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Group Chat Modal -->
+<div class="modal-bg" id="groupChatModal" onclick="if(event.target===this)closeGroupChatModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h3><i class="fas fa-users" style="color:var(--o5)"></i> Create Group Chat</h3>
+        
+        <label class="modal-label">Group Name</label>
+        <input type="text" id="groupName" class="modal-input" placeholder="Enter group name...">
+        
+        <label class="modal-label">Add Members</label>
+        <input type="text" class="modal-input" placeholder="Search members..." oninput="searchGroupMembers(this.value)" style="margin-bottom:8px;">
+        
+        <div class="user-list" id="groupMemberList" style="margin-bottom:0;">
+            <?php if (!empty($allStudents)): ?>
+            <?php foreach (array_slice($allStudents, 0, 10) as $u): ?>
+            <div class="user-item" onclick="toggleGroupMember(this, <?php echo $u['id']; ?>)">
+                <div class="user-ava">
+                    <?php echo strtoupper(substr($u['full_name'],0,1)); ?>
+                </div>
+                <div class="user-info">
+                    <div class="user-name"><?php echo htmlspecialchars($u['full_name']); ?></div>
+                    <div class="user-email"><?php echo htmlspecialchars($u['domain_interest'] ?: $u['email']); ?></div>
+                </div>
+                <div class="user-check"></div>
+            </div>
+            <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        
         <div class="modal-btns">
-            <button class="modal-btn cancel" onclick="document.getElementById('newRoomModal').classList.remove('open')">Cancel</button>
-            <button class="modal-btn create" onclick="createRoom()">Create</button>
+            <button class="modal-btn cancel" onclick="closeGroupChatModal()">Cancel</button>
+            <button class="modal-btn create" onclick="createGroupChat()">Create Group</button>
         </div>
     </div>
 </div>
 
 <script>
 const ROOM_ID = <?php echo $activeRoomId; ?>;
-let lastMsgId = <?php echo $lastMsgId ?? 0; ?>;
+const MY_ID = <?php echo $sid; ?>;
+let lastMsgId = <?php echo $lastMsgId; ?>;
 let polling;
+let selectedGroupMembers = [];
 
-function scrollToBottom(){const c=document.getElementById('chatMessages');if(c)c.scrollTop=c.scrollHeight;}
+function scrollToBottom() {
+    const c = document.getElementById('chatMessages');
+    if (c) c.scrollTop = c.scrollHeight;
+}
 scrollToBottom();
 
-function sendMessage(){
-    const input=document.getElementById('msgInput');
-    const msg=input.value.trim();
-    if(!msg||!ROOM_ID)return;
-    input.value='';
-    const fd=new FormData();
-    fd.append('action','send');fd.append('room_id',ROOM_ID);fd.append('message',msg);
-    fetch('messenger.php',{method:'POST',body:fd})
-        .then(r=>r.json()).then(d=>{if(d.success){appendMessage({id:d.msg_id,message:msg,full_name:<?php echo json_encode($student['full_name']); ?>,created_at:new Date().toISOString(),sender_id:<?php echo $sid; ?>},true);lastMsgId=d.msg_id;}});
+function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const msg = input.value.trim();
+    if (!msg || !ROOM_ID) return;
+    
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+    
+    const fd = new FormData();
+    fd.append('action', 'send');
+    fd.append('room_id', ROOM_ID);
+    fd.append('message', msg);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                appendMessage({
+                    id: d.msg_id,
+                    message: msg,
+                    full_name: <?php echo json_encode($student['full_name']); ?>,
+                    profile_photo: <?php echo json_encode($student['profile_photo']); ?>,
+                    created_at: new Date().toISOString(),
+                    sender_id: MY_ID
+                }, true);
+                lastMsgId = d.msg_id;
+            }
+            btn.disabled = false;
+            input.focus();
+        })
+        .catch(() => {
+            btn.disabled = false;
+        });
 }
 
-function appendMessage(msg, isMe){
-    const c=document.getElementById('chatMessages');
-    const nm=c.querySelector('.no-msgs');
-    if(nm)nm.remove();
-    const div=document.createElement('div');
-    div.className='msg-group'+(isMe?' mine':'');
-    const time=new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    div.innerHTML=`<div class="msg-ava">${msg.full_name[0].toUpperCase()}</div>
+function appendMessage(msg, isMe) {
+    const c = document.getElementById('chatMessages');
+    const nm = c.querySelector('.no-msgs');
+    if (nm) nm.remove();
+    
+    const div = document.createElement('div');
+    div.className = 'msg-group' + (isMe ? ' mine' : '');
+    const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    const initial = msg.full_name[0].toUpperCase();
+    const profileImg = msg.profile_photo ? `<img src="${msg.profile_photo}" alt="">` : initial;
+    const isGroup = <?php echo $activeRoom['room_type']==='group'?'true':'false'; ?>;
+    
+    div.innerHTML = `
+        <div class="msg-ava">${profileImg}</div>
         <div class="msg-bubble-wrap">
-            ${!isMe?`<div class="msg-sender-name">${msg.full_name.split(' ')[0]}</div>`:''}
-            <div class="msg-bubble ${isMe?'mine-b':'other'}">${msg.message.replace(/\n/g,'<br>')}</div>
+            ${!isMe && isGroup ? `<div class="msg-sender-name">${msg.full_name.split(' ')[0]}</div>` : ''}
+            <div class="msg-bubble ${isMe ? 'mine-b' : 'other'}">${msg.message.replace(/\n/g, '<br>')}</div>
             <div class="msg-time">${time}</div>
-        </div>`;
+        </div>
+    `;
     c.appendChild(div);
     scrollToBottom();
 }
 
-function pollMessages(){
-    if(!ROOM_ID)return;
-    const fd=new FormData();
-    fd.append('action','fetch');fd.append('room_id',ROOM_ID);fd.append('since_id',lastMsgId);
-    fetch('messenger.php',{method:'POST',body:fd})
-        .then(r=>r.json()).then(msgs=>{
-            msgs.forEach(m=>{
-                if(m.sender_id!=<?php echo $sid; ?>){appendMessage(m,false);lastMsgId=m.id;}
-            });
-        }).catch(()=>{});
+function pollMessages() {
+    if (!ROOM_ID) return;
+    
+    const fd = new FormData();
+    fd.append('action', 'fetch');
+    fd.append('room_id', ROOM_ID);
+    fd.append('since_id', lastMsgId);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.messages) {
+                data.messages.forEach(m => {
+                    if (m.sender_id != MY_ID) {
+                        appendMessage(m, false);
+                        lastMsgId = m.id;
+                    }
+                });
+            }
+        })
+        .catch(() => {});
 }
-polling=setInterval(pollMessages,3000);
 
-function createRoom(){
-    const name=document.getElementById('newRoomName').value.trim();
-    const type=document.getElementById('newRoomType').value;
-    if(!name)return;
-    const fd=new FormData();
-    fd.append('action','create_room');fd.append('room_name',name);fd.append('room_type',type);
-    fetch('messenger.php',{method:'POST',body:fd})
-        .then(r=>r.json()).then(d=>{if(d.success)location.href='messenger.php?room='+d.room_id;});
+if (ROOM_ID) {
+    polling = setInterval(pollMessages, 3000);
 }
 
 // Auto-resize textarea
-document.getElementById('msgInput')?.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+const msgInput = document.getElementById('msgInput');
+if (msgInput) {
+    msgInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+}
+
+// New chat modal
+function openNewChatModal() {
+    document.getElementById('newChatModal').classList.add('open');
+}
+
+function closeNewChatModal() {
+    document.getElementById('newChatModal').classList.remove('open');
+}
+
+function startDirectMessage(targetId) {
+    const fd = new FormData();
+    fd.append('action', 'start_dm');
+    fd.append('target_id', targetId);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.href = 'messenger.php?room=' + d.room_id;
+            } else {
+                alert('Failed to start conversation');
+            }
+        })
+        .catch(() => {
+            alert('Error starting conversation');
+        });
+}
+
+function searchUsers(query) {
+    if (!query.trim() || query.length < 2) {
+        return;
+    }
+    
+    const fd = new FormData();
+    fd.append('action', 'search_users');
+    fd.append('query', query);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(users => {
+            const list = document.getElementById('userList');
+            if (!users || users.length === 0) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
+                return;
+            }
+            
+            list.innerHTML = users.map(u => `
+                <div class="user-item" onclick="startDirectMessage(${u.id})">
+                    <div class="user-ava">
+                        ${u.profile_photo ? `<img src="${u.profile_photo}" alt="">` : u.full_name[0].toUpperCase()}
+                        ${u.is_online ? '<div class="online-dot"></div>' : ''}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">${u.full_name}</div>
+                        <div class="user-email">${u.domain_interest || u.email}</div>
+                    </div>
+                    <i class="fas fa-comment" style="color:var(--o5);"></i>
+                </div>
+            `).join('');
+        })
+        .catch(() => {
+            console.error('Search failed');
+        });
+}
+
+// Group chat
+function openGroupChatModal() {
+    closeNewChatModal();
+    document.getElementById('groupChatModal').classList.add('open');
+    selectedGroupMembers = [];
+}
+
+function closeGroupChatModal() {
+    document.getElementById('groupChatModal').classList.remove('open');
+}
+
+function toggleGroupMember(elem, userId) {
+    elem.classList.toggle('selected');
+    const check = elem.querySelector('.user-check');
+    
+    if (elem.classList.contains('selected')) {
+        selectedGroupMembers.push(userId);
+        check.innerHTML = '<i class="fas fa-check fa-xs"></i>';
+    } else {
+        selectedGroupMembers = selectedGroupMembers.filter(id => id !== userId);
+        check.innerHTML = '';
+    }
+}
+
+function createGroupChat() {
+    const name = document.getElementById('groupName').value.trim();
+    
+    if (!name) {
+        alert('Please enter a group name');
+        return;
+    }
+    
+    if (selectedGroupMembers.length === 0) {
+        alert('Please select at least one member');
+        return;
+    }
+    
+    const fd = new FormData();
+    fd.append('action', 'create_group');
+    fd.append('room_name', name);
+    fd.append('member_ids', JSON.stringify(selectedGroupMembers));
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.href = 'messenger.php?room=' + d.room_id;
+            } else {
+                alert('Failed to create group');
+            }
+        })
+        .catch(() => {
+            alert('Error creating group');
+        });
+}
+
+function searchGroupMembers(query) {
+    if (!query.trim() || query.length < 2) return;
+    
+    const fd = new FormData();
+    fd.append('action', 'search_users');
+    fd.append('query', query);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(users => {
+            const list = document.getElementById('groupMemberList');
+            if (!users || users.length === 0) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
+                return;
+            }
+            
+            list.innerHTML = users.map(u => `
+                <div class="user-item" onclick="toggleGroupMember(this, ${u.id})">
+                    <div class="user-ava">${u.full_name[0].toUpperCase()}</div>
+                    <div class="user-info">
+                        <div class="user-name">${u.full_name}</div>
+                        <div class="user-email">${u.domain_interest || u.email}</div>
+                    </div>
+                    <div class="user-check"></div>
+                </div>
+            `).join('');
+        });
+}
 </script>
 </body>
 </html>
