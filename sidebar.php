@@ -33,6 +33,7 @@ $navInternship = [
     ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
     ['key'=>'certificate',  'label'=>'My Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
+    ['key'=>'game',  'label'=>'My Games', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
 ];
 $navAccount = [
     ['key'=>'profile',         'label'=>'My Profile',     'icon'=>'fas fa-user-circle',  'href'=>'profile.php'],
