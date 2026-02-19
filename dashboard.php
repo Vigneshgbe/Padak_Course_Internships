@@ -65,11 +65,19 @@ $rm = $db->query("SELECT cm.*, s.full_name as sender_name, cr.room_name, cr.room
     ORDER BY cm.created_at DESC LIMIT 3");
 if ($rm) while ($r = $rm->fetch_assoc()) $recentMsgs[] = $r;
 
-// Announcements (3)
+// Announcements (3) - FIXED: Handle missing 'type' column
 $announcements = [];
 $an = $db->query("SELECT a.*, (SELECT COUNT(*) FROM announcement_reads WHERE announcement_id=a.id AND student_id=$sid) as is_read
     FROM announcements a WHERE a.target_all=1 ORDER BY a.created_at DESC LIMIT 3");
-if ($an) while ($r = $an->fetch_assoc()) $announcements[] = $r;
+if ($an) {
+    while ($r = $an->fetch_assoc()) {
+        // Set default type if not present in database
+        if (!isset($r['type']) || empty($r['type'])) {
+            $r['type'] = 'general';
+        }
+        $announcements[] = $r;
+    }
+}
 
 // Top 3 leaderboard
 $topStudents = [];
@@ -509,7 +517,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                 <?php foreach ($announcements as $ann): ?>
                 <div class="ann-item">
                     <div class="ann-top">
-                        <span class="ann-badge <?php echo $ann['type']; ?>"><?php echo $ann['type']; ?></span>
+                        <span class="ann-badge <?php echo strtolower($ann['type']); ?>"><?php echo htmlspecialchars($ann['type']); ?></span>
                         <?php if (!$ann['is_read']): ?><span class="ann-new-dot" title="New"></span><?php endif; ?>
                     </div>
                     <div class="ann-title"><?php echo htmlspecialchars($ann['title']); ?></div>
