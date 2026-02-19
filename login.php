@@ -490,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
         <h1 class="card-title">Welcome back</h1>
-        <p class="card-desc">Sign in to your account to access courses and internships</p>
+        <p class="card-desc">Sign in to your account to access internships</p>
     </div>
 
     <div class="card-content">
@@ -564,7 +564,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     >
                     Remember me
                 </label>
-                <a href="student_forgot_password.php" class="link-btn">Forgot password?</a>
+                <a href="forgot_password.php" class="link-btn">Forgot password?</a>
             </div>
 
             <!-- Submit -->
@@ -573,7 +573,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
 
             <div class="signup-row">
-                Don't have an account? <a href="student_register.php">Sign up</a>
+                Don't have an account? <a href="register.php">Sign up</a>
             </div>
         </form>
     </div>

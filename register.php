@@ -597,7 +597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
 
             <div class="signin-row">
-                Already have an account? <a href="student_login.php">Sign in</a>
+                Already have an account? <a href="login.php">Sign in</a>
             </div>
         </form>
     </div>
