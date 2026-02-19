@@ -225,20 +225,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission']))
             WHERE id=$subId";
     
     if ($db->query($sql)) {
-        $success = 'Submission reviewed successfully!';
-        
-        // Send notification to student
+        // Get submission details
         $subData = $db->query("SELECT student_id, task_id FROM task_submissions WHERE id=$subId")->fetch_assoc();
+        
         if ($subData) {
-            $taskData = $db->query("SELECT title FROM internship_tasks WHERE id={$subData['task_id']}")->fetch_assoc();
+            $studentId = $subData['student_id'];
+            $taskId = $subData['task_id'];
+            $taskData = $db->query("SELECT title FROM internship_tasks WHERE id=$taskId")->fetch_assoc();
             $taskTitle = $db->real_escape_string($taskData['title'] ?? 'Your task');
+            
+            // If approved and points awarded, log points and update student total
+            if ($reviewStatus === 'approved' && $pointsEarned !== null && $pointsEarned > 0) {
+                $reasonEsc = $db->real_escape_string("Earned from task: $taskTitle");
+                
+                // Insert into student_points_log
+                $db->query("INSERT INTO student_points_log (student_id, points, reason, task_id, awarded_at)
+                           VALUES ($studentId, $pointsEarned, '$reasonEsc', $taskId, NOW())");
+                
+                // Calculate total points from log
+                $totalPointsResult = $db->query("SELECT SUM(points) as total FROM student_points_log WHERE student_id=$studentId");
+                $totalPoints = $totalPointsResult ? (int)$totalPointsResult->fetch_assoc()['total'] : 0;
+                
+                // Update student's total_points
+                $db->query("UPDATE internship_students SET total_points=$totalPoints WHERE id=$studentId");
+                
+                $success = "Submission approved! $pointsEarned points awarded to student.";
+            } else {
+                $success = 'Submission reviewed successfully!';
+            }
+            
+            // Send notification to student
             $notifMsg = $reviewStatus === 'approved' ? 
                 "Your submission for \"$taskTitle\" has been approved! You earned $pointsEarned points." :
                 "Your submission for \"$taskTitle\" requires revision. Check feedback.";
             $notifMsgEsc = $db->real_escape_string($notifMsg);
             
             $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
-                       VALUES ({$subData['student_id']}, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
+                       VALUES ($studentId, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
         }
     } else {
         $error = 'Failed to review submission';

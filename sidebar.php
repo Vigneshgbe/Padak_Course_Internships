@@ -16,16 +16,22 @@ $pendingTasks = 0;
 $r3 = $db->query("SELECT COUNT(*) as c FROM internship_tasks t LEFT JOIN task_submissions ts ON ts.task_id=t.id AND ts.student_id=$sid WHERE t.status='active' AND ts.id IS NULL AND (t.assigned_to_student IS NULL OR t.assigned_to_student=$sid)");
 if ($r3) $pendingTasks = (int)$r3->fetch_assoc()['c'];
 
-$rank = '-';
-$r4 = $db->query("SELECT COUNT(*)+1 as rnk FROM internship_students WHERE total_points > (SELECT total_points FROM internship_students WHERE id=$sid) AND is_active=1");
-if ($r4) $rank = (int)$r4->fetch_assoc()['rnk'];
+// Calculate total points from student_points_log
+$pointsResult = $db->query("SELECT COALESCE(SUM(points), 0) as total FROM student_points_log WHERE student_id=$sid");
+$points = $pointsResult ? (int)$pointsResult->fetch_assoc()['total'] : 0;
 
-$points = (int)($student['total_points'] ?? 0);
+// Update student's total_points if different (sync)
+$db->query("UPDATE internship_students SET total_points=$points WHERE id=$sid AND total_points!=$points");
+
+// Calculate rank based on total_points
+$rankResult = $db->query("SELECT COUNT(*)+1 as rnk FROM internship_students WHERE total_points > $points AND is_active=1");
+$rank = $rankResult ? (int)$rankResult->fetch_assoc()['rnk'] : '-';
+
 $certThreshold = 500;
 $progress = min(100, round(($points / $certThreshold) * 100));
 
 // Check if user is admin (adjust this condition based on your database structure)
-// $isAdmin = isset($student['is_admin']) && $student['is_admin'] == 1;
+$isAdmin = isset($student['is_admin']) && $student['is_admin'] == 1;
 
 $navMain = [
     ['key'=>'dashboard',    'label'=>'Dashboard',     'icon'=>'fas fa-home',         'href'=>'dashboard.php'],
@@ -33,7 +39,7 @@ $navMain = [
 ];
 $navInternship = [
     ['key'=>'tasks',        'label'=>'My Tasks',       'icon'=>'fas fa-tasks',        'href'=>'tasks.php',     'badge'=>$pendingTasks],
-    // ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
+    ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
     ['key'=>'certificate',  'label'=>'My Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
     ['key'=>'game',  'label'=>'Game Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
@@ -43,17 +49,13 @@ $navAccount = [
     ['key'=>'notifications',   'label'=>'Notifications',  'icon'=>'fas fa-bell',         'href'=>'notifications.php', 'badge'=>$notifCount],
 ];
 
-$navAdmin = [
-        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-];
-
 // Admin navigation (only shown to admins)
-// $navAdmin = [];
-// if ($isAdmin) {
-//     $navAdmin = [
-//         ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-//     ];
-// }
+$navAdmin = [];
+if ($isAdmin) {
+    $navAdmin = [
+        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+    ];
+}
 
 $firstName = explode(' ', trim($student['full_name']))[0] ?? $student['full_name'];
 $initials = strtoupper(substr($student['full_name'], 0, 1));
@@ -112,18 +114,6 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             </a>
             <?php endforeach; ?>
         </div>
-        
-        <div class="sb-nav-group">
-            <span class="sb-group-label">ACCOUNT</span>
-            <?php foreach ($navAccount as $item): $active = $activePage === $item['key']; ?>
-            <a href="<?php echo $item['href']; ?>" class="sb-nav-item <?php echo $active ? 'active' : ''; ?>">
-                <i class="<?php echo $item['icon']; ?> sb-nav-icon"></i>
-                <span><?php echo $item['label']; ?></span>
-                <?php if (!empty($item['badge']) && $item['badge'] > 0): ?><span class="sb-badge"><?php echo min($item['badge'],99); ?></span><?php endif; ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-        
         <?php if (!empty($navAdmin)): ?>
         <div class="sb-nav-group">
             <span class="sb-group-label">ADMIN</span>
@@ -136,6 +126,16 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
+        <div class="sb-nav-group">
+            <span class="sb-group-label">ACCOUNT</span>
+            <?php foreach ($navAccount as $item): $active = $activePage === $item['key']; ?>
+            <a href="<?php echo $item['href']; ?>" class="sb-nav-item <?php echo $active ? 'active' : ''; ?>">
+                <i class="<?php echo $item['icon']; ?> sb-nav-icon"></i>
+                <span><?php echo $item['label']; ?></span>
+                <?php if (!empty($item['badge']) && $item['badge'] > 0): ?><span class="sb-badge"><?php echo min($item['badge'],99); ?></span><?php endif; ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
     </nav>
 
     <div class="sb-cert-card">
