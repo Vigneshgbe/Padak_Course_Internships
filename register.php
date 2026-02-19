@@ -5,7 +5,7 @@ require_once 'config.php';
 $auth = new StudentAuth();
 
 if ($auth->isLoggedIn()) {
-    header('Location: student_dashboard.php');
+    header('Location: dashboard.php');
     exit;
 }
 

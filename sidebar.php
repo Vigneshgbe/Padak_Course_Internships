@@ -25,7 +25,7 @@ $certThreshold = 500;
 $progress = min(100, round(($points / $certThreshold) * 100));
 
 $navMain = [
-    ['key'=>'dashboard',    'label'=>'Dashboard',     'icon'=>'fas fa-home',         'href'=>'student_dashboard.php'],
+    ['key'=>'dashboard',    'label'=>'Dashboard',     'icon'=>'fas fa-home',         'href'=>'dashboard.php'],
     ['key'=>'messenger',    'label'=>'Messenger',      'icon'=>'fas fa-comments',     'href'=>'messenger.php', 'badge'=>$msgCount],
 ];
 $navInternship = [

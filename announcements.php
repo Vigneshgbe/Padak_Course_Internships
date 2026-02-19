@@ -4,9 +4,11 @@ session_start();
 require_once 'config.php';
 $auth = new StudentAuth();
 if (!$auth->isLoggedIn()) { header('Location: login.php'); exit; }
+
 $student = $auth->getCurrentStudent();
 $db = getPadakDB();
 $sid = (int)$student['id'];
+
 $er = $db->query("SELECT se.batch_id FROM student_enrollments se WHERE se.student_id=$sid AND se.status='active' LIMIT 1");
 $enrollment = $er ? $er->fetch_assoc() : null;
 $batchId = $enrollment ? (int)$enrollment['batch_id'] : 0;
@@ -20,6 +22,7 @@ $ar = $db->query("SELECT a.*, c.full_name as coordinator_name, ib.batch_name FRO
 while ($ar && $row = $ar->fetch_assoc()) $announcements[] = $row;
 $initials = strtoupper(substr($student['full_name'],0,1).(str_contains($student['full_name'],' ')?substr(explode(' ',$student['full_name'])[1],0,1):''));
 ?>
+
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Announcements - Padak</title>
@@ -56,6 +59,7 @@ body.sidebar-collapsed .main-content{margin-left:var(--sb-collapsed);}
 .empty-state{text-align:center;padding:60px;color:#9ca3af;}
 .empty-state i{font-size:3rem;margin-bottom:14px;display:block;opacity:0.3;}
 @media(max-width:768px){.page-content{padding:16px;}.mobile-menu-btn{display:flex!important;}}
+
 </style></head><body>
 <div class="student-layout">
 <?php include 'sidebar.php'; ?>

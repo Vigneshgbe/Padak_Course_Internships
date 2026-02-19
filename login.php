@@ -6,7 +6,7 @@ $auth = new StudentAuth();
 
 // Redirect if already logged in
 if ($auth->isLoggedIn()) {
-    header('Location: student_dashboard.php');
+    header('Location: dashboard.php');
     exit;
 }
 
@@ -22,7 +22,7 @@ if (!$auth->isLoggedIn() && isset($_COOKIE['padak_student_token'])) {
         $_SESSION['student_id'] = $row['id'];
         $_SESSION['student_name'] = $row['full_name'];
         $_SESSION['student_email'] = $row['email'];
-        header('Location: student_dashboard.php');
+        header('Location: dashboard.php');
         exit;
     }
 }
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $auth->login($email, $password, $rememberMe);
         if ($result['success']) {
             $successMessage = 'Login successful! Redirecting...';
-            header('Refresh: 1.5; URL=student_dashboard.php');
+            header('Refresh: 1.5; URL=dashboard.php');
         } else {
             $generalError = $result['message'];
         }
