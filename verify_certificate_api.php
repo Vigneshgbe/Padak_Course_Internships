@@ -36,7 +36,7 @@ try {
     $stmt = $db->prepare("
         SELECT ic.*, s.full_name as student_name, ib.batch_name, ib.course_name
         FROM internship_certificates ic
-        JOIN students s ON ic.student_id = s.id
+        JOIN internship_students s ON ic.student_id = s.id
         LEFT JOIN internship_batches ib ON ic.batch_id = ib.id
         WHERE ic.certificate_number = ? AND ic.is_issued = 1
     ");
