@@ -8,36 +8,48 @@ $db = getPadakDB();
 $sid = (int)$student['id'];
 $activePage = 'game';
 
+// Create game_scores table if it doesn't exist (do this FIRST)
+$db->query("CREATE TABLE IF NOT EXISTS game_scores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    game_type VARCHAR(50),
+    score INT,
+    level_reached INT,
+    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY(student_id)
+)");
+
 // Handle score submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_score'])) {
     $game_type = $db->real_escape_string($_POST['game_type']);
     $score = (int)$_POST['score'];
     $level = (int)$_POST['level'];
     
-    // Save to database (create game_scores table if needed)
-    $db->query("CREATE TABLE IF NOT EXISTS game_scores (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id INT NOT NULL,
-        game_type VARCHAR(50),
-        score INT,
-        level_reached INT,
-        played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        KEY(student_id)
-    )");
-    
     $db->query("INSERT INTO game_scores (student_id, game_type, score, level_reached) 
                 VALUES ($sid, '$game_type', $score, $level)");
 }
 
-// Get leaderboard
+// Get leaderboard - simplified to avoid table structure issues
 $leaderboard = [];
-$res = $db->query("SELECT s.first_name, s.last_name, MAX(gs.score) as best_score 
-                   FROM game_scores gs 
-                   JOIN students s ON gs.student_id = s.id 
-                   WHERE gs.game_type = 'points_quest'
-                   GROUP BY gs.student_id 
+$res = $db->query("SELECT student_id, MAX(score) as best_score 
+                   FROM game_scores 
+                   WHERE game_type = 'points_quest'
+                   GROUP BY student_id 
                    ORDER BY best_score DESC LIMIT 10");
-if ($res) while ($r = $res->fetch_assoc()) $leaderboard[] = $r;
+if ($res) {
+    while ($r = $res->fetch_assoc()) {
+        // Try to get student name, fallback to ID if table doesn't exist
+        $nameRes = $db->query("SELECT first_name, last_name FROM students WHERE id = " . (int)$r['student_id']);
+        if ($nameRes && $nameRow = $nameRes->fetch_assoc()) {
+            $r['first_name'] = $nameRow['first_name'];
+            $r['last_name'] = $nameRow['last_name'];
+        } else {
+            $r['first_name'] = 'Player';
+            $r['last_name'] = $r['student_id'];
+        }
+        $leaderboard[] = $r;
+    }
+}
 
 // Get player's best score
 $myBest = 0;
