@@ -222,7 +222,8 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Messenger - Padak</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -345,7 +346,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     <div class="topbar">
         <button class="topbar-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars fa-sm"></i></button>
         <div class="topbar-title">Messenger</div>
-        <button class="btn-new-chat" onclick="openNewChatModal()">
+        <button class="btn-new-chat" id="newChatBtn">
             <i class="fas fa-plus fa-sm"></i> New Chat
         </button>
     </div>
@@ -452,9 +453,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
             
             <div class="chat-input-area">
                 <div class="chat-form">
-                    <textarea class="chat-input" id="msgInput" placeholder="Type a message…" rows="1"
-                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <textarea class="chat-input" id="msgInput" placeholder="Type a message…" rows="1"></textarea>
+                    <button class="send-btn" id="sendBtn">
                         <i class="fas fa-paper-plane fa-sm"></i>
                     </button>
                 </div>
@@ -471,12 +471,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 </div>
 
 <!-- New Chat Modal -->
-<div class="modal-bg" id="newChatModal" onclick="if(event.target===this)closeNewChatModal()">
-    <div class="modal" onclick="event.stopPropagation()">
+<div class="modal-bg" id="newChatModal">
+    <div class="modal">
         <h3><i class="fas fa-comment-dots" style="color:var(--o5)"></i> Start New Chat</h3>
         
         <div style="margin-bottom:16px;">
-            <input type="text" id="userSearch" class="modal-input" placeholder="Search by name or email..." oninput="searchUsers(this.value)">
+            <input type="text" id="userSearch" class="modal-input" placeholder="Search by name or email...">
         </div>
         
         <div id="userListContainer">
@@ -485,7 +485,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                 <div style="padding:20px;text-align:center;color:var(--text3);">No other students found</div>
                 <?php else: ?>
                 <?php foreach (array_slice($allStudents, 0, 10) as $u): ?>
-                <div class="user-item" onclick="startDirectMessage(<?php echo $u['id']; ?>)">
+                <div class="user-item" data-user-id="<?php echo $u['id']; ?>">
                     <div class="user-ava">
                         <?php if ($u['profile_photo']): ?>
                             <img src="<?php echo htmlspecialchars($u['profile_photo']); ?>" alt="">
@@ -506,7 +506,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         </div>
         
         <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px;">
-            <button class="modal-btn create" style="width:100%;" onclick="openGroupChatModal()">
+            <button class="modal-btn create" id="createGroupBtn" style="width:100%;">
                 <i class="fas fa-users"></i> Create Group Chat
             </button>
         </div>
@@ -514,20 +514,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 </div>
 
 <!-- Group Chat Modal -->
-<div class="modal-bg" id="groupChatModal" onclick="if(event.target===this)closeGroupChatModal()">
-    <div class="modal" onclick="event.stopPropagation()">
+<div class="modal-bg" id="groupChatModal">
+    <div class="modal">
         <h3><i class="fas fa-users" style="color:var(--o5)"></i> Create Group Chat</h3>
         
         <label class="modal-label">Group Name</label>
         <input type="text" id="groupName" class="modal-input" placeholder="Enter group name...">
         
         <label class="modal-label">Add Members</label>
-        <input type="text" class="modal-input" placeholder="Search members..." oninput="searchGroupMembers(this.value)" style="margin-bottom:8px;">
+        <input type="text" id="groupMemberSearch" class="modal-input" placeholder="Search members..." style="margin-bottom:8px;">
         
         <div class="user-list" id="groupMemberList" style="margin-bottom:0;">
             <?php if (!empty($allStudents)): ?>
             <?php foreach (array_slice($allStudents, 0, 10) as $u): ?>
-            <div class="user-item" onclick="toggleGroupMember(this, <?php echo $u['id']; ?>)">
+            <div class="user-item" data-member-id="<?php echo $u['id']; ?>">
                 <div class="user-ava">
                     <?php echo strtoupper(substr($u['full_name'],0,1)); ?>
                 </div>
@@ -542,8 +542,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         </div>
         
         <div class="modal-btns">
-            <button class="modal-btn cancel" onclick="closeGroupChatModal()">Cancel</button>
-            <button class="modal-btn create" onclick="createGroupChat()">Create Group</button>
+            <button class="modal-btn cancel" id="cancelGroupBtn">Cancel</button>
+            <button class="modal-btn create" id="submitGroupBtn">Create Group</button>
         </div>
     </div>
 </div>
@@ -555,12 +555,14 @@ let lastMsgId = <?php echo $lastMsgId; ?>;
 let polling;
 let selectedGroupMembers = [];
 
+// Scroll to bottom
 function scrollToBottom() {
     const c = document.getElementById('chatMessages');
     if (c) c.scrollTop = c.scrollHeight;
 }
 scrollToBottom();
 
+// Send message
 function sendMessage() {
     const input = document.getElementById('msgInput');
     const msg = input.value.trim();
@@ -598,6 +600,7 @@ function sendMessage() {
         });
 }
 
+// Append message to chat
 function appendMessage(msg, isMe) {
     const c = document.getElementById('chatMessages');
     const nm = c.querySelector('.no-msgs');
@@ -622,6 +625,7 @@ function appendMessage(msg, isMe) {
     scrollToBottom();
 }
 
+// Poll for new messages
 function pollMessages() {
     if (!ROOM_ID) return;
     
@@ -656,156 +660,215 @@ if (msgInput) {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
-}
-
-// New chat modal
-function openNewChatModal() {
-    document.getElementById('newChatModal').classList.add('open');
-}
-
-function closeNewChatModal() {
-    document.getElementById('newChatModal').classList.remove('open');
-}
-
-function startDirectMessage(targetId) {
-    const fd = new FormData();
-    fd.append('action', 'start_dm');
-    fd.append('target_id', targetId);
     
-    fetch('messenger.php', {method: 'POST', body: fd})
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                location.href = 'messenger.php?room=' + d.room_id;
-            } else {
-                alert('Failed to start conversation');
-            }
-        })
-        .catch(() => {
-            alert('Error starting conversation');
-        });
+    msgInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 }
 
-function searchUsers(query) {
-    if (!query.trim() || query.length < 2) {
-        return;
+// Send button click
+const sendBtn = document.getElementById('sendBtn');
+if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+}
+
+// New Chat Modal
+const newChatBtn = document.getElementById('newChatBtn');
+const newChatModal = document.getElementById('newChatModal');
+const userSearch = document.getElementById('userSearch');
+
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', function() {
+        newChatModal.classList.add('open');
+    });
+}
+
+newChatModal.addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.classList.remove('open');
     }
-    
-    const fd = new FormData();
-    fd.append('action', 'search_users');
-    fd.append('query', query);
-    
-    fetch('messenger.php', {method: 'POST', body: fd})
-        .then(r => r.json())
-        .then(users => {
-            const list = document.getElementById('userList');
-            if (!users || users.length === 0) {
-                list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
-                return;
-            }
+});
+
+// Start direct message
+document.getElementById('userList').addEventListener('click', function(e) {
+    const userItem = e.target.closest('.user-item');
+    if (userItem) {
+        const targetId = userItem.dataset.userId;
+        if (targetId) {
+            const fd = new FormData();
+            fd.append('action', 'start_dm');
+            fd.append('target_id', targetId);
             
-            list.innerHTML = users.map(u => `
-                <div class="user-item" onclick="startDirectMessage(${u.id})">
-                    <div class="user-ava">
-                        ${u.profile_photo ? `<img src="${u.profile_photo}" alt="">` : u.full_name[0].toUpperCase()}
-                        ${u.is_online ? '<div class="online-dot"></div>' : ''}
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">${u.full_name}</div>
-                        <div class="user-email">${u.domain_interest || u.email}</div>
-                    </div>
-                    <i class="fas fa-comment" style="color:var(--o5);"></i>
-                </div>
-            `).join('');
-        })
-        .catch(() => {
-            console.error('Search failed');
-        });
-}
-
-// Group chat
-function openGroupChatModal() {
-    closeNewChatModal();
-    document.getElementById('groupChatModal').classList.add('open');
-    selectedGroupMembers = [];
-}
-
-function closeGroupChatModal() {
-    document.getElementById('groupChatModal').classList.remove('open');
-}
-
-function toggleGroupMember(elem, userId) {
-    elem.classList.toggle('selected');
-    const check = elem.querySelector('.user-check');
-    
-    if (elem.classList.contains('selected')) {
-        selectedGroupMembers.push(userId);
-        check.innerHTML = '<i class="fas fa-check fa-xs"></i>';
-    } else {
-        selectedGroupMembers = selectedGroupMembers.filter(id => id !== userId);
-        check.innerHTML = '';
+            fetch('messenger.php', {method: 'POST', body: fd})
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        location.href = 'messenger.php?room=' + d.room_id;
+                    } else {
+                        alert('Failed to start conversation');
+                    }
+                })
+                .catch(() => {
+                    alert('Error starting conversation');
+                });
+        }
     }
-}
+});
 
-function createGroupChat() {
-    const name = document.getElementById('groupName').value.trim();
-    
-    if (!name) {
-        alert('Please enter a group name');
-        return;
-    }
-    
-    if (selectedGroupMembers.length === 0) {
-        alert('Please select at least one member');
-        return;
-    }
-    
-    const fd = new FormData();
-    fd.append('action', 'create_group');
-    fd.append('room_name', name);
-    fd.append('member_ids', JSON.stringify(selectedGroupMembers));
-    
-    fetch('messenger.php', {method: 'POST', body: fd})
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                location.href = 'messenger.php?room=' + d.room_id;
-            } else {
-                alert('Failed to create group');
-            }
-        })
-        .catch(() => {
-            alert('Error creating group');
-        });
-}
-
-function searchGroupMembers(query) {
-    if (!query.trim() || query.length < 2) return;
-    
-    const fd = new FormData();
-    fd.append('action', 'search_users');
-    fd.append('query', query);
-    
-    fetch('messenger.php', {method: 'POST', body: fd})
-        .then(r => r.json())
-        .then(users => {
-            const list = document.getElementById('groupMemberList');
-            if (!users || users.length === 0) {
-                list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
-                return;
-            }
-            
-            list.innerHTML = users.map(u => `
-                <div class="user-item" onclick="toggleGroupMember(this, ${u.id})">
-                    <div class="user-ava">${u.full_name[0].toUpperCase()}</div>
-                    <div class="user-info">
-                        <div class="user-name">${u.full_name}</div>
-                        <div class="user-email">${u.domain_interest || u.email}</div>
+// Search users
+if (userSearch) {
+    userSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (!query || query.length < 2) return;
+        
+        const fd = new FormData();
+        fd.append('action', 'search_users');
+        fd.append('query', query);
+        
+        fetch('messenger.php', {method: 'POST', body: fd})
+            .then(r => r.json())
+            .then(users => {
+                const list = document.getElementById('userList');
+                if (!users || users.length === 0) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
+                    return;
+                }
+                
+                list.innerHTML = users.map(u => `
+                    <div class="user-item" data-user-id="${u.id}">
+                        <div class="user-ava">
+                            ${u.profile_photo ? `<img src="${u.profile_photo}" alt="">` : u.full_name[0].toUpperCase()}
+                            ${u.is_online ? '<div class="online-dot"></div>' : ''}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">${u.full_name}</div>
+                            <div class="user-email">${u.domain_interest || u.email}</div>
+                        </div>
+                        <i class="fas fa-comment" style="color:var(--o5);"></i>
                     </div>
-                    <div class="user-check"></div>
-                </div>
-            `).join('');
-        });
+                `).join('');
+            })
+            .catch(() => {
+                console.error('Search failed');
+            });
+    });
+}
+
+// Group Chat Modal
+const createGroupBtn = document.getElementById('createGroupBtn');
+const groupChatModal = document.getElementById('groupChatModal');
+const cancelGroupBtn = document.getElementById('cancelGroupBtn');
+const submitGroupBtn = document.getElementById('submitGroupBtn');
+const groupMemberSearch = document.getElementById('groupMemberSearch');
+
+if (createGroupBtn) {
+    createGroupBtn.addEventListener('click', function() {
+        newChatModal.classList.remove('open');
+        groupChatModal.classList.add('open');
+        selectedGroupMembers = [];
+    });
+}
+
+if (cancelGroupBtn) {
+    cancelGroupBtn.addEventListener('click', function() {
+        groupChatModal.classList.remove('open');
+    });
+}
+
+groupChatModal.addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.classList.remove('open');
+    }
+});
+
+// Toggle group member selection
+document.getElementById('groupMemberList').addEventListener('click', function(e) {
+    const userItem = e.target.closest('.user-item');
+    if (userItem) {
+        const userId = parseInt(userItem.dataset.memberId);
+        const check = userItem.querySelector('.user-check');
+        
+        userItem.classList.toggle('selected');
+        
+        if (userItem.classList.contains('selected')) {
+            selectedGroupMembers.push(userId);
+            check.innerHTML = '<i class="fas fa-check fa-xs"></i>';
+        } else {
+            selectedGroupMembers = selectedGroupMembers.filter(id => id !== userId);
+            check.innerHTML = '';
+        }
+    }
+});
+
+// Create group chat
+if (submitGroupBtn) {
+    submitGroupBtn.addEventListener('click', function() {
+        const name = document.getElementById('groupName').value.trim();
+        
+        if (!name) {
+            alert('Please enter a group name');
+            return;
+        }
+        
+        if (selectedGroupMembers.length === 0) {
+            alert('Please select at least one member');
+            return;
+        }
+        
+        const fd = new FormData();
+        fd.append('action', 'create_group');
+        fd.append('room_name', name);
+        fd.append('member_ids', JSON.stringify(selectedGroupMembers));
+        
+        fetch('messenger.php', {method: 'POST', body: fd})
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    location.href = 'messenger.php?room=' + d.room_id;
+                } else {
+                    alert('Failed to create group');
+                }
+            })
+            .catch(() => {
+                alert('Error creating group');
+            });
+    });
+}
+
+// Search group members
+if (groupMemberSearch) {
+    groupMemberSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (!query || query.length < 2) return;
+        
+        const fd = new FormData();
+        fd.append('action', 'search_users');
+        fd.append('query', query);
+        
+        fetch('messenger.php', {method: 'POST', body: fd})
+            .then(r => r.json())
+            .then(users => {
+                const list = document.getElementById('groupMemberList');
+                if (!users || users.length === 0) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">No users found</div>';
+                    return;
+                }
+                
+                list.innerHTML = users.map(u => `
+                    <div class="user-item" data-member-id="${u.id}">
+                        <div class="user-ava">${u.full_name[0].toUpperCase()}</div>
+                        <div class="user-info">
+                            <div class="user-name">${u.full_name}</div>
+                            <div class="user-email">${u.domain_interest || u.email}</div>
+                        </div>
+                        <div class="user-check"></div>
+                    </div>
+                `).join('');
+            });
+    });
 }
 </script>
 </body>
