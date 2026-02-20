@@ -62,9 +62,14 @@ if (!$isLoggedIn) {
             .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(249,115,22,0.45);}
             .alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;font-size:.82rem;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
             .login-footer{padding:0 28px 28px;text-align:center;font-size:.75rem;color:var(--text3);}
+            .back-btn-login{position:fixed;top:20px;left:20px;width:44px;height:44px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;text-decoration:none;transition:all .2s;z-index:1000;backdrop-filter:blur(10px);}
+            .back-btn-login:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.4);transform:translateX(-3px);}
         </style>
     </head>
     <body>
+        <a href="index.php" class="back-btn-login" title="Back to Home">
+            <i class="fas fa-arrow-left"></i>
+        </a>
         <div class="login-box">
             <div class="login-header">
                 <i class="fas fa-shield-halved"></i>
