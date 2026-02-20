@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     echo json_encode(['success'=>false]); exit;
 }
 
-// === GET CONVERSATIONS ===
+// === GET CONVERSATIONS WITH PROFILE PHOTOS ===
 $rooms = [];
 $res = $db->query("SELECT cr.*, 
     (SELECT cm2.message FROM chat_messages cm2 WHERE cm2.room_id=cr.id AND cm2.is_deleted=0 ORDER BY cm2.id DESC LIMIT 1) as last_msg,
@@ -165,6 +165,9 @@ $res = $db->query("SELECT cr.*,
     (SELECT s.full_name FROM internship_students s 
         JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id) 
         WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_name,
+    (SELECT s.profile_photo FROM internship_students s 
+        JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id) 
+        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_photo,
     (SELECT s.is_online FROM internship_students s 
         JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id) 
         WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_online
@@ -173,7 +176,7 @@ $res = $db->query("SELECT cr.*,
     WHERE cr.is_active=1
     ORDER BY COALESCE(last_msg_time, cr.created_at) DESC LIMIT 50");
 if ($res) while ($r = $res->fetch_assoc()) {
-    // For DMs, use partner's name
+    // For DMs, use partner's name and photo
     if ($r['room_type'] === 'direct' && $r['dm_partner_name']) {
         $r['room_name'] = $r['dm_partner_name'];
     }
@@ -373,7 +376,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                             <?php if ($r['room_type']==='group'): ?>
                                 <i class="fas fa-users"></i>
                             <?php else: ?>
-                                <?php echo strtoupper(substr($r['room_name'],0,1)); ?>
+                                <?php if (!empty($r['dm_partner_photo'])): ?>
+                                    <img src="<?php echo htmlspecialchars($r['dm_partner_photo']); ?>" alt="">
+                                <?php else: ?>
+                                    <?php echo strtoupper(substr($r['room_name'],0,1)); ?>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                         <?php if ($isOnline): ?><div class="online-dot"></div><?php endif; ?>
@@ -400,7 +407,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                     <?php if ($activeRoom['room_type']==='group'): ?>
                         <i class="fas fa-users"></i>
                     <?php else: ?>
-                        <?php echo strtoupper(substr($activeRoom['room_name'],0,1)); ?>
+                        <?php if (!empty($activeRoom['dm_partner_photo'])): ?>
+                            <img src="<?php echo htmlspecialchars($activeRoom['dm_partner_photo']); ?>" alt="">
+                        <?php else: ?>
+                            <?php echo strtoupper(substr($activeRoom['room_name'],0,1)); ?>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <?php if ($activeRoom['room_type']==='direct' && $activeRoom['dm_partner_online']): ?>
                         <div class="online-dot"></div>
@@ -529,7 +540,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
             <?php foreach (array_slice($allStudents, 0, 10) as $u): ?>
             <div class="user-item" onclick="toggleGroupMember(this, <?php echo $u['id']; ?>)">
                 <div class="user-ava">
-                    <?php echo strtoupper(substr($u['full_name'],0,1)); ?>
+                    <?php if ($u['profile_photo']): ?>
+                        <img src="<?php echo htmlspecialchars($u['profile_photo']); ?>" alt="">
+                    <?php else: ?>
+                        <?php echo strtoupper(substr($u['full_name'],0,1)); ?>
+                    <?php endif; ?>
                 </div>
                 <div class="user-info">
                     <div class="user-name"><?php echo htmlspecialchars($u['full_name']); ?></div>
@@ -797,7 +812,7 @@ function searchGroupMembers(query) {
             
             list.innerHTML = users.map(u => `
                 <div class="user-item" onclick="toggleGroupMember(this, ${u.id})">
-                    <div class="user-ava">${u.full_name[0].toUpperCase()}</div>
+                    <div class="user-ava">${u.profile_photo ? `<img src="${u.profile_photo}" alt="">` : u.full_name[0].toUpperCase()}</div>
                     <div class="user-info">
                         <div class="user-name">${u.full_name}</div>
                         <div class="user-email">${u.domain_interest || u.email}</div>

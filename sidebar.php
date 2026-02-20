@@ -47,18 +47,22 @@ $navInternship = [
     ['key'=>'announcements',    'label'=>'Announcements',      'icon'=>'fas fa-bullhorn',         'href'=>'announcements.php'],
     ['key'=>'game',  'label'=>'Game Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
 ];
+$navAdmin = [
+        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+    ];
+
 $navAccount = [
     ['key'=>'profile',         'label'=>'My Profile',     'icon'=>'fas fa-user-circle',  'href'=>'profile.php'],
     ['key'=>'notifications',   'label'=>'Notifications',  'icon'=>'fas fa-bell',         'href'=>'notifications.php', 'badge'=>$notifCount],
 ];
 
 // Admin navigation (only shown to admins)
-$navAdmin = [];
-if ($isAdmin) {
-    $navAdmin = [
-        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-    ];
-}
+// $navAdmin = [];
+// if ($isAdmin) {
+//     $navAdmin = [
+//         ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+//     ];
+// }
 
 $firstName = explode(' ', trim($student['full_name']))[0] ?? $student['full_name'];
 $initials = strtoupper(substr($student['full_name'], 0, 1));
