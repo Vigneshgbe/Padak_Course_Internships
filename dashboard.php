@@ -421,7 +421,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                 <div class="pb-bar-bg"><div class="pb-bar" style="width:<?php echo $progressPct; ?>%"></div></div>
                 <div class="pb-meta">
                     <?php $certPoints = min(100, round(($totalPoints/2000)*100)); ?>
-                    Certificate: <?php echo $certPoints; ?>% &bull; <?php echo max(0, 2000 - $totalPoints); ?> more points needed for free certificate
+                    Certificate: <?php echo $certPoints; ?>% &bull; <?php echo max(0, 2000 - $totalPoints); ?> more points needed for top grade certificate
                 </div>
             </div>
             <div class="pb-right">
@@ -615,7 +615,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                         <div class="cert-elig-title">Earn your Free Certificate</div>
                         <div class="cert-elig-sub">
                             Earn <strong>1200+ points</strong> & complete at least <strong>10 tasks</strong> to unlock a free internship completion certificate.
-                            You need <strong><?php echo max(0,2000-$totalPoints); ?> more points</strong> and <strong><?php echo max(0,10-$completedCount); ?> more approved tasks</strong>.
+                            You need <strong><?php echo max(0,1200-$totalPoints); ?> more points</strong> and <strong><?php echo max(0,10-$completedCount); ?> more approved tasks</strong>.
                         </div>
                     <?php endif; ?>
                 </div>
