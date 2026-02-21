@@ -5,7 +5,7 @@ require_once 'config.php';
 $db = getPadakDB();
 
 define('ADMIN_USERNAME', 'admin');
-define('ADMIN_PASSWORD', 'admin123');
+define('ADMIN_PASSWORD', 'vigneshg091002');
 
 $loginError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_login'])) {
