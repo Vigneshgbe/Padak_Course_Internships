@@ -45,7 +45,7 @@ $navInternship = [
     ['key'=>'attendance',    'label'=>'Attendance',      'icon'=>'fas fa-book',         'href'=>'attendance.php'],
     ['key'=>'verify certificate',    'label'=>'Verify Certificate',      'icon'=>'fas fa-id-card',         'href'=>'verify_certificate.php'],
     ['key'=>'announcements',    'label'=>'Announcements',      'icon'=>'fas fa-bullhorn',         'href'=>'announcements.php'],
-    ['key'=>'game',  'label'=>'Game Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
+    ['key'=>'game',  'label'=>'Gamer Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
 ];
 $navAdmin = [
         ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
