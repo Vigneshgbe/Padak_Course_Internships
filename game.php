@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_score'])) {
 
 // Get stats for all games
 $gameStats = [];
-$gameTypes = ['memory_match', 'reflex_runner', 'word_builder', 'number_crush', 'pattern_master'];
+$gameTypes = ['memory_match', 'reflex_runner', 'word_builder', 'number_crush', 'pattern_master', 'tic_tac_toe', 'hexgl_racing'];
 foreach ($gameTypes as $type) {
     $res = $db->query("SELECT MAX(score) as best, COUNT(*) as plays 
                        FROM game_scores 
@@ -93,6 +93,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
 .game-card.green{--gradient:linear-gradient(135deg,var(--green),#4ade80);--color:var(--green);}
 .game-card.purple{--gradient:linear-gradient(135deg,var(--purple),#a78bfa);--color:var(--purple);}
 .game-card.pink{--gradient:linear-gradient(135deg,var(--pink),#f472b6);--color:var(--pink);}
+.game-card.cyan{--gradient:linear-gradient(135deg,var(--cyan),#22d3ee);--color:var(--cyan);}
+.game-card.yellow{--gradient:linear-gradient(135deg,var(--yellow),#fbbf24);--color:var(--yellow);}
 .game-icon{width:60px;height:60px;border-radius:14px;background:var(--gradient);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}
 .game-icon i{font-size:1.8rem;color:#fff;}
 .game-title{font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:6px;}
@@ -161,6 +163,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
 .pattern-btn:hover{border-color:var(--o5);transform:translateY(-2px);}
 .pattern-btn:active{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;}
 
+/* Tic-Tac-Toe Game */
+.tictactoe-board{width:100%;max-width:450px;aspect-ratio:1;background:linear-gradient(145deg,#f8fafc,#f1f5f9);border-radius:16px;border:2px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:20px;box-shadow:inset 0 2px 8px rgba(0,0,0,0.05);}
+.ttt-cell{background:var(--card);border-radius:12px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;transition:all .3s;box-shadow:0 2px 8px rgba(0,0,0,0.1);color:var(--o5);}
+.ttt-cell:hover:not(.filled){transform:scale(1.05);box-shadow:0 6px 15px rgba(249,115,22,0.3);border-color:var(--o5);}
+.ttt-cell.filled{cursor:not-allowed;}
+.ttt-cell.winner{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;animation:pulse .5s;}
+.ttt-status{font-size:1.4rem;font-weight:700;text-align:center;padding:16px;background:linear-gradient(135deg,rgba(249,115,22,0.08),rgba(251,146,60,0.05));border-radius:12px;color:var(--text);margin-bottom:20px;}
+
+/* HexGL Racing Game */
+.racing-frame{width:100%;max-width:900px;height:600px;border-radius:16px;border:2px solid var(--border);overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);}
+.racing-frame iframe{width:100%;height:100%;border:none;}
+.racing-info{background:linear-gradient(135deg,rgba(249,115,22,0.08),rgba(251,146,60,0.05));border-radius:12px;padding:16px;margin-bottom:20px;border:1.5px solid rgba(249,115,22,0.15);}
+.racing-info h3{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.racing-info p{color:var(--text2);font-size:.85rem;line-height:1.5;margin-bottom:6px;}
+.racing-info ul{color:var(--text2);font-size:.85rem;line-height:1.7;margin-left:20px;margin-top:6px;}
+
 /* Controls */
 .game-controls{display:flex;gap:12px;width:100%;max-width:600px;flex-wrap:wrap;}
 .game-btn{flex:1;min-width:140px;padding:14px 24px;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;border:none;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;}
@@ -209,6 +227,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
     .letters-grid{grid-template-columns:repeat(4,1fr);}
     .game-controls{flex-direction:column;}
     .game-btn{min-width:100%;}
+    .racing-frame{height:400px;}
 }
 </style>
 </head>
@@ -305,6 +324,38 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
                         <div class="game-stat">
                             <div class="game-stat-label">Times Played</div>
                             <div class="game-stat-value"><?php echo $gameStats['pattern_master']['plays']; ?></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card cyan" onclick="loadGame('tictactoe')">
+                    <div class="game-icon"><i class="fas fa-times"></i></div>
+                    <div class="game-title">Tic-Tac-Toe</div>
+                    <div class="game-desc">Classic strategy game. Beat the AI and prove your tactical skills!</div>
+                    <div class="game-stats-row">
+                        <div class="game-stat">
+                            <div class="game-stat-label">Best Score</div>
+                            <div class="game-stat-value"><?php echo $gameStats['tic_tac_toe']['best']; ?></div>
+                        </div>
+                        <div class="game-stat">
+                            <div class="game-stat-label">Times Played</div>
+                            <div class="game-stat-value"><?php echo $gameStats['tic_tac_toe']['plays']; ?></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card yellow" onclick="loadGame('racing')">
+                    <div class="game-icon"><i class="fas fa-flag-checkered"></i></div>
+                    <div class="game-title">HexGL Racing</div>
+                    <div class="game-desc">Experience futuristic racing! Navigate tracks at blazing speeds.</div>
+                    <div class="game-stats-row">
+                        <div class="game-stat">
+                            <div class="game-stat-label">Best Score</div>
+                            <div class="game-stat-value"><?php echo $gameStats['hexgl_racing']['best']; ?></div>
+                        </div>
+                        <div class="game-stat">
+                            <div class="game-stat-label">Times Played</div>
+                            <div class="game-stat-value"><?php echo $gameStats['hexgl_racing']['plays']; ?></div>
                         </div>
                     </div>
                 </div>
@@ -506,6 +557,85 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
                 </div>
             </div>
         </div>
+
+        <!-- Tic-Tac-Toe Game -->
+        <div id="tictactoeGame" class="game-view">
+            <button class="back-btn" onclick="backToHub()"><i class="fas fa-arrow-left"></i> Back to Games</button>
+            <div class="game-container">
+                <div class="game-main">
+                    <div class="game-canvas-wrap">
+                        <div class="game-stats">
+                            <div class="stat-box">
+                                <div class="stat-label">Wins</div>
+                                <div class="stat-value" id="tttWins">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Draws</div>
+                                <div class="stat-value" id="tttDraws">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Score</div>
+                                <div class="stat-value" id="tttScore">0</div>
+                            </div>
+                        </div>
+                        <div class="ttt-status" id="tttStatus">Click Start to Play!</div>
+                        <div class="tictactoe-board" id="tictactoeBoard"></div>
+                        <div class="game-controls">
+                            <button class="game-btn primary" id="tttStart"><i class="fas fa-play"></i> Start Game</button>
+                            <button class="game-btn secondary" id="tttReset"><i class="fas fa-redo"></i> Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="game-sidebar">
+                    <div class="side-card">
+                        <div class="side-card-title"><i class="fas fa-crown"></i> Top Tacticians</div>
+                        <div class="leader-list" id="tttLeaderboard"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HexGL Racing Game -->
+        <div id="racingGame" class="game-view">
+            <button class="back-btn" onclick="backToHub()"><i class="fas fa-arrow-left"></i> Back to Games</button>
+            <div class="game-container">
+                <div class="game-main">
+                    <div class="game-canvas-wrap">
+                        <div class="racing-info">
+                            <h3><i class="fas fa-info-circle"></i> Game Controls</h3>
+                            <p><strong>Arrow Keys or WASD:</strong> Steer your ship</p>
+                            <p><strong>Shift:</strong> Boost (limited use)</p>
+                            <p><strong>Enter:</strong> Start race / Pause</p>
+                            <ul>
+                                <li>Navigate through checkpoints to complete laps</li>
+                                <li>Avoid hitting walls to maintain speed</li>
+                                <li>Use boost strategically on straights</li>
+                                <li>Complete 3 laps as fast as possible!</li>
+                            </ul>
+                        </div>
+                        <div class="racing-frame">
+                            <iframe id="racingIframe" src="https://hexgl.bkcore.com/play/" allow="accelerometer; gyroscope"></iframe>
+                        </div>
+                    </div>
+                </div>
+                <div class="game-sidebar">
+                    <div class="side-card">
+                        <div class="side-card-title"><i class="fas fa-crown"></i> Top Racers</div>
+                        <div class="leader-list" id="racingLeaderboard"></div>
+                    </div>
+                    <div class="side-card">
+                        <div class="side-card-title"><i class="fas fa-trophy"></i> Your Best Times</div>
+                        <div id="racingStats" style="color:var(--text2);font-size:.85rem;line-height:1.7;">
+                            <p>Races: <strong id="racesPlayed">0</strong></p>
+                            <p>Best Time: <strong id="bestTime">--:--</strong></p>
+                            <p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:.75rem;color:var(--text3);">
+                                Complete races to track your times here!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -537,7 +667,9 @@ function loadGame(game) {
         'reflex': 'reflexGame',
         'word': 'wordGame',
         'number': 'numberGame',
-        'pattern': 'patternGame'
+        'pattern': 'patternGame',
+        'tictactoe': 'tictactoeGame',
+        'racing': 'racingGame'
     };
     document.getElementById(games[game]).classList.add('active');
     
@@ -555,7 +687,9 @@ function loadGame(game) {
         'reflex': 'reflex_runner',
         'word': 'word_builder',
         'number': 'number_crush',
-        'pattern': 'pattern_master'
+        'pattern': 'pattern_master',
+        'tictactoe': 'tic_tac_toe',
+        'racing': 'hexgl_racing'
     };
     
     const boardId = game + 'Leaderboard';
@@ -1111,12 +1245,190 @@ class PatternGame {
     }
 }
 
+// Tic-Tac-Toe Game
+class TicTacToeGame {
+    constructor() {
+        this.currentPlayer = "X";
+        this.board = ["", "", "", "", "", "", "", "", ""];
+        this.wins = 0;
+        this.draws = 0;
+        this.score = 0;
+        this.isPlaying = false;
+        this.gameOver = false;
+        
+        document.getElementById('tttStart').onclick = () => this.start();
+        document.getElementById('tttReset').onclick = () => this.reset();
+    }
+    
+    start() {
+        this.isPlaying = true;
+        this.gameOver = false;
+        document.getElementById('tttStart').disabled = true;
+        this.initBoard();
+        this.updateStatus("Your turn! (X)");
+    }
+    
+    initBoard() {
+        const board = document.getElementById('tictactoeBoard');
+        board.innerHTML = '';
+        this.board = ["", "", "", "", "", "", "", "", ""];
+        this.currentPlayer = "X";
+        
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'ttt-cell';
+            cell.dataset.index = i;
+            cell.onclick = () => this.handleClick(cell, i);
+            board.appendChild(cell);
+        }
+    }
+    
+    handleClick(cell, index) {
+        if (!this.isPlaying || this.gameOver || this.board[index] || cell.classList.contains('filled')) return;
+        
+        this.board[index] = this.currentPlayer;
+        cell.textContent = this.currentPlayer;
+        cell.classList.add('filled');
+        
+        const winner = this.checkWinner();
+        
+        if (winner) {
+            this.handleGameEnd(winner);
+        } else {
+            this.currentPlayer = "O";
+            this.updateStatus("AI's turn (O)...");
+            setTimeout(() => this.aiMove(), 500);
+        }
+    }
+    
+    aiMove() {
+        if (this.gameOver) return;
+        
+        // Simple AI: Try to win, block player, or pick random
+        let move = this.findWinningMove("O") || this.findWinningMove("X") || this.findRandomMove();
+        
+        if (move !== null) {
+            this.board[move] = "O";
+            const cell = document.querySelector(`[data-index="${move}"]`);
+            cell.textContent = "O";
+            cell.classList.add('filled');
+            
+            const winner = this.checkWinner();
+            
+            if (winner) {
+                this.handleGameEnd(winner);
+            } else {
+                this.currentPlayer = "X";
+                this.updateStatus("Your turn! (X)");
+            }
+        }
+    }
+    
+    findWinningMove(player) {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+        
+        for (const pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            const line = [this.board[a], this.board[b], this.board[c]];
+            const emptyIndex = pattern.find(i => !this.board[i]);
+            
+            if (line.filter(cell => cell === player).length === 2 && emptyIndex !== undefined) {
+                return emptyIndex;
+            }
+        }
+        return null;
+    }
+    
+    findRandomMove() {
+        const empty = this.board.map((cell, i) => cell === "" ? i : null).filter(i => i !== null);
+        return empty.length > 0 ? empty[Math.floor(Math.random() * empty.length)] : null;
+    }
+    
+    checkWinner() {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+        
+        for (const pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
+                this.highlightWinner(pattern);
+                return this.board[a];
+            }
+        }
+        
+        return this.board.includes("") ? null : "Tie";
+    }
+    
+    highlightWinner(pattern) {
+        pattern.forEach(index => {
+            const cell = document.querySelector(`[data-index="${index}"]`);
+            cell.classList.add('winner');
+        });
+    }
+    
+    handleGameEnd(winner) {
+        this.gameOver = true;
+        
+        if (winner === "X") {
+            this.wins++;
+            this.score += 100;
+            this.updateStatus("🎉 You Win!");
+            submitScore('tic_tac_toe', this.score);
+            setTimeout(() => showModal(true, this.score, 'Victory!'), 800);
+        } else if (winner === "O") {
+            this.score = Math.max(0, this.score - 50);
+            this.updateStatus("😔 AI Wins!");
+            setTimeout(() => showModal(false, this.score, 'AI Wins'), 800);
+        } else {
+            this.draws++;
+            this.score += 25;
+            this.updateStatus("🤝 It's a Tie!");
+            submitScore('tic_tac_toe', this.score);
+            setTimeout(() => showModal(true, this.score, 'Draw!'), 800);
+        }
+        
+        this.updateScores();
+        document.getElementById('tttStart').disabled = false;
+        this.isPlaying = false;
+    }
+    
+    updateStatus(text) {
+        document.getElementById('tttStatus').textContent = text;
+    }
+    
+    updateScores() {
+        document.getElementById('tttWins').textContent = this.wins;
+        document.getElementById('tttDraws').textContent = this.draws;
+        document.getElementById('tttScore').textContent = this.score;
+    }
+    
+    reset() {
+        this.wins = 0;
+        this.draws = 0;
+        this.score = 0;
+        this.isPlaying = false;
+        this.gameOver = false;
+        document.getElementById('tictactoeBoard').innerHTML = '';
+        document.getElementById('tttStart').disabled = false;
+        this.updateStatus("Click Start to Play!");
+        this.updateScores();
+    }
+}
+
 // Initialize games
 const memoryGame = new MemoryGame();
 const reflexGame = new ReflexGame();
 const wordGame = new WordGame();
 const numberGame = new NumberGame();
 const patternGame = new PatternGame();
+const tictactoeGame = new TicTacToeGame();
 </script>
 </body>
 </html>
