@@ -47,14 +47,15 @@ $navInternship = [
     ['key'=>'announcements',    'label'=>'Announcements',      'icon'=>'fas fa-bullhorn',         'href'=>'announcements.php'],
     ['key'=>'game',  'label'=>'Gamer Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
 ];
-$navAdmin = [
-        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-    ];
 
 $navAccount = [
     ['key'=>'profile',         'label'=>'My Profile',     'icon'=>'fas fa-user-circle',  'href'=>'profile.php'],
     ['key'=>'notifications',   'label'=>'Notifications',  'icon'=>'fas fa-bell',         'href'=>'notifications.php', 'badge'=>$notifCount],
 ];
+
+$navAdmin = [
+        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+    ];
 
 // Admin navigation (only shown to admins)
 // $navAdmin = [];
@@ -125,6 +126,16 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             </a>
             <?php endforeach; ?>
         </div>
+        <div class="sb-nav-group">
+            <span class="sb-group-label">ACCOUNT</span>
+            <?php foreach ($navAccount as $item): $active = $activePage === $item['key']; ?>
+            <a href="<?php echo $item['href']; ?>" class="sb-nav-item <?php echo $active ? 'active' : ''; ?>">
+                <i class="<?php echo $item['icon']; ?> sb-nav-icon"></i>
+                <span><?php echo $item['label']; ?></span>
+                <?php if (!empty($item['badge']) && $item['badge'] > 0): ?><span class="sb-badge"><?php echo min($item['badge'],99); ?></span><?php endif; ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
         <?php if (!empty($navAdmin)): ?>
         <div class="sb-nav-group">
             <span class="sb-group-label">ADMIN</span>
@@ -137,16 +148,6 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
-        <div class="sb-nav-group">
-            <span class="sb-group-label">ACCOUNT</span>
-            <?php foreach ($navAccount as $item): $active = $activePage === $item['key']; ?>
-            <a href="<?php echo $item['href']; ?>" class="sb-nav-item <?php echo $active ? 'active' : ''; ?>">
-                <i class="<?php echo $item['icon']; ?> sb-nav-icon"></i>
-                <span><?php echo $item['label']; ?></span>
-                <?php if (!empty($item['badge']) && $item['badge'] > 0): ?><span class="sb-badge"><?php echo min($item['badge'],99); ?></span><?php endif; ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
     </nav>
 
     <div class="sb-cert-card">
