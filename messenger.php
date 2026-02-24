@@ -236,10 +236,12 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
 .page-wrap{margin-left:var(--sbw);height:100vh;display:flex;flex-direction:column;}
 .topbar{flex-shrink:0;background:rgba(248,250,252,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;}
-.topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;}
+.topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;font-size:1.2rem;}
+.topbar-hamburger:active{background:var(--border);}
 .topbar-title{font-size:1rem;font-weight:600;color:var(--text);flex:1;}
 .btn-new-chat{background:var(--o5);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:opacity .2s;}
 .btn-new-chat:hover{opacity:.9;}
+.btn-new-chat:active{opacity:.8;}
 .chat-layout{flex:1;display:grid;grid-template-columns:320px 1fr;min-height:0;}
 
 /* Sidebar */
@@ -251,6 +253,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .rooms-list{flex:1;overflow-y:auto;padding:4px;}
 .room-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;transition:background .15s;text-decoration:none;position:relative;}
 .room-item:hover{background:#f1f5f9;text-decoration:none;}
+.room-item:active{background:#e2e8f0;}
 .room-item.active{background:rgba(249,115,22,0.09);}
 
 .room-avatar-wrap{position:relative;flex-shrink:0;}
@@ -270,6 +273,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 /* Chat area */
 .chat-area{display:flex;flex-direction:column;background:var(--bg);}
 .chat-head{flex-shrink:0;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;gap:12px;}
+.chat-head-back{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;margin-right:4px;font-size:1.1rem;}
+.chat-head-back:active{background:var(--border);}
 .chat-head-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;flex-shrink:0;position:relative;}
 .chat-head-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .chat-room-name{font-size:.98rem;font-weight:700;color:var(--text);}
@@ -299,6 +304,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .chat-input:focus{border-color:var(--o5);}
 .send-btn{width:42px;height:42px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;box-shadow:0 4px 12px rgba(249,115,22,0.3);}
 .send-btn:hover{opacity:.9;}
+.send-btn:active{opacity:.8;transform:scale(0.95);}
 .send-btn:disabled{opacity:.5;cursor:not-allowed;}
 
 /* Modals */
@@ -313,6 +319,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .user-list{display:flex;flex-direction:column;gap:4px;max-height:350px;overflow-y:auto;margin-bottom:14px;}
 .user-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s;border:1.5px solid transparent;}
 .user-item:hover{background:#f1f5f9;}
+.user-item:active{background:#e2e8f0;}
 .user-item.selected{background:rgba(249,115,22,0.08);border-color:var(--o5);}
 .user-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;position:relative;}
 .user-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
@@ -327,6 +334,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .modal-btn.cancel{background:var(--bg);border:1px solid var(--border);color:var(--text2);}
 .modal-btn.create{background:var(--o5);color:#fff;}
 .modal-btn:hover{opacity:.9;}
+.modal-btn:active{opacity:.8;}
 .modal-btn:disabled{opacity:.5;cursor:not-allowed;}
 
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);padding:40px;}
@@ -334,29 +342,120 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .empty-state h3{font-size:1.1rem;font-weight:600;margin-bottom:6px;}
 .empty-state p{font-size:.88rem;}
 
+/* Mobile styles */
 @media(max-width:768px){
     .page-wrap{margin-left:0;}
     .topbar-hamburger{display:flex;}
-    .chat-layout{grid-template-columns:1fr;}
-    .rooms-panel{display:none;}
-    .rooms-panel.mobile-open{display:flex;position:fixed;inset:0;z-index:300;}
+    .chat-layout{grid-template-columns:1fr;position:relative;}
+    
+    /* Show/hide panels on mobile */
+    .rooms-panel{
+        position:absolute;
+        inset:0;
+        z-index:100;
+        transform:translateX(-100%);
+        transition:transform .3s ease;
+    }
+    .rooms-panel.mobile-visible{
+        transform:translateX(0);
+    }
+    
+    .chat-area{
+        position:absolute;
+        inset:0;
+        z-index:50;
+    }
+    
+    /* Show back button in chat header on mobile */
+    .chat-head-back{
+        display:flex;
+    }
+    
+    /* Hide chat area when no room is selected */
+    body:not(.room-selected) .chat-area{
+        display:none;
+    }
+    body:not(.room-selected) .rooms-panel{
+        position:relative;
+        transform:translateX(0);
+    }
+    
+    /* Adjust modal for mobile */
+    .modal{
+        width:95%;
+        max-width:none;
+        max-height:85vh;
+        padding:20px;
+    }
+    
+    /* Make message bubbles more mobile-friendly */
+    .msg-bubble-wrap{
+        max-width:80%;
+    }
+    
+    /* Adjust input area for mobile */
+    .chat-input-area{
+        padding:10px 12px;
+    }
+    
+    .chat-form{
+        gap:8px;
+    }
+    
+    .send-btn{
+        width:40px;
+        height:40px;
+    }
+}
+
+/* Very small screens */
+@media(max-width:380px){
+    .topbar{
+        padding:8px 12px;
+    }
+    
+    .topbar-title{
+        font-size:.9rem;
+    }
+    
+    .btn-new-chat{
+        padding:7px 12px;
+        font-size:.8rem;
+    }
+    
+    .btn-new-chat span{
+        display:none;
+    }
+    
+    .room-avatar{
+        width:42px;
+        height:42px;
+    }
+    
+    .room-name{
+        font-size:.82rem;
+    }
+    
+    .msg-bubble-wrap{
+        max-width:85%;
+    }
 }
 </style>
 </head>
-<body>
+<body<?php echo $activeRoomId ? ' class="room-selected"' : ''; ?>>
 <?php include 'sidebar.php'; ?>
 <div class="page-wrap">
     <div class="topbar">
-        <button class="topbar-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars fa-sm"></i></button>
+        <button class="topbar-hamburger" onclick="toggleRoomsPanel()"><i class="fas fa-bars"></i></button>
         <div class="topbar-title">Messenger</div>
         <button class="btn-new-chat" onclick="openNewChatModal()">
-            <i class="fas fa-plus fa-sm"></i> New Chat
+            <i class="fas fa-plus fa-sm"></i><span> New Chat</span>
         </button>
     </div>
     
     <div class="chat-layout">
         <!-- Conversations List -->
-        <div class="rooms-panel">
+        <div class="rooms-panel" id="roomsPanel">
             <div class="search-box">
                 <input type="text" class="search-input" placeholder="Search conversations..." id="searchConvo">
             </div>
@@ -371,7 +470,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                     $isOnline = ($r['room_type'] === 'direct' && $r['dm_partner_online']);
                     $lastTime = $r['last_msg_time'] ? date('h:i A', strtotime($r['last_msg_time'])) : '';
                 ?>
-                <a href="?room=<?php echo $r['id']; ?>" class="room-item <?php echo $r['id']==$activeRoomId?'active':''; ?>">
+                <a href="?room=<?php echo $r['id']; ?>" class="room-item <?php echo $r['id']==$activeRoomId?'active':''; ?>" onclick="handleRoomClick(event, <?php echo $r['id']; ?>)">
                     <div class="room-avatar-wrap">
                         <div class="room-avatar <?php echo $r['room_type']; ?>">
                             <?php if ($r['room_type']==='group'): ?>
@@ -404,6 +503,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         <div class="chat-area">
             <?php if ($activeRoom): ?>
             <div class="chat-head">
+                <button class="chat-head-back" onclick="goBackToRooms()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
                 <div class="chat-head-avatar">
                     <?php if ($activeRoom['room_type']==='group'): ?>
                         <i class="fas fa-users"></i>
@@ -570,6 +672,42 @@ const MY_ID = <?php echo $sid; ?>;
 let lastMsgId = <?php echo $lastMsgId; ?>;
 let polling;
 let selectedGroupMembers = [];
+
+// Mobile navigation functions
+function toggleRoomsPanel() {
+    const panel = document.getElementById('roomsPanel');
+    panel.classList.toggle('mobile-visible');
+}
+
+function goBackToRooms() {
+    // Remove room-selected class and navigate to messenger without room param
+    if (window.innerWidth <= 768) {
+        window.location.href = 'messenger.php';
+    }
+}
+
+function handleRoomClick(event, roomId) {
+    if (window.innerWidth <= 768) {
+        // On mobile, add room-selected class to body
+        document.body.classList.add('room-selected');
+        // Close rooms panel
+        document.getElementById('roomsPanel').classList.remove('mobile-visible');
+    }
+    // Let the default link behavior happen
+}
+
+// Close rooms panel when clicking outside on mobile
+document.addEventListener('click', function(e) {
+    if (window.innerWidth <= 768) {
+        const panel = document.getElementById('roomsPanel');
+        const hamburger = document.querySelector('.topbar-hamburger');
+        if (panel.classList.contains('mobile-visible') && 
+            !panel.contains(e.target) && 
+            !hamburger.contains(e.target)) {
+            panel.classList.remove('mobile-visible');
+        }
+    }
+});
 
 function scrollToBottom() {
     const c = document.getElementById('chatMessages');
