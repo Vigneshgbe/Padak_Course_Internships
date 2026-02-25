@@ -588,7 +588,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="terms-row">
                 <input type="checkbox" id="terms" name="terms" required>
                 <label for="terms">
-                    I agree to Padak's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+                    I agree to Padak's <a href="https://thepadak.com/Internships/terms_and_conditions.php">Terms of Service</a> and <a href="https://thepadak.com/Internships/privacy_policy.php">Privacy Policy</a>.
                     I consent to receiving internship updates via email.
                 </label>
             </div>
