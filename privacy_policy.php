@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Padak</title>
+    <title>Privacy Policy - Padak Portal</title>
     <style>
         * {
             margin: 0;
@@ -506,7 +506,7 @@
                     </div>
                 </div>
                 <p class="header-description">
-                    At Padak, your branding partner, we are committed to protecting your privacy and ensuring 
+                    At Padak Internship Portal, we are committed to protecting your privacy and ensuring 
                     the security of your personal information while delivering our educational and digital services.
                 </p>
                 <div class="header-meta">
@@ -514,7 +514,7 @@
                         <svg class="meta-icon icon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>Last Updated: August 2025</span>
+                        <span>Last Updated: February 2026</span>
                     </div>
                     <div class="meta-item">
                         <svg class="meta-icon icon-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -915,7 +915,7 @@
                     for courses, internships, or digital services, please contact our Privacy Team.
                 </p>
                 <div class="contact-buttons">
-                    <a href="mailto:privacy@padak.com" class="button button-primary">
+                    <a href="mailto:contact@thepadak.com" class="button button-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
