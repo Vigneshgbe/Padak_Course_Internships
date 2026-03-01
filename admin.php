@@ -31,9 +31,6 @@ if (isset($_GET['logout'])) {
 
 $isLoggedIn = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 
-// ═══════════════════════════════════════════════════════════
-// LOGIN PAGE
-// ═══════════════════════════════════════════════════════════
 if (!$isLoggedIn) {
     ?>
     <!DOCTYPE html>
@@ -68,7 +65,6 @@ if (!$isLoggedIn) {
             .login-footer{padding:0 28px 28px;text-align:center;font-size:.75rem;color:var(--text3);}
             .back-btn-login{position:fixed;top:20px;left:20px;width:44px;height:44px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;text-decoration:none;transition:all .2s;z-index:1000;backdrop-filter:blur(10px);}
             .back-btn-login:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.4);transform:translateX(-3px);}
-            @media(max-width:480px){.login-box{max-width:calc(100vw - 32px);}.login-header{padding:24px 20px;}.login-body{padding:24px 20px;}.back-btn-login{top:12px;left:12px;width:40px;height:40px;}}
         </style>
     </head>
     <body>
@@ -119,16 +115,6 @@ if (!$isLoggedIn) {
     exit;
 }
 
-// ═══════════════════════════════════════════════════════════
-// ADMIN DASHBOARD - LOGGED IN
-// ═══════════════════════════════════════════════════════════
-
-$success = '';
-$error = '';
-
-// Determine active tab
-$activeTab = $_GET['tab'] ?? 'tasks';
-
 // Get Statistics
 $statsRes = $db->query("SELECT 
     (SELECT COUNT(*) FROM internship_tasks WHERE status='active') as active_tasks,
@@ -138,6 +124,10 @@ $statsRes = $db->query("SELECT
 ");
 $stats = $statsRes->fetch_assoc();
 
+// Get success/error messages from session if redirected from module pages
+$success = $_SESSION['admin_success'] ?? '';
+$error = $_SESSION['admin_error'] ?? '';
+unset($_SESSION['admin_success'], $_SESSION['admin_error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -145,14 +135,65 @@ $stats = $statsRes->fetch_assoc();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Padak</title>
-    <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <?php include 'admin_modules/admin_styles.php'; ?>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        :root{--o5:#f97316;--o4:#fb923c;--o6:#ea580c;--o1:#fff7ed;--o2:#ffedd5;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--red:#ef4444;--green:#22c55e;--blue:#3b82f6;--yellow:#eab308;--purple:#8b5cf6;}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+        .admin-header{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;padding:20px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+        .ah-left{display:flex;align-items:center;gap:16px;}
+        .ah-logo{width:48px;height:48px;background:linear-gradient(135deg,var(--o5),var(--o4));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(249,115,22,0.3);}
+        .ah-title h1{font-size:1.5rem;font-weight:800;margin-bottom:2px;}
+        .ah-title p{font-size:.82rem;opacity:.7;}
+        .ah-right{display:flex;align-items:center;gap:14px;}
+        .ah-user{display:flex;align-items:center;gap:10px;padding:8px 16px;background:rgba(255,255,255,0.1);border-radius:10px;font-size:.85rem;}
+        .ah-user i{color:var(--o4);}
+        .btn-logout{padding:8px 16px;background:rgba(239,68,68,0.2);border:1.5px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;display:flex;align-items:center;gap:6px;}
+        .btn-logout:hover{background:rgba(239,68,68,0.3);border-color:rgba(239,68,68,0.5);}
+        .admin-container{max-width:1400px;margin:0 auto;padding:28px;}
+        .alert{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:20px;animation:slideIn .3s ease;}
+        .alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}
+        .alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
+        @keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-bottom:32px;}
+        .stat-card{background:var(--card);border-radius:14px;padding:22px 24px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.06);transition:all .2s;}
+        .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.1);}
+        .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+        .sc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+        .sc-icon.orange{background:var(--o1);color:var(--o6);}
+        .sc-icon.blue{background:rgba(59,130,246,0.1);color:var(--blue);}
+        .sc-icon.green{background:rgba(34,197,94,0.1);color:var(--green);}
+        .sc-icon.purple{background:rgba(139,92,246,0.1);color:var(--purple);}
+        .sc-value{font-size:2rem;font-weight:900;color:var(--text);line-height:1;}
+        .sc-label{font-size:.82rem;color:var(--text3);margin-top:6px;font-weight:500;}
+        .tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;}
+        .tab{padding:12px 20px;border-radius:10px 10px 0 0;border:none;background:none;font-size:.875rem;font-weight:600;color:var(--text2);cursor:pointer;transition:all .2s;position:relative;font-family:inherit;}
+        .tab:hover{background:var(--bg);color:var(--text);}
+        .tab.active{background:var(--card);color:var(--o5);border:1px solid var(--border);border-bottom:2px solid var(--card);margin-bottom:-2px;}
+        .tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--o5);}
+        @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
+    </style>
 </head>
 <body>
-    <?php include 'admin_modules/admin_header.php'; ?>
+    <div class="admin-header">
+        <div class="ah-left">
+            <div class="ah-logo"><i class="fas fa-tasks"></i></div>
+            <div class="ah-title">
+                <h1>Admin Dashboard</h1>
+                <p>Task & Attendance Management</p>
+            </div>
+        </div>
+        <div class="ah-right">
+            <div class="ah-user">
+                <i class="fas fa-user-shield"></i>
+                <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
+            </div>
+            <a href="?logout=1" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
     
     <div class="admin-container">
         <?php if ($success): ?>
@@ -162,89 +203,56 @@ $stats = $statsRes->fetch_assoc();
         <div class="alert alert-error"><i class="fas fa-circle-exclamation"></i><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
-        <!-- Statistics Cards -->
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="sc-top">
-                    <div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div>
-                </div>
-                <div class="sc-value"><?php echo $stats['active_tasks']; ?></div>
-                <div class="sc-label">Active Tasks</div>
-            </div>
-            <div class="stat-card">
-                <div class="sc-top">
-                    <div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div>
-                </div>
-                <div class="sc-value"><?php echo $stats['pending_reviews']; ?></div>
-                <div class="sc-label">Pending Reviews</div>
-            </div>
-            <div class="stat-card">
-                <div class="sc-top">
-                    <div class="sc-icon green"><i class="fas fa-circle-check"></i></div>
-                </div>
-                <div class="sc-value"><?php echo $stats['completed_tasks']; ?></div>
-                <div class="sc-label">Completed Tasks</div>
-            </div>
-            <div class="stat-card">
-                <div class="sc-top">
-                    <div class="sc-icon purple"><i class="fas fa-users"></i></div>
-                </div>
-                <div class="sc-value"><?php echo $stats['total_students']; ?></div>
-                <div class="sc-label">Active Students</div>
-            </div>
+            <div class="stat-card"><div class="sc-top"><div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div></div><div class="sc-value"><?php echo $stats['active_tasks']; ?></div><div class="sc-label">Active Tasks</div></div>
+            <div class="stat-card"><div class="sc-top"><div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div></div><div class="sc-value"><?php echo $stats['pending_reviews']; ?></div><div class="sc-label">Pending Reviews</div></div>
+            <div class="stat-card"><div class="sc-top"><div class="sc-icon green"><i class="fas fa-circle-check"></i></div></div><div class="sc-value"><?php echo $stats['completed_tasks']; ?></div><div class="sc-label">Completed Tasks</div></div>
+            <div class="stat-card"><div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div><div class="sc-value"><?php echo $stats['total_students']; ?></div><div class="sc-label">Active Students</div></div>
         </div>
         
-        <!-- Navigation Tabs -->
         <div class="tabs">
-            <button class="tab <?php echo $activeTab === 'tasks' ? 'active' : ''; ?>" onclick="window.location.href='?tab=tasks'">
-                <i class="fas fa-tasks"></i> Manage Tasks
-            </button>
-            <button class="tab <?php echo $activeTab === 'reviews' ? 'active' : ''; ?>" onclick="window.location.href='?tab=reviews'">
-                <i class="fas fa-clipboard-check"></i> Review Submissions
-                <?php if ($stats['pending_reviews'] > 0): ?>
-                <span class="badge badge-urgent"><?php echo $stats['pending_reviews']; ?></span>
-                <?php endif; ?>
-            </button>
-            <button class="tab <?php echo $activeTab === 'attendance' ? 'active' : ''; ?>" onclick="window.location.href='?tab=attendance'">
-                <i class="fas fa-calendar-check"></i> Attendance
-            </button>
+            <button class="tab active" onclick="showTab('tasks')"><i class="fas fa-tasks"></i> Manage Tasks</button>
+            <button class="tab" onclick="showTab('reviews')"><i class="fas fa-clipboard-check"></i> Review Submissions<?php if ($stats['pending_reviews'] > 0): ?> <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span><?php endif; ?></button>
+            <button class="tab" onclick="showTab('attendance')"><i class="fas fa-calendar-check"></i> Attendance</button>
         </div>
         
-        <!-- Tab Content -->
-        <div id="tab-tasks" class="tab-content" <?php echo $activeTab !== 'tasks' ? 'style="display:none;"' : ''; ?>>
-            <?php include 'admin_modules/admin_manage_tasks.php'; ?>
+        <div id="tab-tasks" class="tab-content">
+            <?php include 'admin_manage_tasks.php'; ?>
         </div>
         
-        <div id="tab-reviews" class="tab-content" <?php echo $activeTab !== 'reviews' ? 'style="display:none;"' : ''; ?>>
-            <?php include 'admin_modules/admin_review_submissions.php'; ?>
+        <div id="tab-reviews" class="tab-content" style="display:none;">
+            <?php include 'admin_review_submissions.php'; ?>
         </div>
         
-        <div id="tab-attendance" class="tab-content" <?php echo $activeTab !== 'attendance' ? 'style="display:none;"' : ''; ?>>
-            <?php include 'admin_modules/admin_attendance_manage.php'; ?>
+        <div id="tab-attendance" class="tab-content" style="display:none;">
+            <?php include 'admin_attendance_manage.php'; ?>
         </div>
     </div>
     
     <script>
-        // Alert auto-dismiss
-        setTimeout(() => {
-            document.querySelectorAll('.alert').forEach(alert => {
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 300);
-            });
-        }, 5000);
+        function showTab(tab){
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
+            event.target.closest('.tab').classList.add('active');
+            document.getElementById('tab-'+tab).style.display='block';
+            window.location.hash='tab-'+tab;
+        }
         
-        // Preserve tab state in URL
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function(e) {
-                if (this.onclick) return; // Skip if already has onclick
-                
-                const tabName = this.textContent.toLowerCase().includes('manage') ? 'tasks' :
-                               this.textContent.toLowerCase().includes('review') ? 'reviews' :
-                               'attendance';
-                
-                window.location.href = '?tab=' + tabName;
+        setTimeout(()=>{
+            document.querySelectorAll('.alert').forEach(alert=>{
+                alert.style.opacity='0';
+                setTimeout(()=>alert.remove(),300);
             });
-        });
+        },5000);
+        
+        if(window.location.hash){
+            const hash=window.location.hash.replace('#','');
+            if(hash.startsWith('tab-')){
+                const tabName=hash.replace('tab-','');
+                const tabBtn=document.querySelector(`.tab[onclick*="${tabName}"]`);
+                if(tabBtn)tabBtn.click();
+            }
+        }
     </script>
 </body>
 </html>
