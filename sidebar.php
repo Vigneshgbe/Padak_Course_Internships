@@ -40,6 +40,7 @@ $navMain = [
 $navInternship = [
     ['key'=>'tasks',        'label'=>'My Tasks',       'icon'=>'fas fa-tasks',        'href'=>'tasks.php',     'badge'=>$pendingTasks],
     // ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
+    ['key'=>'social feed',  'label'=>'Social Feed',    'icon'=>'fas fa-rss',       'href'=>'social_feed.php'],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
     ['key'=>'certificate',  'label'=>'Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
     ['key'=>'attendance',    'label'=>'Attendance',      'icon'=>'fas fa-book',         'href'=>'attendance.php'],
