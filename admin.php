@@ -217,15 +217,15 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         </div>
         
         <div id="tab-tasks" class="tab-content">
-            <?php include '/admin_modules/admin_manage_tasks.php'; ?>
+            <?php include 'admin_modules/admin_manage_tasks.php'; ?>
         </div>
         
         <div id="tab-reviews" class="tab-content" style="display:none;">
-            <?php include 'admin_review_submissions.php'; ?>
+            <?php include 'admin_modules/admin_review_submissions.php'; ?>
         </div>
         
         <div id="tab-attendance" class="tab-content" style="display:none;">
-            <?php include 'admin_attendance_manage.php'; ?>
+            <?php include 'admin_modules/admin_attendance_manage.php'; ?>
         </div>
     </div>
     
