@@ -94,7 +94,8 @@ $whereClause = $filterStatus === 'all' ? "1=1" : "t.status='$filterStatusEsc'";
 
 // Get counts for filter buttons
 $activeCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='active'")->fetch_assoc()['cnt'];
-$archivedCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='archived'")->fetch_assoc()['cnt'];
+$draftCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='draft'")->fetch_assoc()['cnt'];
+$closedCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='closed'")->fetch_assoc()['cnt'];
 $allCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks")->fetch_assoc()['cnt'];
 
 // Get Tasks
@@ -145,7 +146,8 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
     .data-table td:first-child{font-weight:600;color:var(--text);}
     .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;white-space:nowrap;}
     .badge-active{background:rgba(34,197,94,0.12);color:#16a34a;}
-    .badge-archived{background:rgba(100,116,139,0.12);color:#475569;}
+    .badge-draft{background:rgba(234,179,8,0.12);color:#854d0e;}
+    .badge-closed{background:rgba(100,116,139,0.12);color:#475569;}
     .badge-urgent{background:rgba(239,68,68,0.12);color:#dc2626;}
     .badge-high{background:rgba(249,115,22,0.12);color:var(--o6);}
     .badge-medium{background:rgba(234,179,8,0.12);color:#854d0e;}
@@ -185,7 +187,8 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         
         <div class="filter-bar">
             <a href="?filter=active#tab-tasks" class="filter-btn <?php echo $filterStatus==='active'?'active':''; ?>">Active (<?php echo $activeCount; ?>)</a>
-            <a href="?filter=archived#tab-tasks" class="filter-btn <?php echo $filterStatus==='archived'?'active':''; ?>">Archived (<?php echo $archivedCount; ?>)</a>
+            <a href="?filter=draft#tab-tasks" class="filter-btn <?php echo $filterStatus==='draft'?'active':''; ?>">Draft (<?php echo $draftCount; ?>)</a>
+            <a href="?filter=closed#tab-tasks" class="filter-btn <?php echo $filterStatus==='closed'?'active':''; ?>">Closed (<?php echo $closedCount; ?>)</a>
             <a href="?filter=all#tab-tasks" class="filter-btn <?php echo $filterStatus==='all'?'active':''; ?>">All Tasks (<?php echo $allCount; ?>)</a>
         </div>
         
@@ -193,7 +196,15 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         <div class="empty-state">
             <i class="fas fa-clipboard-list"></i>
             <h3>No <?php echo $filterStatus !== 'all' ? $filterStatus : ''; ?> tasks found</h3>
-            <p><?php echo $filterStatus === 'archived' ? 'Archive tasks to see them here' : 'Create your first task to get started'; ?></p>
+            <p><?php 
+                if ($filterStatus === 'draft') {
+                    echo 'Save tasks as draft to see them here';
+                } elseif ($filterStatus === 'closed') {
+                    echo 'Close tasks to see them here';
+                } else {
+                    echo 'Create your first task to get started';
+                }
+            ?></p>
         </div>
         <?php else: ?>
         <div class="table-responsive">
