@@ -179,14 +179,18 @@ $announcements = [];
 while ($row = $announcementsRes->fetch_assoc()) $announcements[] = $row;
 
 // Get batches for dropdown
-$batchesRes = $db->query("SELECT id, batch_name FROM batches ORDER BY batch_name ASC");
 $batches = [];
-while ($row = $batchesRes->fetch_assoc()) $batches[] = $row;
+$batchesRes = @$db->query("SELECT id, batch_name FROM batches ORDER BY batch_name ASC");
+if ($batchesRes) {
+    while ($row = $batchesRes->fetch_assoc()) $batches[] = $row;
+}
 
 // Get coordinators for dropdown
-$coordinatorsRes = $db->query("SELECT id, full_name FROM coordinators ORDER BY full_name ASC");
 $coordinators = [];
-while ($row = $coordinatorsRes->fetch_assoc()) $coordinators[] = $row;
+$coordinatorsRes = @$db->query("SELECT id, full_name FROM coordinators ORDER BY full_name ASC");
+if ($coordinatorsRes) {
+    while ($row = $coordinatorsRes->fetch_assoc()) $coordinators[] = $row;
+}
 ?>
 
 <style>
