@@ -293,12 +293,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $stmt->execute();
         $res = $stmt->get_result();
 
-        while ($r = $res->fetch_assoc()) {
-            $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+        // Store all message rows first to avoid "commands out of sync"
+        $allRows = [];
+        while ($r = $res->fetch_assoc()) $allRows[] = $r;
+        $stmt->free_result();
+        $stmt->close();
+
+        // Prepare reaction statement once, reuse it
+        $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+        foreach ($allRows as $r) {
+            $reactions = [];
             $reactStmt->bind_param("i", $r['id']);
             $reactStmt->execute();
-            $reactions = [];
-            while ($react = $reactStmt->get_result()->fetch_assoc()) {
+            $reactRes = $reactStmt->get_result();
+            while ($react = $reactRes->fetch_assoc()) {
                 if (!isset($reactions[$react['emoji']])) {
                     $reactions[$react['emoji']] = ['count' => 0, 'users' => [], 'has_reacted' => false];
                 }
@@ -306,9 +314,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $reactions[$react['emoji']]['users'][] = $react['full_name'];
                 if ($react['student_id'] == $sid) $reactions[$react['emoji']]['has_reacted'] = true;
             }
+            $reactRes->free();
             $r['reactions'] = $reactions;
             $msgs[] = $r;
         }
+        $reactStmt->close();
 
         $upd = $db->prepare("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=? AND student_id=?");
         $upd->bind_param("ii", $roomId, $sid);
@@ -475,21 +485,29 @@ if ($activeRoomId) {
         LEFT JOIN internship_students rs ON rs.id=rm.sender_id
         WHERE cm.room_id=$activeRoomId AND cm.is_deleted=0
         ORDER BY cm.created_at ASC LIMIT 100");
-    if ($res) while ($r = $res->fetch_assoc()) {
-        $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+    // Store all rows first to avoid "commands out of sync" with nested prepared statements
+    $allMsgRows = [];
+    if ($res) while ($r = $res->fetch_assoc()) $allMsgRows[] = $r;
+
+    // Prepare reaction statement once and reuse
+    $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+    foreach ($allMsgRows as $r) {
+        $reactions = [];
         $reactStmt->bind_param("i", $r['id']);
         $reactStmt->execute();
-        $reactions = [];
-        while ($react = $reactStmt->get_result()->fetch_assoc()) {
+        $reactRes = $reactStmt->get_result();
+        while ($react = $reactRes->fetch_assoc()) {
             if (!isset($reactions[$react['emoji']])) $reactions[$react['emoji']] = ['count' => 0, 'users' => [], 'has_reacted' => false];
             $reactions[$react['emoji']]['count']++;
             $reactions[$react['emoji']]['users'][] = $react['full_name'];
             if ($react['student_id'] == $sid) $reactions[$react['emoji']]['has_reacted'] = true;
         }
+        $reactRes->free();
         $r['reactions'] = $reactions;
         $messages[]     = $r;
         $lastMsgId      = max($lastMsgId, $r['id']);
     }
+    if ($reactStmt) $reactStmt->close();
     $db->query("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=$activeRoomId AND student_id=$sid");
 }
 
@@ -1199,28 +1217,56 @@ function cancelReply(){
 }
 
 // ─── REACTIONS ────────────────────────────────────────────────
-function showReactionPicker(msgId,btn){
-    const picker=document.getElementById('emojiPicker');
-    currentReactionMsgId=msgId;
-    const rect=btn.getBoundingClientRect();
-    picker.style.top=(rect.top-55)+'px';
-    picker.style.left=rect.left+'px';
+function showReactionPicker(msgId, btn){
+    const picker = document.getElementById('emojiPicker');
+    if(picker.classList.contains('active') && currentReactionMsgId === msgId){ hidePicker(); return; }
+    currentReactionMsgId = msgId;
+    const rect = btn.getBoundingClientRect();
+    const pickerW = 260, pickerH = 56;
+    let top = rect.top - pickerH - 8;
+    let left = rect.left;
+    if(left + pickerW > window.innerWidth - 8) left = window.innerWidth - pickerW - 8;
+    if(left < 8) left = 8;
+    if(top < 8) top = rect.bottom + 6;
+    picker.style.top = top + 'px';
+    picker.style.left = left + 'px';
     picker.classList.add('active');
-    setTimeout(()=>document.addEventListener('click',closeReactionPicker,{once:true}),50);
+    if(window._pickerHandler) document.removeEventListener('click', window._pickerHandler);
+    setTimeout(() => {
+        window._pickerHandler = function(e){ if(!picker.contains(e.target)) hidePicker(); };
+        document.addEventListener('click', window._pickerHandler);
+    }, 150);
 }
-function closeReactionPicker(e){
-    const picker=document.getElementById('emojiPicker');
-    if(!picker.contains(e.target)) picker.classList.remove('active');
+function hidePicker(){
+    document.getElementById('emojiPicker').classList.remove('active');
+    if(window._pickerHandler){ document.removeEventListener('click', window._pickerHandler); window._pickerHandler = null; }
 }
 function reactWithEmoji(emoji){
     if(!currentReactionMsgId) return;
-    toggleReaction(currentReactionMsgId,emoji);
-    document.getElementById('emojiPicker').classList.remove('active');
+    const msgId = currentReactionMsgId;
+    hidePicker();
+    toggleReaction(msgId, emoji);
 }
-function toggleReaction(msgId,emoji){
-    const fd=new FormData();
-    fd.append('action','react'); fd.append('msg_id',msgId); fd.append('emoji',emoji);
-    fetch('messenger.php',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success) pollMessages(); }).catch(()=>{});
+function toggleReaction(msgId, emoji){
+    const fd = new FormData();
+    fd.append('action','react'); fd.append('msg_id', msgId); fd.append('emoji', emoji);
+    fetch('messenger.php',{method:'POST',body:fd})
+        .then(r=>r.json())
+        .then(d=>{ if(d.success) fetchAndUpdateAllReactions(); })
+        .catch(()=>{});
+}
+function fetchAndUpdateAllReactions(){
+    const fd = new FormData();
+    fd.append('action','fetch'); fd.append('room_id', ROOM_ID); fd.append('since_id', 0);
+    fetch('messenger.php',{method:'POST',body:fd})
+        .then(r=>r.json())
+        .then(data=>{
+            if(!data.messages) return;
+            data.messages.forEach(m=>{
+                const el = document.querySelector('[data-msg-id="'+m.id+'"]');
+                if(el) updateReactions(el, m.reactions || {});
+            });
+        }).catch(()=>{});
 }
 
 // ─── IMAGE MODAL ──────────────────────────────────────────────
