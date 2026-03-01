@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
         
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task created successfully!';
-            header('Location: admin.php#tab-tasks');
+            echo '<script>window.location.href="admin.php#tab-tasks";</script>';
             exit;
         } else {
             $error = 'Failed to create task: ' . $db->error;
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
         
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task updated successfully!';
-            header('Location: admin.php#tab-tasks');
+            echo '<script>window.location.href="admin.php#tab-tasks";</script>';
             exit;
         } else {
             $error = 'Failed to update task: ' . $db->error;
@@ -89,7 +89,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
 
 // Get Filter Status
 $filterStatus = $_GET['filter'] ?? 'active';
-$whereClause = $filterStatus === 'all' ? "1=1" : "t.status='$filterStatus'";
+$filterStatusEsc = $db->real_escape_string($filterStatus);
+$whereClause = $filterStatus === 'all' ? "1=1" : "t.status='$filterStatusEsc'";
+
+// Get counts for filter buttons
+$activeCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='active'")->fetch_assoc()['cnt'];
+$archivedCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks WHERE status='archived'")->fetch_assoc()['cnt'];
+$allCount = (int)$db->query("SELECT COUNT(*) as cnt FROM internship_tasks")->fetch_assoc()['cnt'];
 
 // Get Tasks
 $tasksRes = $db->query("SELECT t.*, 
@@ -178,16 +184,16 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         <?php endif; ?>
         
         <div class="filter-bar">
-            <a href="?filter=active#tab-tasks" class="filter-btn <?php echo $filterStatus==='active'?'active':''; ?>">Active (<?php echo count(array_filter($tasks, fn($t)=>$t['status']==='active')); ?>)</a>
-            <a href="?filter=archived#tab-tasks" class="filter-btn <?php echo $filterStatus==='archived'?'active':''; ?>">Archived</a>
-            <a href="?filter=all#tab-tasks" class="filter-btn <?php echo $filterStatus==='all'?'active':''; ?>">All Tasks</a>
+            <a href="?filter=active#tab-tasks" class="filter-btn <?php echo $filterStatus==='active'?'active':''; ?>">Active (<?php echo $activeCount; ?>)</a>
+            <a href="?filter=archived#tab-tasks" class="filter-btn <?php echo $filterStatus==='archived'?'active':''; ?>">Archived (<?php echo $archivedCount; ?>)</a>
+            <a href="?filter=all#tab-tasks" class="filter-btn <?php echo $filterStatus==='all'?'active':''; ?>">All Tasks (<?php echo $allCount; ?>)</a>
         </div>
         
         <?php if (empty($tasks)): ?>
         <div class="empty-state">
             <i class="fas fa-clipboard-list"></i>
-            <h3>No tasks found</h3>
-            <p>Create your first task to get started</p>
+            <h3>No <?php echo $filterStatus !== 'all' ? $filterStatus : ''; ?> tasks found</h3>
+            <p><?php echo $filterStatus === 'archived' ? 'Archive tasks to see them here' : 'Create your first task to get started'; ?></p>
         </div>
         <?php else: ?>
         <div class="table-responsive">

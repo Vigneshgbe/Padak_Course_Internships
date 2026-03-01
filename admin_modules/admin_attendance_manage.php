@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
         }
         
         $_SESSION['admin_success'] = "Attendance marked for $successCount students on " . date('M d, Y', strtotime($attendanceDate));
-        header('Location: admin.php#tab-attendance');
+        echo '<script>window.location.href="admin.php#tab-attendance";</script>';
         exit;
     }
 }

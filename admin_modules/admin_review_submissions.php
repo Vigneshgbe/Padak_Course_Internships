@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission']))
             $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
                        VALUES ($studentId, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
         }
-        header('Location: admin.php#tab-reviews');
+        echo '<script>window.location.href="admin.php#tab-reviews";</script>';
         exit;
     } else {
         $error = 'Failed to review submission';
