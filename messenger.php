@@ -8,6 +8,12 @@ $db = getPadakDB();
 $sid = (int)$student['id'];
 $activePage = 'messenger';
 
+// Create uploads directory if it doesn't exist
+$uploadsDir = __DIR__ . '/uploads/chat_attachments';
+if (!is_dir($uploadsDir)) {
+    mkdir($uploadsDir, 0755, true);
+}
+
 // Update online status
 $db->query("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id=$sid");
 
@@ -15,21 +21,130 @@ $db->query("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     
-    // Send message
+    // Send message with optional attachment
     if ($_POST['action'] === 'send') {
         $roomId = (int)($_POST['room_id'] ?? 0);
         $msg = trim($_POST['message'] ?? '');
-        if ($roomId && $msg) {
+        $replyToId = !empty($_POST['reply_to_id']) ? (int)$_POST['reply_to_id'] : null;
+        
+        if ($roomId && ($msg || !empty($_FILES['attachment']))) {
             // Verify membership
             $chk = $db->prepare("SELECT id FROM chat_room_members WHERE room_id=? AND student_id=?");
             $chk->bind_param("ii",$roomId,$sid);
             $chk->execute();
             if ($chk->get_result()->num_rows > 0) {
-                $stmt = $db->prepare("INSERT INTO chat_messages (room_id, sender_id, message) VALUES (?,?,?)");
-                $stmt->bind_param("iis",$roomId,$sid,$msg);
+                $attachmentPath = null;
+                $attachmentType = null;
+                $attachmentName = null;
+                
+                // Handle file upload
+                if (!empty($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['attachment'];
+                    $fileName = $file['name'];
+                    $fileTmp = $file['tmp_name'];
+                    $fileSize = $file['size'];
+                    $fileType = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                    
+                    // Validate file size (max 10MB)
+                    if ($fileSize > 10 * 1024 * 1024) {
+                        echo json_encode(['success'=>false, 'error'=>'File too large (max 10MB)']);
+                        exit;
+                    }
+                    
+                    // Allowed file types
+                    $allowedImages = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    $allowedFiles = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'];
+                    
+                    if (in_array($fileType, $allowedImages)) {
+                        $attachmentType = 'image';
+                        // Optimize image
+                        $newFileName = uniqid() . '_' . time();
+                        $optimizedPath = $uploadsDir . '/' . $newFileName . '.jpg';
+                        
+                        // Load and resize image
+                        $image = null;
+                        switch($fileType) {
+                            case 'jpg':
+                            case 'jpeg':
+                                $image = imagecreatefromjpeg($fileTmp);
+                                break;
+                            case 'png':
+                                $image = imagecreatefrompng($fileTmp);
+                                break;
+                            case 'gif':
+                                $image = imagecreatefromgif($fileTmp);
+                                break;
+                            case 'webp':
+                                $image = imagecreatefromwebp($fileTmp);
+                                break;
+                        }
+                        
+                        if ($image) {
+                            $width = imagesx($image);
+                            $height = imagesy($image);
+                            
+                            // Resize if larger than 1200px
+                            $maxWidth = 1200;
+                            if ($width > $maxWidth) {
+                                $ratio = $maxWidth / $width;
+                                $newWidth = $maxWidth;
+                                $newHeight = (int)($height * $ratio);
+                                
+                                $newImage = imagecreatetruecolor($newWidth, $newHeight);
+                                imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                                imagejpeg($newImage, $optimizedPath, 85); // 85% quality
+                                imagedestroy($newImage);
+                            } else {
+                                imagejpeg($image, $optimizedPath, 85);
+                            }
+                            imagedestroy($image);
+                            
+                            $attachmentPath = 'uploads/chat_attachments/' . basename($optimizedPath);
+                            $attachmentName = $fileName;
+                        }
+                    } elseif (in_array($fileType, $allowedFiles)) {
+                        $attachmentType = 'file';
+                        $newFileName = uniqid() . '_' . time() . '.' . $fileType;
+                        $filePath = $uploadsDir . '/' . $newFileName;
+                        
+                        if (move_uploaded_file($fileTmp, $filePath)) {
+                            $attachmentPath = 'uploads/chat_attachments/' . $newFileName;
+                            $attachmentName = $fileName;
+                        }
+                    } else {
+                        echo json_encode(['success'=>false, 'error'=>'File type not allowed']);
+                        exit;
+                    }
+                }
+                
+                // Insert message
+                $stmt = $db->prepare("INSERT INTO chat_messages (room_id, sender_id, message, reply_to_id, attachment_path, attachment_type, attachment_name) VALUES (?,?,?,?,?,?,?)");
+                $stmt->bind_param("iisisss",$roomId,$sid,$msg,$replyToId,$attachmentPath,$attachmentType,$attachmentName);
+                
                 if ($stmt->execute()) {
                     $msgId = $db->insert_id;
-                    echo json_encode(['success'=>true,'msg_id'=>$msgId,'time'=>date('h:i A')]);
+                    
+                    // Get reply message if exists
+                    $replyMsg = null;
+                    if ($replyToId) {
+                        $replyStmt = $db->prepare("SELECT cm.message, cm.attachment_type, s.full_name FROM chat_messages cm JOIN internship_students s ON s.id=cm.sender_id WHERE cm.id=?");
+                        $replyStmt->bind_param("i", $replyToId);
+                        $replyStmt->execute();
+                        $replyRes = $replyStmt->get_result();
+                        if ($replyRes->num_rows > 0) {
+                            $replyMsg = $replyRes->fetch_assoc();
+                        }
+                    }
+                    
+                    echo json_encode([
+                        'success'=>true,
+                        'msg_id'=>$msgId,
+                        'time'=>date('h:i A'),
+                        'attachment_path'=>$attachmentPath,
+                        'attachment_type'=>$attachmentType,
+                        'attachment_name'=>$attachmentName,
+                        'reply_msg'=>$replyMsg
+                    ]);
                     exit;
                 }
             }
@@ -42,13 +157,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $roomId = (int)($_POST['room_id'] ?? 0);
         $since = (int)($_POST['since_id'] ?? 0);
         $msgs = [];
-        $stmt = $db->prepare("SELECT cm.id, cm.message, cm.created_at, cm.sender_id, s.full_name, s.profile_photo
-            FROM chat_messages cm JOIN internship_students s ON s.id=cm.sender_id
-            WHERE cm.room_id=? AND cm.id>? AND cm.is_deleted=0 ORDER BY cm.id ASC LIMIT 50");
+        
+        $stmt = $db->prepare("SELECT cm.id, cm.message, cm.created_at, cm.sender_id, cm.reply_to_id, 
+            cm.attachment_path, cm.attachment_type, cm.attachment_name,
+            s.full_name, s.profile_photo,
+            reply_msg.message as reply_message, reply_msg.attachment_type as reply_attachment_type,
+            reply_sender.full_name as reply_sender_name
+            FROM chat_messages cm 
+            JOIN internship_students s ON s.id=cm.sender_id
+            LEFT JOIN chat_messages reply_msg ON reply_msg.id=cm.reply_to_id
+            LEFT JOIN internship_students reply_sender ON reply_sender.id=reply_msg.sender_id
+            WHERE cm.room_id=? AND cm.id>? AND cm.is_deleted=0 
+            ORDER BY cm.id ASC LIMIT 50");
         $stmt->bind_param("ii",$roomId,$since);
         $stmt->execute();
         $res = $stmt->get_result();
-        while ($r = $res->fetch_assoc()) $msgs[] = $r;
+        
+        while ($r = $res->fetch_assoc()) {
+            // Get reactions for this message
+            $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+            $reactStmt->bind_param("i", $r['id']);
+            $reactStmt->execute();
+            $reactRes = $reactStmt->get_result();
+            $reactions = [];
+            while ($react = $reactRes->fetch_assoc()) {
+                if (!isset($reactions[$react['emoji']])) {
+                    $reactions[$react['emoji']] = ['count'=>0, 'users'=>[], 'has_reacted'=>false];
+                }
+                $reactions[$react['emoji']]['count']++;
+                $reactions[$react['emoji']]['users'][] = $react['full_name'];
+                if ($react['student_id'] == $sid) {
+                    $reactions[$react['emoji']]['has_reacted'] = true;
+                }
+            }
+            $r['reactions'] = $reactions;
+            $msgs[] = $r;
+        }
         
         // Update last read
         $upd = $db->prepare("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=? AND student_id=?");
@@ -56,6 +200,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $upd->execute();
         
         echo json_encode(['messages'=>$msgs, 'typing'=>[]]); exit;
+    }
+    
+    // Add/remove reaction
+    if ($_POST['action'] === 'react') {
+        $msgId = (int)($_POST['msg_id'] ?? 0);
+        $emoji = trim($_POST['emoji'] ?? '');
+        
+        if ($msgId && $emoji) {
+            // Check if already reacted
+            $checkStmt = $db->prepare("SELECT id FROM message_reactions WHERE message_id=? AND student_id=? AND emoji=?");
+            $checkStmt->bind_param("iis", $msgId, $sid, $emoji);
+            $checkStmt->execute();
+            $exists = $checkStmt->get_result()->num_rows > 0;
+            
+            if ($exists) {
+                // Remove reaction
+                $delStmt = $db->prepare("DELETE FROM message_reactions WHERE message_id=? AND student_id=? AND emoji=?");
+                $delStmt->bind_param("iis", $msgId, $sid, $emoji);
+                $delStmt->execute();
+                echo json_encode(['success'=>true, 'action'=>'removed']);
+            } else {
+                // Add reaction
+                $insStmt = $db->prepare("INSERT INTO message_reactions (message_id, student_id, emoji) VALUES (?,?,?)");
+                $insStmt->bind_param("iis", $msgId, $sid, $emoji);
+                $insStmt->execute();
+                echo json_encode(['success'=>true, 'action'=>'added']);
+            }
+            exit;
+        }
+        echo json_encode(['success'=>false]); exit;
     }
     
     // Start direct message
@@ -187,15 +361,37 @@ $activeRoomId = (int)($_GET['room'] ?? ($rooms[0]['id'] ?? 0));
 $activeRoom = null;
 foreach ($rooms as $r) { if ($r['id'] == $activeRoomId) { $activeRoom = $r; break; } }
 
-// Load messages for active room
+// Load messages for active room with reactions
 $messages = [];
 $lastMsgId = 0;
 if ($activeRoomId) {
-    $res = $db->query("SELECT cm.*, s.full_name, s.profile_photo FROM chat_messages cm 
+    $res = $db->query("SELECT cm.*, s.full_name, s.profile_photo,
+        reply_msg.message as reply_message, reply_msg.attachment_type as reply_attachment_type,
+        reply_sender.full_name as reply_sender_name
+        FROM chat_messages cm 
         JOIN internship_students s ON s.id=cm.sender_id 
+        LEFT JOIN chat_messages reply_msg ON reply_msg.id=cm.reply_to_id
+        LEFT JOIN internship_students reply_sender ON reply_sender.id=reply_msg.sender_id
         WHERE cm.room_id=$activeRoomId AND cm.is_deleted=0 
         ORDER BY cm.created_at ASC LIMIT 100");
     if ($res) while ($r = $res->fetch_assoc()) {
+        // Get reactions
+        $reactStmt = $db->prepare("SELECT emoji, student_id, s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+        $reactStmt->bind_param("i", $r['id']);
+        $reactStmt->execute();
+        $reactRes = $reactStmt->get_result();
+        $reactions = [];
+        while ($react = $reactRes->fetch_assoc()) {
+            if (!isset($reactions[$react['emoji']])) {
+                $reactions[$react['emoji']] = ['count'=>0, 'users'=>[], 'has_reacted'=>false];
+            }
+            $reactions[$react['emoji']]['count']++;
+            $reactions[$react['emoji']]['users'][] = $react['full_name'];
+            if ($react['student_id'] == $sid) {
+                $reactions[$react['emoji']]['has_reacted'] = true;
+            }
+        }
+        $r['reactions'] = $reactions;
         $messages[] = $r;
         $lastMsgId = max($lastMsgId, $r['id']);
     }
@@ -286,26 +482,71 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .msg-ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#64748b,#475569);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;flex-shrink:0;}
 .msg-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .msg-group.mine .msg-ava{background:linear-gradient(135deg,var(--o5),var(--o4));}
-.msg-bubble-wrap{max-width:65%;display:flex;flex-direction:column;gap:2px;}
+.msg-bubble-wrap{max-width:65%;display:flex;flex-direction:column;gap:2px;position:relative;}
 .msg-group.mine .msg-bubble-wrap{align-items:flex-end;}
 .msg-sender-name{font-size:.72rem;color:var(--text3);padding:0 4px;}
-.msg-bubble{padding:10px 14px;border-radius:14px;font-size:.88rem;line-height:1.5;word-break:break-word;}
+.msg-bubble{padding:10px 14px;border-radius:14px;font-size:.88rem;line-height:1.5;word-break:break-word;position:relative;}
 .msg-bubble.other{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.05);}
 .msg-bubble.mine-b{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;border-bottom-right-radius:4px;box-shadow:0 2px 8px rgba(249,115,22,0.25);}
+
+/* Reply preview in bubble */
+.reply-preview{background:rgba(0,0,0,0.08);border-left:3px solid rgba(0,0,0,0.2);padding:6px 10px;border-radius:6px;margin-bottom:8px;font-size:.8rem;}
+.msg-bubble.mine-b .reply-preview{background:rgba(255,255,255,0.15);border-left-color:rgba(255,255,255,0.4);}
+.reply-preview-name{font-weight:600;margin-bottom:2px;font-size:.75rem;}
+.reply-preview-text{opacity:.85;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Attachment styles */
+.msg-attachment{margin-top:4px;}
+.msg-attachment img{max-width:100%;border-radius:8px;cursor:pointer;display:block;}
+.msg-attachment.file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.05);border-radius:8px;text-decoration:none;color:inherit;}
+.msg-bubble.mine-b .msg-attachment.file{background:rgba(255,255,255,0.15);}
+.file-icon{width:32px;height:32px;background:var(--o5);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;}
+.file-info{flex:1;min-width:0;}
+.file-name{font-size:.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-download{color:var(--o5);font-size:.9rem;}
+.msg-bubble.mine-b .file-download{color:#fff;}
+
+/* Reactions */
+.msg-reactions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.reaction-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2px 8px;font-size:.8rem;display:flex;align-items:center;gap:4px;cursor:pointer;transition:all .15s;}
+.reaction-item:hover{transform:scale(1.1);box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+.reaction-item.has-reacted{background:rgba(249,115,22,0.1);border-color:var(--o5);}
+.reaction-count{font-size:.72rem;font-weight:600;color:var(--text2);}
+
+.msg-actions{position:absolute;top:-10px;right:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px;display:none;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:10;}
+.msg-bubble-wrap:hover .msg-actions{display:flex;}
+.msg-action-btn{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:4px;font-size:.85rem;color:var(--text2);transition:background .15s;}
+.msg-action-btn:hover{background:var(--bg);}
+
 .msg-time{font-size:.68rem;color:var(--text3);padding:0 4px;}
 
 .no-msgs{text-align:center;padding:60px 20px;color:var(--text3);}
 .no-msgs i{font-size:3rem;margin-bottom:12px;display:block;opacity:.2;}
 
-/* Input */
+/* Input area with reply preview */
 .chat-input-area{flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border);background:var(--card);}
+.reply-bar{display:none;padding:8px 12px;background:#f8f9fa;border-left:3px solid var(--o5);border-radius:6px;margin-bottom:8px;font-size:.82rem;}
+.reply-bar.active{display:block;}
+.reply-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.reply-bar-label{font-weight:600;color:var(--o5);font-size:.75rem;}
+.reply-bar-close{background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;font-size:.9rem;}
+.reply-bar-text{color:var(--text2);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
 .chat-form{display:flex;gap:10px;align-items:flex-end;}
+.attach-btn{background:none;border:none;cursor:pointer;color:var(--text2);padding:8px;border-radius:8px;font-size:1.1rem;transition:background .15s;}
+.attach-btn:hover{background:var(--bg);}
 .chat-input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;resize:none;max-height:120px;transition:border-color .2s;}
 .chat-input:focus{border-color:var(--o5);}
 .send-btn{width:42px;height:42px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;box-shadow:0 4px 12px rgba(249,115,22,0.3);}
 .send-btn:hover{opacity:.9;}
 .send-btn:active{opacity:.8;transform:scale(0.95);}
 .send-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* Reaction picker */
+.emoji-picker{display:none;position:absolute;bottom:100%;right:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:100;margin-bottom:4px;}
+.emoji-picker.active{display:flex;}
+.emoji-picker-emoji{font-size:1.3rem;cursor:pointer;padding:6px;border-radius:6px;transition:background .15s;}
+.emoji-picker-emoji:hover{background:var(--bg);}
 
 /* Modals */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
@@ -342,13 +583,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .empty-state h3{font-size:1.1rem;font-weight:600;margin-bottom:6px;}
 .empty-state p{font-size:.88rem;}
 
+/* Image preview modal */
+.image-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.image-modal.open{display:flex;}
+.image-modal img{max-width:90%;max-height:90vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.image-modal-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.2);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;backdrop-filter:blur(10px);}
+
 /* Mobile styles */
 @media(max-width:768px){
     .page-wrap{margin-left:0;}
     .topbar-hamburger{display:flex;}
     .chat-layout{grid-template-columns:1fr;position:relative;}
     
-    /* Show/hide panels on mobile */
     .rooms-panel{
         position:absolute;
         inset:0;
@@ -366,12 +612,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         z-index:50;
     }
     
-    /* Show back button in chat header on mobile */
     .chat-head-back{
         display:flex;
     }
     
-    /* Hide chat area when no room is selected */
     body:not(.room-selected) .chat-area{
         display:none;
     }
@@ -380,7 +624,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         transform:translateX(0);
     }
     
-    /* Adjust modal for mobile */
     .modal{
         width:95%;
         max-width:none;
@@ -388,12 +631,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         padding:20px;
     }
     
-    /* Make message bubbles more mobile-friendly */
     .msg-bubble-wrap{
         max-width:80%;
     }
     
-    /* Adjust input area for mobile */
     .chat-input-area{
         padding:10px 12px;
     }
@@ -406,9 +647,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
         width:40px;
         height:40px;
     }
+    
+    .msg-actions{
+        display:flex !important;
+        position:static;
+        margin-top:4px;
+    }
 }
 
-/* Very small screens */
 @media(max-width:380px){
     .topbar{
         padding:8px 12px;
@@ -542,7 +788,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                 <?php foreach ($messages as $msg):
                     $isMe = $msg['sender_id'] == $sid;
                 ?>
-                <div class="msg-group <?php echo $isMe?'mine':''; ?>">
+                <div class="msg-group <?php echo $isMe?'mine':''; ?>" data-msg-id="<?php echo $msg['id']; ?>">
                     <div class="msg-ava">
                         <?php if ($msg['profile_photo']): ?>
                             <img src="<?php echo htmlspecialchars($msg['profile_photo']); ?>" alt="">
@@ -555,8 +801,59 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                             <div class="msg-sender-name"><?php echo htmlspecialchars(explode(' ',$msg['full_name'])[0]); ?></div>
                         <?php endif; ?>
                         <div class="msg-bubble <?php echo $isMe?'mine-b':'other'; ?>">
-                            <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
+                            <?php if ($msg['reply_to_id']): ?>
+                            <div class="reply-preview">
+                                <div class="reply-preview-name"><?php echo htmlspecialchars($msg['reply_sender_name']); ?></div>
+                                <div class="reply-preview-text">
+                                    <?php if ($msg['reply_attachment_type'] === 'image'): ?>
+                                        <i class="fas fa-image"></i> Photo
+                                    <?php elseif ($msg['reply_attachment_type'] === 'file'): ?>
+                                        <i class="fas fa-file"></i> File
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars(substr($msg['reply_message'], 0, 40)); ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($msg['message']): ?>
+                                <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
+                            <?php endif; ?>
+                            <?php if ($msg['attachment_path']): ?>
+                            <div class="msg-attachment">
+                                <?php if ($msg['attachment_type'] === 'image'): ?>
+                                    <img src="<?php echo htmlspecialchars($msg['attachment_path']); ?>" alt="Image" onclick="openImageModal(this.src)">
+                                <?php else: ?>
+                                    <a href="<?php echo htmlspecialchars($msg['attachment_path']); ?>" download="<?php echo htmlspecialchars($msg['attachment_name']); ?>" class="msg-attachment file">
+                                        <div class="file-icon"><i class="fas fa-file"></i></div>
+                                        <div class="file-info">
+                                            <div class="file-name"><?php echo htmlspecialchars($msg['attachment_name']); ?></div>
+                                        </div>
+                                        <i class="fas fa-download file-download"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+                            <div class="msg-actions">
+                                <button class="msg-action-btn" onclick="showReactionPicker(<?php echo $msg['id']; ?>, this)" title="React">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                                <button class="msg-action-btn" onclick="replyToMessage(<?php echo $msg['id']; ?>, '<?php echo addslashes($msg['full_name']); ?>', '<?php echo addslashes($msg['message'] ?: ($msg['attachment_type'] === 'image' ? 'Photo' : 'File')); ?>')" title="Reply">
+                                    <i class="fas fa-reply"></i>
+                                </button>
+                            </div>
                         </div>
+                        <?php if (!empty($msg['reactions'])): ?>
+                        <div class="msg-reactions">
+                            <?php foreach ($msg['reactions'] as $emoji => $data): ?>
+                            <div class="reaction-item <?php echo $data['has_reacted'] ? 'has-reacted' : ''; ?>" 
+                                 onclick="toggleReaction(<?php echo $msg['id']; ?>, '<?php echo $emoji; ?>')"
+                                 title="<?php echo implode(', ', $data['users']); ?>">
+                                <span><?php echo $emoji; ?></span>
+                                <span class="reaction-count"><?php echo $data['count']; ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
                         <div class="msg-time"><?php echo date('h:i A', strtotime($msg['created_at'])); ?></div>
                     </div>
                 </div>
@@ -565,7 +862,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
             </div>
             
             <div class="chat-input-area">
+                <div class="reply-bar" id="replyBar">
+                    <div class="reply-bar-top">
+                        <span class="reply-bar-label">Replying to <span id="replyUserName"></span></span>
+                        <button class="reply-bar-close" onclick="cancelReply()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="reply-bar-text" id="replyText"></div>
+                </div>
                 <div class="chat-form">
+                    <input type="file" id="fileInput" style="display:none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar" onchange="handleFileSelect(this)">
+                    <button class="attach-btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
                     <textarea class="chat-input" id="msgInput" placeholder="Type a message…" rows="1"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
@@ -582,6 +890,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
             <?php endif; ?>
         </div>
     </div>
+</div>
+
+<!-- Emoji Picker (positioned by JS) -->
+<div class="emoji-picker" id="emojiPicker">
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('👍')">👍</span>
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('❤️')">❤️</span>
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('😂')">😂</span>
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('😮')">😮</span>
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('😢')">😢</span>
+    <span class="emoji-picker-emoji" onclick="reactWithEmoji('🎉')">🎉</span>
+</div>
+
+<!-- Image Modal -->
+<div class="image-modal" id="imageModal" onclick="closeImageModal()">
+    <button class="image-modal-close"><i class="fas fa-times"></i></button>
+    <img id="imageModalImg" src="" alt="">
 </div>
 
 <!-- New Chat Modal -->
@@ -672,15 +996,16 @@ const MY_ID = <?php echo $sid; ?>;
 let lastMsgId = <?php echo $lastMsgId; ?>;
 let polling;
 let selectedGroupMembers = [];
+let replyToId = null;
+let selectedFile = null;
+let currentReactionMsgId = null;
 
-// Mobile navigation functions
+// Mobile navigation
 function toggleRoomsPanel() {
-    const panel = document.getElementById('roomsPanel');
-    panel.classList.toggle('mobile-visible');
+    document.getElementById('roomsPanel').classList.toggle('mobile-visible');
 }
 
 function goBackToRooms() {
-    // Remove room-selected class and navigate to messenger without room param
     if (window.innerWidth <= 768) {
         window.location.href = 'messenger.php';
     }
@@ -688,12 +1013,9 @@ function goBackToRooms() {
 
 function handleRoomClick(event, roomId) {
     if (window.innerWidth <= 768) {
-        // On mobile, add room-selected class to body
         document.body.classList.add('room-selected');
-        // Close rooms panel
         document.getElementById('roomsPanel').classList.remove('mobile-visible');
     }
-    // Let the default link behavior happen
 }
 
 // Close rooms panel when clicking outside on mobile
@@ -715,10 +1037,22 @@ function scrollToBottom() {
 }
 scrollToBottom();
 
+// File handling
+function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedFile = input.files[0];
+        // Show file name in placeholder or add visual indicator
+        const fileName = selectedFile.name;
+        const msgInput = document.getElementById('msgInput');
+        msgInput.placeholder = `📎 ${fileName} - Type a message or press send...`;
+    }
+}
+
+// Send message with optional file
 function sendMessage() {
     const input = document.getElementById('msgInput');
     const msg = input.value.trim();
-    if (!msg || !ROOM_ID) return;
+    if ((!msg && !selectedFile) || !ROOM_ID) return;
     
     const btn = document.getElementById('sendBtn');
     btn.disabled = true;
@@ -729,6 +1063,12 @@ function sendMessage() {
     fd.append('action', 'send');
     fd.append('room_id', ROOM_ID);
     fd.append('message', msg);
+    if (replyToId) {
+        fd.append('reply_to_id', replyToId);
+    }
+    if (selectedFile) {
+        fd.append('attachment', selectedFile);
+    }
     
     fetch('messenger.php', {method: 'POST', body: fd})
         .then(r => r.json())
@@ -740,15 +1080,30 @@ function sendMessage() {
                     full_name: <?php echo json_encode($student['full_name']); ?>,
                     profile_photo: <?php echo json_encode($student['profile_photo']); ?>,
                     created_at: new Date().toISOString(),
-                    sender_id: MY_ID
+                    sender_id: MY_ID,
+                    attachment_path: d.attachment_path,
+                    attachment_type: d.attachment_type,
+                    attachment_name: d.attachment_name,
+                    reply_to_id: replyToId,
+                    reply_message: d.reply_msg ? d.reply_msg.message : null,
+                    reply_sender_name: d.reply_msg ? d.reply_msg.full_name : null,
+                    reply_attachment_type: d.reply_msg ? d.reply_msg.attachment_type : null,
+                    reactions: {}
                 }, true);
                 lastMsgId = d.msg_id;
+                cancelReply();
+                selectedFile = null;
+                document.getElementById('fileInput').value = '';
+                input.placeholder = 'Type a message…';
+            } else {
+                alert(d.error || 'Failed to send message');
             }
             btn.disabled = false;
             input.focus();
         })
         .catch(() => {
             btn.disabled = false;
+            alert('Error sending message');
         });
 }
 
@@ -759,16 +1114,68 @@ function appendMessage(msg, isMe) {
     
     const div = document.createElement('div');
     div.className = 'msg-group' + (isMe ? ' mine' : '');
+    div.setAttribute('data-msg-id', msg.id);
     const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     const initial = msg.full_name[0].toUpperCase();
     const profileImg = msg.profile_photo ? `<img src="${msg.profile_photo}" alt="">` : initial;
     const isGroup = <?php echo $activeRoom && $activeRoom['room_type']==='group' ? 'true' : 'false'; ?>;
     
+    let replyHtml = '';
+    if (msg.reply_to_id) {
+        let replyContent = '';
+        if (msg.reply_attachment_type === 'image') {
+            replyContent = '<i class="fas fa-image"></i> Photo';
+        } else if (msg.reply_attachment_type === 'file') {
+            replyContent = '<i class="fas fa-file"></i> File';
+        } else {
+            replyContent = (msg.reply_message || '').substring(0, 40);
+        }
+        replyHtml = `
+            <div class="reply-preview">
+                <div class="reply-preview-name">${msg.reply_sender_name}</div>
+                <div class="reply-preview-text">${replyContent}</div>
+            </div>
+        `;
+    }
+    
+    let attachmentHtml = '';
+    if (msg.attachment_path) {
+        if (msg.attachment_type === 'image') {
+            attachmentHtml = `<div class="msg-attachment"><img src="${msg.attachment_path}" alt="Image" onclick="openImageModal('${msg.attachment_path}')"></div>`;
+        } else {
+            attachmentHtml = `
+                <div class="msg-attachment">
+                    <a href="${msg.attachment_path}" download="${msg.attachment_name}" class="msg-attachment file">
+                        <div class="file-icon"><i class="fas fa-file"></i></div>
+                        <div class="file-info">
+                            <div class="file-name">${msg.attachment_name}</div>
+                        </div>
+                        <i class="fas fa-download file-download"></i>
+                    </a>
+                </div>
+            `;
+        }
+    }
+    
+    let messageText = msg.message ? msg.message.replace(/\n/g, '<br>') : '';
+    
     div.innerHTML = `
         <div class="msg-ava">${profileImg}</div>
         <div class="msg-bubble-wrap">
             ${!isMe && isGroup ? `<div class="msg-sender-name">${msg.full_name.split(' ')[0]}</div>` : ''}
-            <div class="msg-bubble ${isMe ? 'mine-b' : 'other'}">${msg.message.replace(/\n/g, '<br>')}</div>
+            <div class="msg-bubble ${isMe ? 'mine-b' : 'other'}">
+                ${replyHtml}
+                ${messageText}
+                ${attachmentHtml}
+                <div class="msg-actions">
+                    <button class="msg-action-btn" onclick="showReactionPicker(${msg.id}, this)" title="React">
+                        <i class="fas fa-smile"></i>
+                    </button>
+                    <button class="msg-action-btn" onclick="replyToMessage(${msg.id}, '${msg.full_name.replace(/'/g, "\\'")}', '${(msg.message || (msg.attachment_type === 'image' ? 'Photo' : 'File')).replace(/'/g, "\\'").substring(0, 40)}')" title="Reply">
+                        <i class="fas fa-reply"></i>
+                    </button>
+                </div>
+            </div>
             <div class="msg-time">${time}</div>
         </div>
     `;
@@ -776,6 +1183,80 @@ function appendMessage(msg, isMe) {
     scrollToBottom();
 }
 
+// Reply functionality
+function replyToMessage(msgId, userName, msgText) {
+    replyToId = msgId;
+    document.getElementById('replyBar').classList.add('active');
+    document.getElementById('replyUserName').textContent = userName;
+    document.getElementById('replyText').textContent = msgText;
+    document.getElementById('msgInput').focus();
+}
+
+function cancelReply() {
+    replyToId = null;
+    document.getElementById('replyBar').classList.remove('active');
+}
+
+// Reaction functionality
+function showReactionPicker(msgId, btn) {
+    const picker = document.getElementById('emojiPicker');
+    currentReactionMsgId = msgId;
+    
+    // Position picker relative to button
+    const rect = btn.getBoundingClientRect();
+    picker.style.position = 'fixed';
+    picker.style.top = (rect.top - 50) + 'px';
+    picker.style.left = rect.left + 'px';
+    picker.classList.add('active');
+    
+    // Close on click outside
+    setTimeout(() => {
+        document.addEventListener('click', closeReactionPicker);
+    }, 100);
+}
+
+function closeReactionPicker(e) {
+    const picker = document.getElementById('emojiPicker');
+    if (!picker.contains(e.target)) {
+        picker.classList.remove('active');
+        document.removeEventListener('click', closeReactionPicker);
+    }
+}
+
+function reactWithEmoji(emoji) {
+    if (!currentReactionMsgId) return;
+    toggleReaction(currentReactionMsgId, emoji);
+    document.getElementById('emojiPicker').classList.remove('active');
+}
+
+function toggleReaction(msgId, emoji) {
+    const fd = new FormData();
+    fd.append('action', 'react');
+    fd.append('msg_id', msgId);
+    fd.append('emoji', emoji);
+    
+    fetch('messenger.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                // Refresh the specific message reactions
+                pollMessages();
+            }
+        })
+        .catch(() => {});
+}
+
+// Image modal
+function openImageModal(src) {
+    document.getElementById('imageModalImg').src = src;
+    document.getElementById('imageModal').classList.add('open');
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').classList.remove('open');
+}
+
+// Poll messages
 function pollMessages() {
     if (!ROOM_ID) return;
     
@@ -792,11 +1273,37 @@ function pollMessages() {
                     if (m.sender_id != MY_ID) {
                         appendMessage(m, false);
                         lastMsgId = m.id;
+                    } else {
+                        // Update reactions for own messages
+                        const msgDiv = document.querySelector(`[data-msg-id="${m.id}"]`);
+                        if (msgDiv && Object.keys(m.reactions).length > 0) {
+                            updateMessageReactions(msgDiv, m.reactions);
+                        }
                     }
                 });
             }
         })
         .catch(() => {});
+}
+
+function updateMessageReactions(msgDiv, reactions) {
+    let reactionsDiv = msgDiv.querySelector('.msg-reactions');
+    if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'msg-reactions';
+        msgDiv.querySelector('.msg-bubble-wrap').insertBefore(reactionsDiv, msgDiv.querySelector('.msg-time'));
+    }
+    
+    reactionsDiv.innerHTML = '';
+    Object.keys(reactions).forEach(emoji => {
+        const data = reactions[emoji];
+        const item = document.createElement('div');
+        item.className = 'reaction-item' + (data.has_reacted ? ' has-reacted' : '');
+        item.onclick = () => toggleReaction(msgDiv.getAttribute('data-msg-id'), emoji);
+        item.title = data.users.join(', ');
+        item.innerHTML = `<span>${emoji}</span><span class="reaction-count">${data.count}</span>`;
+        reactionsDiv.appendChild(item);
+    });
 }
 
 if (ROOM_ID) {
@@ -812,7 +1319,7 @@ if (msgInput) {
     });
 }
 
-// New chat modal
+// New chat modal functions
 function openNewChatModal() {
     document.getElementById('newChatModal').classList.add('open');
 }
@@ -877,7 +1384,7 @@ function searchUsers(query) {
         });
 }
 
-// Group chat
+// Group chat functions
 function openGroupChatModal() {
     closeNewChatModal();
     document.getElementById('groupChatModal').classList.add('open');
