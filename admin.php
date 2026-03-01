@@ -224,6 +224,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span>
                 <?php endif; ?>
             </button>
+            <button class="tab" data-tab="all_submissions"><i class="fas fa-inbox"></i> All Submissions</button>
             <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
             <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
         </div>
@@ -236,6 +237,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         
         <div id="tab-reviews" class="tab-content">
             <?php include 'admin_modules/admin_review_submissions.php'; ?>
+        </div>
+
+        <div id="tab-all_submissions" class="tab-content">
+            <?php include 'admin_modules/admin_all_submissions.php'; ?>
         </div>
         
         <div id="tab-attendance" class="tab-content">
