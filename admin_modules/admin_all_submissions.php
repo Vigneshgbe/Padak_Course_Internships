@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_submission_sta
                             VALUES ($sid, '$notifTitle', '$notifEsc', 'task', NOW())");
             }
             $_SESSION['admin_success'] = 'Submission updated successfully!';
-            echo '<script>window.location.href="admin.php#tab-all_submissions";</script>';
+            header('Location: admin.php?tab=all_submissions');
             exit;
         } else {
             $error = 'Failed to update submission: ' . $db->error;
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_update'])) {
         $db->query("UPDATE task_submissions SET status='$bulkStatus', reviewed_by='$reviewedBy',
                     reviewed_at=NOW(), updated_at=NOW() WHERE id IN ($idList)");
         $_SESSION['admin_success'] = count($idsInt) . ' submission(s) updated to ' . ucfirst(str_replace('_', ' ', $bulkStatus)) . '.';
-        echo '<script>window.location.href="admin.php#tab-all_submissions";</script>';
+        header('Location: admin.php?tab=all_submissions');
         exit;
     } else {
         $error = 'Please select submissions and a valid bulk action.';
@@ -397,7 +397,7 @@ function buildSubUrl($params = []) {
                                     <a href="<?php echo htmlspecialchars($sub['github_link']); ?>" target="_blank" class="ts-link"><i class="fab fa-github fa-xs"></i> GitHub</a>
                                     <?php endif; ?>
                                     <?php if (!empty($sub['file_name'])): ?>
-                                    <a href="/uploads/<?php echo htmlspecialchars($sub['file_path']); ?>" target="_blank" class="ts-link"><i class="fas fa-file fa-xs"></i> <?php echo htmlspecialchars(substr($sub['file_name'],0,12).(strlen($sub['file_name'])>12?'…':'')); ?></a>
+                                    <a href="/<?php echo htmlspecialchars($sub['file_path']); ?>" target="_blank" class="ts-link"><i class="fas fa-file fa-xs"></i> <?php echo htmlspecialchars(substr($sub['file_name'],0,12).(strlen($sub['file_name'])>12?'…':'')); ?></a>
                                     <?php endif; ?>
                                     <?php if (empty($sub['submission_url']) && empty($sub['github_link']) && empty($sub['file_name'])): ?>
                                     <span style="color:var(--text3);font-size:.75rem;">Text only</span>
@@ -597,7 +597,7 @@ function openReviewModal(sub) {
     var links = [];
     if (sub.submission_url) links.push({label:'Submission URL',icon:'fa-link',href:sub.submission_url});
     if (sub.github_link)    links.push({label:'GitHub',icon:'fa-github',href:sub.github_link,fab:true});
-    if (sub.file_path)      links.push({label:sub.file_name||'Attached File',icon:'fa-file',href:'/uploads/'+sub.file_path});
+    if (sub.file_path)      links.push({label:sub.file_name||'Attached File',icon:'fa-file',href:'/'+sub.file_path});
     if (links.length) {
         links.forEach(function(l){
             var a=document.createElement('a'); a.href=l.href; a.target='_blank'; a.className='ts-link';
