@@ -231,7 +231,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         
         <div id="tab-submitted-tasks" class="tab-content" style="display:none;">
             <?php 
-            $module_path = 'admin_modules/admin_submitted_tasks.php';
+            $module_path = 'admin_modules/admin_all_submitted_tasks.php';
             if (file_exists($module_path)) {
                 include $module_path;
             } else {
