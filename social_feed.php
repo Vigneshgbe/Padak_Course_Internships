@@ -202,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // --------------------------------------------------
     if ($_POST['action'] === 'toggle_like') {
         $postId = (int)($_POST['post_id'] ?? 0);
-
+        
         if (!$postId) {
             echo json_encode(['success' => false, 'error' => 'Invalid post ID']);
             exit;
@@ -317,6 +317,155 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     // --------------------------------------------------
+    // EDIT POST
+    // --------------------------------------------------
+    if ($_POST['action'] === 'edit_post') {
+        $postId = (int)($_POST['post_id'] ?? 0);
+        $content = trim($_POST['content'] ?? '');
+        $hasFile = isset($_FILES['media']) && $_FILES['media']['error'] !== UPLOAD_ERR_NO_FILE;
+
+        if (!$postId) {
+            echo json_encode(['success' => false, 'error' => 'Invalid post ID']);
+            exit;
+        }
+
+        // Verify ownership
+        $checkStmt = $db->prepare("SELECT media_path FROM social_feed WHERE id=? AND student_id=? AND item_type='post'");
+        $checkStmt->bind_param("ii", $postId, $sid);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            echo json_encode(['success' => false, 'error' => 'Not authorized']);
+            exit;
+        }
+
+        $existingPost = $result->fetch_assoc();
+        $oldMediaPath = $existingPost['media_path'];
+        $mediaPath = $oldMediaPath;
+        $mediaType = null;
+
+        // Handle new file upload
+        if ($hasFile) {
+            $fileError = $_FILES['media']['error'];
+            if ($fileError !== UPLOAD_ERR_OK) {
+                echo json_encode(['success' => false, 'error' => 'Upload error']);
+                exit;
+            }
+
+            if (!is_writable($uploadsDir)) {
+                echo json_encode(['success' => false, 'error' => 'Uploads folder not writable']);
+                exit;
+            }
+
+            $file = $_FILES['media'];
+            $fileName = basename($file['name']);
+            $fileTmp = $file['tmp_name'];
+            $fileSize = $file['size'];
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            if ($fileSize > 10 * 1024 * 1024) {
+                echo json_encode(['success' => false, 'error' => 'File too large (max 10MB)']);
+                exit;
+            }
+
+            $allowedImages = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $allowedVideos = ['mp4', 'webm', 'mov'];
+
+            if (in_array($fileExt, $allowedImages)) {
+                $mediaType = 'image';
+                $newFileName = uniqid() . '_' . time() . '.jpg';
+                $optimizedPath = $uploadsDir . '/' . $newFileName;
+
+                if (extension_loaded('gd')) {
+                    $image = null;
+                    switch ($fileExt) {
+                        case 'jpg':
+                        case 'jpeg': $image = @imagecreatefromjpeg($fileTmp); break;
+                        case 'png':  $image = @imagecreatefrompng($fileTmp);  break;
+                        case 'gif':  $image = @imagecreatefromgif($fileTmp);  break;
+                        case 'webp': $image = @imagecreatefromwebp($fileTmp); break;
+                    }
+
+                    if ($image) {
+                        $width = imagesx($image);
+                        $height = imagesy($image);
+                        $maxWidth = 1200;
+
+                        if ($width > $maxWidth) {
+                            $ratio = $maxWidth / $width;
+                            $newW = $maxWidth;
+                            $newH = (int)($height * $ratio);
+                            $resized = imagecreatetruecolor($newW, $newH);
+                            imagealphablending($resized, false);
+                            imagesavealpha($resized, true);
+                            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newW, $newH, $width, $height);
+                            imagejpeg($resized, $optimizedPath, 85);
+                            imagedestroy($resized);
+                        } else {
+                            imagejpeg($image, $optimizedPath, 85);
+                        }
+                        imagedestroy($image);
+                        $mediaPath = $uploadsUrl . '/' . $newFileName;
+                    } else {
+                        move_uploaded_file($fileTmp, $optimizedPath);
+                        $mediaPath = $uploadsUrl . '/' . $newFileName;
+                    }
+                } else {
+                    $newFileName = uniqid() . '_' . time() . '.' . $fileExt;
+                    $destPath = $uploadsDir . '/' . $newFileName;
+                    move_uploaded_file($fileTmp, $destPath);
+                    $mediaPath = $uploadsUrl . '/' . $newFileName;
+                }
+
+                // Delete old media file
+                if ($oldMediaPath && file_exists($oldMediaPath)) {
+                    @unlink($oldMediaPath);
+                }
+
+            } elseif (in_array($fileExt, $allowedVideos)) {
+                $mediaType = 'video';
+                $newFileName = uniqid() . '_' . time() . '.' . $fileExt;
+                $destPath = $uploadsDir . '/' . $newFileName;
+                if (move_uploaded_file($fileTmp, $destPath)) {
+                    $mediaPath = $uploadsUrl . '/' . $newFileName;
+                    // Delete old media file
+                    if ($oldMediaPath && file_exists($oldMediaPath)) {
+                        @unlink($oldMediaPath);
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Failed to save video']);
+                    exit;
+                }
+            } else {
+                echo json_encode(['success' => false, 'error' => "File type '$fileExt' not allowed"]);
+                exit;
+            }
+        }
+
+        // Update post
+        if ($hasFile) {
+            $stmt = $db->prepare("UPDATE social_feed SET content=?, media_path=?, media_type=?, updated_at=NOW() WHERE id=?");
+            $stmt->bind_param("sssi", $content, $mediaPath, $mediaType, $postId);
+        } else {
+            $stmt = $db->prepare("UPDATE social_feed SET content=?, updated_at=NOW() WHERE id=?");
+            $stmt->bind_param("si", $content, $postId);
+        }
+
+        if (!$stmt->execute()) {
+            echo json_encode(['success' => false, 'error' => 'Failed to update post']);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'media_path' => $mediaPath,
+            'media_type' => $mediaType ?: ($oldMediaPath ? 'image' : null)
+        ]);
+        exit;
+    }
+
+    // --------------------------------------------------
     // DELETE POST
     // --------------------------------------------------
     if ($_POST['action'] === 'delete_post') {
@@ -331,7 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $checkStmt = $db->prepare("SELECT id FROM social_feed WHERE id=? AND student_id=? AND item_type='post'");
         $checkStmt->bind_param("ii", $postId, $sid);
         $checkStmt->execute();
-
+        
         if ($checkStmt->get_result()->num_rows === 0) {
             echo json_encode(['success' => false, 'error' => 'Not authorized']);
             exit;
@@ -414,23 +563,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 /* ── FEED LAYOUT ─────────────────────────────────────────── */
 .feed-container{
-    max-width:680px;
     max-width:900px;
     margin:0 auto;
-    padding:20px;
     padding:24px;
     flex:1;
 }
+
 @media(min-width:1400px){
-    .feed-container{max-width:1000px;padding:28px;}
+    .feed-container{max-width:1000px;}
+}
+@media(min-width:1600px){
+    .feed-container{max-width:1100px;}
 }
 
 /* ── CREATE POST CARD ────────────────────────────────────── */
 .create-post-card{
     background:var(--card);
-    border-radius:12px;
-    padding:18px;
-    margin-bottom:20px;
     border-radius:14px;
     padding:22px;
     margin-bottom:24px;
@@ -440,16 +588,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .create-post-header{
     display:flex;
     align-items:center;
-    gap:12px;
-    margin-bottom:12px;
     gap:14px;
     margin-bottom:14px;
 }
 .user-avatar{
-    width:42px;
-    height:42px;
-    width:46px;
-    height:46px;
+    width:48px;
+    height:48px;
     border-radius:50%;
     background:linear-gradient(135deg,var(--o5),var(--o4));
     color:#fff;
@@ -457,25 +601,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     align-items:center;
     justify-content:center;
     font-weight:700;
-    font-size:1rem;
     font-size:1.05rem;
     flex-shrink:0;
 }
 .user-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .create-post-input{
     flex:1;
-    padding:12px 16px;
     padding:14px 18px;
     border:1.5px solid var(--border);
-    border-radius:24px;
-    font-size:.9rem;
+    border-radius:16px;
     font-size:.92rem;
     font-family:inherit;
     outline:none;
     resize:none;
     transition:border-color .2s;
     background:var(--bg);
-    min-height:52px;
+    min-height:80px;
+    max-height:200px;
 }
 .create-post-input:focus{border-color:var(--o5);background:var(--card);}
 .create-post-actions{
@@ -484,8 +626,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     justify-content:space-between;
     margin-top:12px;
     padding-top:12px;
-    margin-top:14px;
-    padding-top:14px;
     border-top:1px solid var(--border);
 }
 .media-preview{
@@ -518,7 +658,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     justify-content:center;
     font-size:.95rem;
 }
-.post-actions-left{display:flex;gap:8px;}
+.post-actions-left{display:flex;gap:8px;align-items:center;}
 .post-action-btn{
     background:none;
     border:none;
@@ -526,35 +666,226 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     padding:8px 14px;
     border-radius:8px;
     font-size:.88rem;
-    padding:9px 16px;
-    border-radius:10px;
-    font-size:.9rem;
     color:var(--text2);
     display:flex;
     align-items:center;
     gap:6px;
-    gap:7px;
     transition:all .2s;
     font-weight:500;
 }
 .post-action-btn:hover{background:var(--bg);color:var(--text);}
 .post-action-btn i{font-size:1rem;}
-.post-action-btn i{font-size:1.05rem;}
+
+/* Emoji Picker */
+.emoji-picker-container{position:relative;}
+.emoji-picker-popup{
+    display:none;
+    position:absolute;
+    bottom:100%;
+    left:0;
+    margin-bottom:8px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.15);
+    z-index:1000;
+    width:320px;
+    max-height:240px;
+    overflow-y:auto;
+}
+.emoji-picker-popup.active{display:block;}
+.emoji-category{margin-bottom:12px;}
+.emoji-category-title{
+    font-size:.75rem;
+    font-weight:700;
+    color:var(--text3);
+    margin-bottom:8px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+}
+.emoji-grid{
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    gap:4px;
+}
+.emoji-item{
+    font-size:1.5rem;
+    cursor:pointer;
+    padding:6px;
+    border-radius:6px;
+    transition:background .15s;
+    text-align:center;
+    user-select:none;
+}
+.emoji-item:hover{background:var(--bg);transform:scale(1.2);}
+
+/* Edit Modal */
+.edit-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    z-index:9998;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(4px);
+}
+.edit-modal.open{display:flex;}
+.edit-modal-content{
+    background:var(--card);
+    border-radius:16px;
+    padding:24px;
+    width:100%;
+    max-width:600px;
+    max-height:90vh;
+    overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.edit-modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+}
+.edit-modal-title{
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.edit-modal-title i{color:var(--o5);}
+.edit-modal-close{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text3);
+    font-size:1.3rem;
+    padding:4px;
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all .2s;
+}
+.edit-modal-close:hover{background:var(--bg);color:var(--text);}
+.edit-modal-body{margin-bottom:20px;}
+.edit-textarea{
+    width:100%;
+    padding:14px 16px;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    font-size:.92rem;
+    font-family:inherit;
+    outline:none;
+    resize:vertical;
+    min-height:120px;
+    max-height:300px;
+    transition:border-color .2s;
+    margin-bottom:16px;
+}
+.edit-textarea:focus{border-color:var(--o5);}
+.edit-media-section{margin-bottom:16px;}
+.edit-current-media{
+    border-radius:12px;
+    overflow:hidden;
+    margin-bottom:12px;
+    position:relative;
+}
+.edit-current-media img{
+    width:100%;
+    max-height:300px;
+    object-fit:cover;
+    display:block;
+}
+.edit-current-media video{
+    width:100%;
+    max-height:300px;
+    border-radius:12px;
+}
+.edit-remove-media{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(0,0,0,0.7);
+    border:none;
+    color:#fff;
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.95rem;
+    transition:background .2s;
+}
+.edit-remove-media:hover{background:rgba(0,0,0,0.85);}
+.edit-media-label{
+    display:inline-block;
+    padding:10px 18px;
+    background:var(--bg);
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    cursor:pointer;
+    font-size:.88rem;
+    font-weight:600;
+    color:var(--text);
+    transition:all .2s;
+}
+.edit-media-label:hover{border-color:var(--o5);background:var(--card);}
+.edit-media-label i{margin-right:6px;color:var(--o5);}
+.edit-modal-footer{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+}
+.edit-modal-btn{
+    padding:10px 24px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    font-size:.9rem;
+    font-weight:600;
+    font-family:inherit;
+    transition:opacity .2s;
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.edit-modal-btn.cancel{
+    background:var(--bg);
+    border:1.5px solid var(--border);
+    color:var(--text2);
+}
+.edit-modal-btn.save{
+    background:linear-gradient(135deg,var(--o5),var(--o4));
+    color:#fff;
+    box-shadow:0 2px 8px rgba(249,115,22,0.3);
+}
+.edit-modal-btn:hover{opacity:.9;}
+.edit-modal-btn:disabled{opacity:.5;cursor:not-allowed;}
 .btn-post{
     background:linear-gradient(135deg,var(--o5),var(--o4));
     border:none;
     color:#fff;
     padding:8px 24px;
-    padding:10px 28px;
     border-radius:24px;
     cursor:pointer;
     font-size:.88rem;
-    font-size:.9rem;
     font-weight:600;
     display:flex;
     align-items:center;
     gap:6px;
-    gap:7px;
     transition:opacity .2s;
     box-shadow:0 2px 8px rgba(249,115,22,0.3);
 }
@@ -564,9 +895,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 /* ── POST CARD ───────────────────────────────────────────── */
 .post-card{
     background:var(--card);
-    border-radius:12px;
-    padding:18px;
-    margin-bottom:16px;
     border-radius:14px;
     padding:22px;
     margin-bottom:20px;
@@ -578,14 +906,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .post-header{
     display:flex;
     align-items:center;
-    gap:12px;
-    margin-bottom:14px;
     gap:14px;
     margin-bottom:16px;
 }
 .post-avatar{
-    width:44px;
-    height:44px;
     width:48px;
     height:48px;
     border-radius:50%;
@@ -596,49 +920,38 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     justify-content:center;
     font-weight:700;
     font-size:1rem;
-    font-size:1.05rem;
     flex-shrink:0;
 }
 .post-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .post-author-info{flex:1;}
 .post-author-name{font-size:.92rem;font-weight:700;color:var(--text);margin-bottom:2px;}
 .post-meta{font-size:.75rem;color:var(--text3);display:flex;align-items:center;gap:4px;}
-.post-author-name{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:3px;}
-.post-meta{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:4px;}
 .post-options{
     background:none;
     border:none;
     cursor:pointer;
     color:var(--text3);
     padding:6px;
-    padding:8px;
     border-radius:6px;
     font-size:1.1rem;
-    font-size:1.15rem;
     transition:background .2s;
 }
 .post-options:hover{background:var(--bg);}
 .post-content{
-    font-size:.92rem;
-    line-height:1.6;
     font-size:.95rem;
     line-height:1.65;
     color:var(--text);
-    margin-bottom:12px;
     margin-bottom:14px;
     white-space:pre-wrap;
     word-break:break-word;
 }
 .post-media{
-    margin-bottom:14px;
-    border-radius:10px;
     margin-bottom:16px;
     border-radius:12px;
     overflow:hidden;
 }
 .post-media img{
     width:100%;
-    max-height:500px;
     max-height:600px;
     object-fit:cover;
     cursor:pointer;
@@ -646,29 +959,31 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 }
 .post-media video{
     width:100%;
-    max-height:500px;
-    border-radius:10px;
     max-height:600px;
-    border-radius:12px;
+    border-radius:10px;
+}
+
+/* Responsive media heights */
+@media(max-width:768px){
+    .post-media img, .post-media video{max-height:400px;}
+}
+@media(max-width:480px){
+    .post-media img, .post-media video{max-height:300px;}
 }
 .post-stats{
     display:flex;
     align-items:center;
     justify-content:space-between;
     padding:10px 0;
-    padding:12px 0;
     border-bottom:1px solid var(--border);
     margin-bottom:10px;
     font-size:.82rem;
-    margin-bottom:12px;
-    font-size:.85rem;
     color:var(--text3);
 }
 .stat-item{
     display:flex;
     align-items:center;
     gap:4px;
-    gap:5px;
     cursor:pointer;
 }
 .stat-item:hover{color:var(--text2);}
@@ -677,8 +992,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     align-items:center;
     gap:4px;
     padding-bottom:10px;
-    gap:6px;
-    padding-bottom:12px;
     border-bottom:1px solid var(--border);
 }
 .interaction-btn{
@@ -689,15 +1002,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     padding:10px;
     border-radius:8px;
     font-size:.88rem;
-    padding:11px;
-    border-radius:10px;
-    font-size:.9rem;
     color:var(--text2);
     display:flex;
     align-items:center;
     justify-content:center;
     gap:6px;
-    gap:7px;
     transition:all .2s;
     font-weight:600;
 }
@@ -709,7 +1018,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 /* ── COMMENTS ────────────────────────────────────────────── */
 .comments-section{
     margin-top:12px;
-    margin-top:14px;
     display:none;
 }
 .comments-section.active{display:block;}
@@ -717,14 +1025,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     display:flex;
     gap:10px;
     margin-bottom:14px;
-    gap:12px;
-    margin-bottom:16px;
 }
 .comment-avatar{
     width:34px;
     height:34px;
-    width:38px;
-    height:38px;
     border-radius:50%;
     background:linear-gradient(135deg,var(--o5),var(--o4));
     color:#fff;
@@ -733,21 +1037,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     justify-content:center;
     font-weight:700;
     font-size:.85rem;
-    font-size:.9rem;
     flex-shrink:0;
 }
 .comment-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .comment-input-form{flex:1;display:flex;gap:8px;}
-.comment-input-form{flex:1;display:flex;gap:10px;}
 .comment-input{
     flex:1;
     padding:10px 14px;
-    padding:11px 16px;
     border:1.5px solid var(--border);
     border-radius:20px;
     font-size:.85rem;
-    border-radius:22px;
-    font-size:.88rem;
     font-family:inherit;
     outline:none;
     resize:none;
@@ -760,11 +1059,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     color:#fff;
     padding:0 18px;
     border-radius:20px;
-    padding:0 20px;
-    border-radius:22px;
     cursor:pointer;
     font-size:.85rem;
-    font-size:.88rem;
     font-weight:600;
     transition:opacity .2s;
 }
@@ -774,42 +1070,33 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     display:flex;
     flex-direction:column;
     gap:12px;
-    gap:14px;
 }
 .comment-item{
     display:flex;
     gap:10px;
-    gap:12px;
 }
 .comment-content{
     flex:1;
     background:var(--bg);
     padding:10px 14px;
     border-radius:12px;
-    padding:12px 16px;
-    border-radius:14px;
 }
 .comment-author{
     font-size:.82rem;
-    font-size:.85rem;
     font-weight:700;
     color:var(--text);
     margin-bottom:4px;
-    margin-bottom:5px;
 }
 .comment-text{
     font-size:.85rem;
-    font-size:.88rem;
     line-height:1.5;
     color:var(--text2);
     word-break:break-word;
 }
 .comment-time{
     font-size:.72rem;
-    font-size:.74rem;
     color:var(--text3);
     margin-top:4px;
-    margin-top:5px;
 }
 
 /* ── LOADING & EMPTY STATES ──────────────────────────────── */
@@ -906,30 +1193,42 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .option-item:hover{background:var(--bg);}
 .option-item.danger{color:#ef4444;}
 .option-item.danger:hover{background:#fef2f2;}
+.option-item i{width:16px;text-align:center;}
 
 /* ── RESPONSIVE ──────────────────────────────────────────── */
+/* Tablet view (768px - 1024px) */
+@media(max-width:1024px) and (min-width:769px){
+    .feed-container{
+        max-width:750px;
+        padding:20px;
+    }
+    .create-post-card, .post-card{
+        padding:18px;
+    }
+}
+
+/* Mobile view (≤768px) */
 @media(max-width:768px){
     .page-wrap{margin-left:0;}
     .topbar-hamburger{display:flex;}
-    .feed-container{padding:12px;}
-    .create-post-card, .post-card{border-radius:8px;padding:14px;}
-    .feed-container{padding:12px;max-width:100%;}
-    .create-post-card, .post-card{border-radius:10px;padding:16px;}
-    .post-content{font-size:.9rem;}
+    .feed-container{padding:14px;}
+    .create-post-card, .post-card{border-radius:10px;padding:16px;margin-bottom:14px;}
+    .post-content{font-size:.9rem;line-height:1.6;}
+    .user-avatar{width:40px;height:40px;font-size:.95rem;}
+    .post-avatar{width:42px;height:42px;font-size:.95rem;}
+    .comment-avatar{width:34px;height:34px;font-size:.85rem;}
+    .create-post-header, .post-header{gap:12px;}
+}
+
+/* Small mobile (≤480px) */
+@media(max-width:480px){
+    .feed-container{padding:10px;}
+    .create-post-card, .post-card{padding:14px;border-radius:8px;margin-bottom:12px;}
+    .topbar{padding:10px 14px;}
     .user-avatar{width:38px;height:38px;}
     .post-avatar{width:40px;height:40px;}
     .comment-avatar{width:32px;height:32px;}
-    .user-avatar{width:40px;height:40px;font-size:.95rem;}
-    .post-avatar{width:42px;height:42px;font-size:1rem;}
-    .comment-avatar{width:34px;height:34px;font-size:.85rem;}
-    .post-media img, .post-media video{max-height:400px;}
-    .create-post-input{padding:12px 16px;font-size:.9rem;min-height:48px;}
-}
-@media(min-width:769px) and (max-width:1024px){
-    .feed-container{max-width:750px;padding:20px;}
-}
-@media(min-width:1025px) and (max-width:1399px){
-    .feed-container{max-width:850px;padding:24px;}
+    .create-post-header, .post-header{gap:10px;}
 }
 </style>
 </head>
@@ -964,7 +1263,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                     placeholder="What's on your mind, <?php echo htmlspecialchars(explode(' ', $student['full_name'])[0]); ?>?"
                     rows="1"></textarea>
             </div>
-
+            
             <div class="media-preview" id="mediaPreview">
                 <img id="previewImage" src="" alt="" style="display:none;">
                 <video id="previewVideo" controls style="display:none;"></video>
@@ -979,6 +1278,97 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                     <button class="post-action-btn" onclick="document.getElementById('mediaInput').click()">
                         <i class="fas fa-image"></i> Photo/Video
                     </button>
+                    <div class="emoji-picker-container">
+                        <button class="post-action-btn" onclick="toggleEmojiPicker()">
+                            <i class="fas fa-smile"></i> Emoji
+                        </button>
+                        <div class="emoji-picker-popup" id="emojiPicker">
+                            <div class="emoji-category">
+                                <div class="emoji-category-title">Smileys</div>
+                                <div class="emoji-grid">
+                                    <span class="emoji-item" onclick="insertEmoji('😀')">😀</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😃')">😃</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😄')">😄</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😁')">😁</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😅')">😅</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😊')">😊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😇')">😇</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙂')">🙂</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙃')">🙃</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😉')">😉</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😌')">😌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😍')">😍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🥰')">🥰</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😘')">😘</span>
+                                </div>
+                            </div>
+                            <div class="emoji-category">
+                                <div class="emoji-category-title">Gestures</div>
+                                <div class="emoji-grid">
+                                    <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👎')">👎</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👏')">👏</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙌')">🙌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👊')">👊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✊')">✊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤝')">🤝</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙏')">🙏</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💪')">💪</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👌')">👌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✌️')">✌️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤞')">🤞</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤙')">🤙</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👋')">👋</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤚')">🤚</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✋')">✋</span>
+                                </div>
+                            </div>
+                            <div class="emoji-category">
+                                <div class="emoji-category-title">Hearts & Symbols</div>
+                                <div class="emoji-grid">
+                                    <span class="emoji-item" onclick="insertEmoji('❤️')">❤️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🧡')">🧡</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💛')">💛</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💚')">💚</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💙')">💙</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💜')">💜</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🖤')">🖤</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤍')">🤍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤎')">🤎</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💔')">💔</span>
+                                    <span class="emoji-item" onclick="insertEmoji('❣️')">❣️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💕')">💕</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💞')">💞</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💓')">💓</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💗')">💗</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💖')">💖</span>
+                                </div>
+                            </div>
+                            <div class="emoji-category">
+                                <div class="emoji-category-title">Activities</div>
+                                <div class="emoji-grid">
+                                    <span class="emoji-item" onclick="insertEmoji('⚽')">⚽</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏀')">🏀</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏈')">🏈</span>
+                                    <span class="emoji-item" onclick="insertEmoji('⚾')">⚾</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎾')">🎾</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏐')">🏐</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏓')">🏓</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎯')">🎯</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎮')">🎮</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎲')">🎲</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎨')">🎨</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎭')">🎭</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎪')">🎪</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎬')">🎬</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎤')">🎤</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎧')">🎧</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button class="btn-post" id="btnCreatePost" onclick="createPost()">
                     <i class="fas fa-paper-plane fa-sm"></i> Post
@@ -1013,12 +1403,52 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <img id="imageModalImg" src="" alt="">
 </div>
 
+<!-- Edit Post Modal -->
+<div class="edit-modal" id="editModal">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <div class="edit-modal-title">
+                <i class="fas fa-edit"></i>
+                Edit Post
+            </div>
+            <button class="edit-modal-close" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="edit-modal-body">
+            <textarea class="edit-textarea" id="editContent" placeholder="What's on your mind?"></textarea>
+            <div class="edit-media-section">
+                <div class="edit-current-media" id="editCurrentMedia" style="display:none;">
+                    <img id="editMediaImg" src="" alt="" style="display:none;">
+                    <video id="editMediaVideo" controls style="display:none;"></video>
+                    <button class="edit-remove-media" onclick="removeEditMedia()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <input type="file" id="editMediaInput" style="display:none;" accept="image/*,video/*" onchange="handleEditMediaSelect(this)">
+                <label for="editMediaInput" class="edit-media-label">
+                    <i class="fas fa-image"></i>
+                    Change Photo/Video
+                </label>
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button class="edit-modal-btn cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="edit-modal-btn save" id="btnSaveEdit" onclick="saveEditPost()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 const MY_ID = <?php echo $sid; ?>;
 let selectedMedia = null;
 let currentOffset = <?php echo count($posts); ?>;
 let isLoadingMore = false;
 let hasMorePosts = true;
+let editingPostId = null;
+let editMediaToRemove = false;
 
 // Auto-resize textarea
 const postContent = document.getElementById('postContent');
@@ -1027,15 +1457,52 @@ postContent.addEventListener('input', function() {
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 });
 
+// ─── EMOJI PICKER ────────────────────────────────────────────
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    picker.classList.toggle('active');
+    
+    if (picker.classList.contains('active')) {
+        setTimeout(() => {
+            document.addEventListener('click', closeEmojiPickerOutside);
+        }, 100);
+    }
+}
+
+function closeEmojiPickerOutside(e) {
+    const picker = document.getElementById('emojiPicker');
+    const btn = document.querySelector('.emoji-picker-container .post-action-btn');
+    
+    if (!picker.contains(e.target) && !btn.contains(e.target)) {
+        picker.classList.remove('active');
+        document.removeEventListener('click', closeEmojiPickerOutside);
+    }
+}
+
+function insertEmoji(emoji) {
+    const textarea = document.getElementById('postContent');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    textarea.value = text.substring(0, start) + emoji + text.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+    textarea.focus();
+    
+    // Trigger resize
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+}
+
 // ─── MEDIA HANDLING ──────────────────────────────────────────
 function handleMediaSelect(input) {
     if (!input.files || !input.files[0]) return;
     selectedMedia = input.files[0];
-
+    
     const preview = document.getElementById('mediaPreview');
     const previewImg = document.getElementById('previewImage');
     const previewVid = document.getElementById('previewVideo');
-
+    
     if (selectedMedia.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = e => {
@@ -1101,7 +1568,7 @@ function createPost() {
 function toggleLike(postId) {
     const btn = document.querySelector(`[data-post-id="${postId}"] .interaction-btn.like-btn`);
     const countEl = btn.querySelector('.like-count');
-
+    
     const fd = new FormData();
     fd.append('action', 'toggle_like');
     fd.append('post_id', postId);
@@ -1125,7 +1592,7 @@ function toggleLike(postId) {
 function toggleComments(postId) {
     const section = document.getElementById('comments-' + postId);
     const wasActive = section.classList.contains('active');
-
+    
     if (wasActive) {
         section.classList.remove('active');
     } else {
@@ -1140,9 +1607,9 @@ function toggleComments(postId) {
 function loadComments(postId) {
     const section = document.getElementById('comments-' + postId);
     const list = section.querySelector('.comments-list');
-
+    
     list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);"><i class="fas fa-spinner fa-spin"></i></div>';
-
+    
     const fd = new FormData();
     fd.append('action', 'fetch_comments');
     fd.append('post_id', postId);
@@ -1167,7 +1634,7 @@ function loadComments(postId) {
 function addComment(postId) {
     const input = document.getElementById('comment-input-' + postId);
     const comment = input.value.trim();
-
+    
     if (!comment) return;
 
     const btn = input.nextElementSibling;
@@ -1185,10 +1652,10 @@ function addComment(postId) {
                 const list = document.querySelector(`#comments-${postId} .comments-list`);
                 const noComments = list.querySelector('div[style*="No comments"]');
                 if (noComments) noComments.remove();
-
+                
                 list.insertAdjacentHTML('beforeend', renderComment(d.comment));
                 input.value = '';
-
+                
                 // Update comment count
                 const countEl = document.querySelector(`[data-post-id="${postId}"] .comment-count`);
                 if (countEl) countEl.textContent = d.comments_count + (d.comments_count === 1 ? ' Comment' : ' Comments');
@@ -1210,7 +1677,7 @@ function renderComment(c) {
     const profileImg = c.profile_photo 
         ? `<img src="${escHtml(c.profile_photo)}" alt="">`
         : initial;
-
+    
     return `
         <div class="comment-item">
             <div class="comment-avatar">${profileImg}</div>
@@ -1227,10 +1694,10 @@ function renderComment(c) {
 function togglePostOptions(btn, postId, isOwner) {
     const menu = btn.nextElementSibling;
     const wasActive = menu.classList.contains('active');
-
+    
     // Close all other menus
     document.querySelectorAll('.options-menu').forEach(m => m.classList.remove('active'));
-
+    
     if (!wasActive) {
         menu.classList.add('active');
         setTimeout(() => {
@@ -1242,6 +1709,168 @@ function togglePostOptions(btn, postId, isOwner) {
             });
         }, 100);
     }
+}
+
+// ─── EDIT POST ───────────────────────────────────────────────
+function openEditModal(postId) {
+    editingPostId = postId;
+    const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+    const content = postCard.querySelector('.post-content')?.textContent || '';
+    const mediaEl = postCard.querySelector('.post-media img, .post-media video');
+    
+    document.getElementById('editContent').value = content.trim();
+    
+    // Show existing media
+    const currentMedia = document.getElementById('editCurrentMedia');
+    const editImg = document.getElementById('editMediaImg');
+    const editVid = document.getElementById('editMediaVideo');
+    
+    if (mediaEl) {
+        if (mediaEl.tagName === 'IMG') {
+            editImg.src = mediaEl.src;
+            editImg.style.display = 'block';
+            editVid.style.display = 'none';
+        } else if (mediaEl.tagName === 'VIDEO') {
+            editVid.querySelector('source').src = mediaEl.querySelector('source').src;
+            editVid.load();
+            editVid.style.display = 'block';
+            editImg.style.display = 'none';
+        }
+        currentMedia.style.display = 'block';
+    } else {
+        currentMedia.style.display = 'none';
+    }
+    
+    editMediaToRemove = false;
+    document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+    document.getElementById('editContent').value = '';
+    document.getElementById('editMediaInput').value = '';
+    document.getElementById('editCurrentMedia').style.display = 'none';
+    editingPostId = null;
+    editMediaToRemove = false;
+}
+
+function handleEditMediaSelect(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    const currentMedia = document.getElementById('editCurrentMedia');
+    const editImg = document.getElementById('editMediaImg');
+    const editVid = document.getElementById('editMediaVideo');
+    
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            editImg.src = e.target.result;
+            editImg.style.display = 'block';
+            editVid.style.display = 'none';
+            currentMedia.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type.startsWith('video/')) {
+        const url = URL.createObjectURL(file);
+        editVid.querySelector('source').src = url;
+        editVid.load();
+        editVid.style.display = 'block';
+        editImg.style.display = 'none';
+        currentMedia.style.display = 'block';
+    }
+}
+
+function removeEditMedia() {
+    document.getElementById('editCurrentMedia').style.display = 'none';
+    document.getElementById('editMediaInput').value = '';
+    editMediaToRemove = true;
+}
+
+function saveEditPost() {
+    const content = document.getElementById('editContent').value.trim();
+    const fileInput = document.getElementById('editMediaInput');
+    
+    if (!content && !fileInput.files[0] && editMediaToRemove) {
+        alert('Post must have content or media');
+        return;
+    }
+
+    const btn = document.getElementById('btnSaveEdit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    const fd = new FormData();
+    fd.append('action', 'edit_post');
+    fd.append('post_id', editingPostId);
+    fd.append('content', content);
+    
+    if (fileInput.files[0]) {
+        fd.append('media', fileInput.files[0]);
+    }
+
+    fetch('social_feed.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                // Update post in DOM
+                const postCard = document.querySelector(`[data-post-id="${editingPostId}"]`);
+                const contentEl = postCard.querySelector('.post-content');
+                
+                if (content) {
+                    if (contentEl) {
+                        contentEl.textContent = content;
+                    } else {
+                        const mediaEl = postCard.querySelector('.post-media');
+                        const newContent = document.createElement('div');
+                        newContent.className = 'post-content';
+                        newContent.textContent = content;
+                        if (mediaEl) {
+                            mediaEl.parentNode.insertBefore(newContent, mediaEl);
+                        } else {
+                            postCard.querySelector('.post-header').after(newContent);
+                        }
+                    }
+                } else if (contentEl) {
+                    contentEl.remove();
+                }
+                
+                // Update media if changed
+                if (d.media_path) {
+                    let mediaEl = postCard.querySelector('.post-media');
+                    if (!mediaEl) {
+                        mediaEl = document.createElement('div');
+                        mediaEl.className = 'post-media';
+                        const contentDiv = postCard.querySelector('.post-content');
+                        if (contentDiv) {
+                            contentDiv.after(mediaEl);
+                        } else {
+                            postCard.querySelector('.post-header').after(mediaEl);
+                        }
+                    }
+                    
+                    if (d.media_type === 'image') {
+                        mediaEl.innerHTML = `<img src="${escHtml(d.media_path)}" alt="Post image" onclick="openImageModal('${escHtml(d.media_path)}')">`;
+                    } else if (d.media_type === 'video') {
+                        mediaEl.innerHTML = `<video controls><source src="${escHtml(d.media_path)}" type="video/mp4"></video>`;
+                    }
+                } else if (editMediaToRemove) {
+                    const mediaEl = postCard.querySelector('.post-media');
+                    if (mediaEl) mediaEl.remove();
+                }
+                
+                closeEditModal();
+            } else {
+                alert('Error: ' + (d.error || 'Failed to update post'));
+            }
+        })
+        .catch(err => {
+            alert('Error updating post: ' + err.message);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        });
 }
 
 function deletePost(postId) {
@@ -1286,11 +1915,11 @@ function closeImageModal() {
 // ─── INFINITE SCROLL ─────────────────────────────────────────
 window.addEventListener('scroll', () => {
     if (isLoadingMore || !hasMorePosts) return;
-
+    
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollHeight = document.documentElement.scrollHeight;
     const clientHeight = document.documentElement.clientHeight;
-
+    
     if (scrollTop + clientHeight >= scrollHeight - 300) {
         loadMorePosts();
     }
@@ -1332,7 +1961,7 @@ function renderPostHTML(post) {
         : initial;
     const isOwner = post.student_id == MY_ID;
     const likedClass = post.has_liked ? 'liked' : '';
-
+    
     let mediaHTML = '';
     if (post.media_path) {
         if (post.media_type === 'image') {
@@ -1357,7 +1986,10 @@ function renderPostHTML(post) {
                         <i class="fas fa-ellipsis-h"></i>
                     </button>
                     <div class="options-menu">
-                        ${isOwner ? `<div class="option-item danger" onclick="deletePost(${post.id})"><i class="fas fa-trash"></i> Delete Post</div>` : ''}
+                        ${isOwner ? `
+                            <div class="option-item" onclick="openEditModal(${post.id})"><i class="fas fa-edit"></i> Edit Post</div>
+                            <div class="option-item danger" onclick="deletePost(${post.id})"><i class="fas fa-trash"></i> Delete Post</div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -1411,7 +2043,7 @@ function formatTime(dateStr) {
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
     if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-
+    
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 }
 
@@ -1432,7 +2064,7 @@ function renderPost($post, $sid, $student) {
         : $initial;
     $isOwner = $post['student_id'] == $sid;
     $likedClass = $post['has_liked'] ? 'liked' : '';
-
+    
     echo '<div class="post-card" data-post-id="' . $post['id'] . '">';
     echo '<div class="post-header">';
     echo '<div class="post-avatar">' . $profileImg . '</div>';
@@ -1447,14 +2079,15 @@ function renderPost($post, $sid, $student) {
     echo '<i class="fas fa-ellipsis-h"></i></button>';
     echo '<div class="options-menu">';
     if ($isOwner) {
+        echo '<div class="option-item" onclick="openEditModal(' . $post['id'] . ')"><i class="fas fa-edit"></i> Edit Post</div>';
         echo '<div class="option-item danger" onclick="deletePost(' . $post['id'] . ')"><i class="fas fa-trash"></i> Delete Post</div>';
     }
     echo '</div></div></div>';
-
+    
     if ($post['content']) {
         echo '<div class="post-content">' . nl2br(htmlspecialchars($post['content'])) . '</div>';
     }
-
+    
     if ($post['media_path']) {
         echo '<div class="post-media">';
         if ($post['media_type'] === 'image') {
@@ -1464,20 +2097,20 @@ function renderPost($post, $sid, $student) {
         }
         echo '</div>';
     }
-
+    
     echo '<div class="post-stats">';
     echo '<div class="stat-item"><i class="fas fa-heart" style="color:var(--o5);"></i> ';
     echo $post['likes_count'] . ' ' . ($post['likes_count'] == 1 ? 'Like' : 'Likes') . '</div>';
     echo '<div class="stat-item comment-count">' . $post['comments_count'] . ' ' . ($post['comments_count'] == 1 ? 'Comment' : 'Comments') . '</div>';
     echo '</div>';
-
+    
     echo '<div class="post-interactions">';
     echo '<button class="interaction-btn like-btn ' . $likedClass . '" onclick="toggleLike(' . $post['id'] . ')">';
     echo '<i class="fas fa-heart"></i> <span class="like-count">' . $post['likes_count'] . '</span></button>';
     echo '<button class="interaction-btn" onclick="toggleComments(' . $post['id'] . ')">';
     echo '<i class="fas fa-comment"></i> Comment</button>';
     echo '</div>';
-
+    
     // Comments section
     echo '<div class="comments-section" id="comments-' . $post['id'] . '">';
     echo '<div class="comment-input-wrap">';
@@ -1494,7 +2127,7 @@ function renderPost($post, $sid, $student) {
     echo '</div></div>';
     echo '<div class="comments-list"></div>';
     echo '</div>';
-
+    
     echo '</div>';
 }
 
@@ -1502,11 +2135,12 @@ function formatTimeAgo($dateStr) {
     $date = new DateTime($dateStr);
     $now = new DateTime();
     $diff = $now->getTimestamp() - $date->getTimestamp();
-
+    
     if ($diff < 60) return 'Just now';
     if ($diff < 3600) return floor($diff / 60) . 'm ago';
     if ($diff < 86400) return floor($diff / 3600) . 'h ago';
     if ($diff < 604800) return floor($diff / 86400) . 'd ago';
-
+    
     return $date->format('M d, Y');
 }
+?>
