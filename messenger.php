@@ -66,16 +66,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         switch($fileType) {
                             case 'jpg':
                             case 'jpeg':
-                                $image = imagecreatefromjpeg($fileTmp);
+                                $image = @imagecreatefromjpeg($fileTmp);
                                 break;
                             case 'png':
-                                $image = imagecreatefrompng($fileTmp);
+                                $image = @imagecreatefrompng($fileTmp);
                                 break;
                             case 'gif':
-                                $image = imagecreatefromgif($fileTmp);
+                                $image = @imagecreatefromgif($fileTmp);
                                 break;
                             case 'webp':
-                                $image = imagecreatefromwebp($fileTmp);
+                                $image = @imagecreatefromwebp($fileTmp);
                                 break;
                         }
                         
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
             }
         }
-        echo json_encode(['success'=>false]); exit;
+        echo json_encode(['success'=>false, 'error'=>'Invalid request']); exit;
     }
     
     // Fetch new messages
@@ -497,7 +497,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 
 /* Attachment styles */
 .msg-attachment{margin-top:4px;}
-.msg-attachment img{max-width:100%;border-radius:8px;cursor:pointer;display:block;}
+.msg-attachment img{max-width:100%;max-height:300px;border-radius:8px;cursor:pointer;display:block;}
 .msg-attachment.file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.05);border-radius:8px;text-decoration:none;color:inherit;}
 .msg-bubble.mine-b .msg-attachment.file{background:rgba(255,255,255,0.15);}
 .file-icon{width:32px;height:32px;background:var(--o5);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;}
@@ -523,7 +523,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .no-msgs{text-align:center;padding:60px 20px;color:var(--text3);}
 .no-msgs i{font-size:3rem;margin-bottom:12px;display:block;opacity:.2;}
 
-/* Input area with reply preview */
+/* Input area with image preview */
 .chat-input-area{flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border);background:var(--card);}
 .reply-bar{display:none;padding:8px 12px;background:#f8f9fa;border-left:3px solid var(--o5);border-radius:6px;margin-bottom:8px;font-size:.82rem;}
 .reply-bar.active{display:block;}
@@ -531,6 +531,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .reply-bar-label{font-weight:600;color:var(--o5);font-size:.75rem;}
 .reply-bar-close{background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;font-size:.9rem;}
 .reply-bar-text{color:var(--text2);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.image-preview-bar{display:none;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;position:relative;}
+.image-preview-bar.active{display:flex;align-items:center;gap:10px;}
+.image-preview-thumb{width:60px;height:60px;border-radius:6px;object-fit:cover;border:2px solid var(--border);}
+.image-preview-info{flex:1;}
+.image-preview-name{font-size:.82rem;font-weight:600;color:var(--text);}
+.image-preview-size{font-size:.72rem;color:var(--text3);}
+.image-preview-remove{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;font-size:1.1rem;position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.image-preview-remove:hover{background:rgba(0,0,0,0.1);}
 
 .chat-form{display:flex;gap:10px;align-items:flex-end;}
 .attach-btn{background:none;border:none;cursor:pointer;color:var(--text2);padding:8px;border-radius:8px;font-size:1.1rem;transition:background .15s;}
@@ -869,6 +878,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                     </div>
                     <div class="reply-bar-text" id="replyText"></div>
                 </div>
+                <div class="image-preview-bar" id="imagePreviewBar">
+                    <img id="imagePreviewThumb" class="image-preview-thumb" src="" alt="">
+                    <div class="image-preview-info">
+                        <div class="image-preview-name" id="imagePreviewName"></div>
+                        <div class="image-preview-size" id="imagePreviewSize"></div>
+                    </div>
+                    <button class="image-preview-remove" onclick="removeImagePreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <div class="chat-form">
                     <input type="file" id="fileInput" style="display:none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar" onchange="handleFileSelect(this)">
                     <button class="attach-btn" onclick="document.getElementById('fileInput').click()">
@@ -892,7 +911,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     </div>
 </div>
 
-<!-- Emoji Picker (positioned by JS) -->
+<!-- Emoji Picker -->
 <div class="emoji-picker" id="emojiPicker">
     <span class="emoji-picker-emoji" onclick="reactWithEmoji('👍')">👍</span>
     <span class="emoji-picker-emoji" onclick="reactWithEmoji('❤️')">❤️</span>
@@ -1018,7 +1037,6 @@ function handleRoomClick(event, roomId) {
     }
 }
 
-// Close rooms panel when clicking outside on mobile
 document.addEventListener('click', function(e) {
     if (window.innerWidth <= 768) {
         const panel = document.getElementById('roomsPanel');
@@ -1037,15 +1055,36 @@ function scrollToBottom() {
 }
 scrollToBottom();
 
-// File handling
+// File handling with preview
 function handleFileSelect(input) {
     if (input.files && input.files[0]) {
         selectedFile = input.files[0];
-        // Show file name in placeholder or add visual indicator
         const fileName = selectedFile.name;
-        const msgInput = document.getElementById('msgInput');
-        msgInput.placeholder = `📎 ${fileName} - Type a message or press send...`;
+        const fileSize = (selectedFile.size / 1024).toFixed(2) + ' KB';
+        const fileType = selectedFile.type;
+        
+        // Show preview for images
+        if (fileType.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreviewThumb').src = e.target.result;
+                document.getElementById('imagePreviewName').textContent = fileName;
+                document.getElementById('imagePreviewSize').textContent = fileSize;
+                document.getElementById('imagePreviewBar').classList.add('active');
+            };
+            reader.readAsDataURL(selectedFile);
+        } else {
+            // For files, just show the name
+            document.getElementById('msgInput').placeholder = `📎 ${fileName} - Type a message or press send...`;
+        }
     }
+}
+
+function removeImagePreview() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('imagePreviewBar').classList.remove('active');
+    document.getElementById('msgInput').placeholder = 'Type a message…';
 }
 
 // Send message with optional file
@@ -1092,9 +1131,7 @@ function sendMessage() {
                 }, true);
                 lastMsgId = d.msg_id;
                 cancelReply();
-                selectedFile = null;
-                document.getElementById('fileInput').value = '';
-                input.placeholder = 'Type a message…';
+                removeImagePreview();
             } else {
                 alert(d.error || 'Failed to send message');
             }
@@ -1202,14 +1239,12 @@ function showReactionPicker(msgId, btn) {
     const picker = document.getElementById('emojiPicker');
     currentReactionMsgId = msgId;
     
-    // Position picker relative to button
     const rect = btn.getBoundingClientRect();
     picker.style.position = 'fixed';
     picker.style.top = (rect.top - 50) + 'px';
     picker.style.left = rect.left + 'px';
     picker.classList.add('active');
     
-    // Close on click outside
     setTimeout(() => {
         document.addEventListener('click', closeReactionPicker);
     }, 100);
@@ -1239,7 +1274,6 @@ function toggleReaction(msgId, emoji) {
         .then(r => r.json())
         .then(d => {
             if (d.success) {
-                // Refresh the specific message reactions
                 pollMessages();
             }
         })
@@ -1274,7 +1308,6 @@ function pollMessages() {
                         appendMessage(m, false);
                         lastMsgId = m.id;
                     } else {
-                        // Update reactions for own messages
                         const msgDiv = document.querySelector(`[data-msg-id="${m.id}"]`);
                         if (msgDiv && Object.keys(m.reactions).length > 0) {
                             updateMessageReactions(msgDiv, m.reactions);
