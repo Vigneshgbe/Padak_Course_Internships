@@ -528,23 +528,59 @@ ob_end_flush();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
 <title>Social Feed</title>
 <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+/* ═══════════════════════════════════════════════════════════
+   RESET & BASE STYLES
+   ═══════════════════════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-:root{--sbw:258px;--o5:#f97316;--o4:#fb923c;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--green:#22c55e;--blue:#3b82f6;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-/* ── DESKTOP LAYOUT ─────────────────────────────────────── */
+:root{
+    /* Sidebar width */
+    --sbw:258px;
+    
+    /* Colors */
+    --o5:#f97316;
+    --o4:#fb923c;
+    --bg:#f8fafc;
+    --card:#fff;
+    --text:#0f172a;
+    --text2:#475569;
+    --text3:#94a3b8;
+    --border:#e2e8f0;
+    --green:#22c55e;
+    --blue:#3b82f6;
+    
+    /* Responsive spacing */
+    --page-padding:24px;
+    --card-padding:22px;
+    --card-radius:14px;
+    --card-gap:24px;
+}
+
+body{
+    font-family:'Inter',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT - DESKTOP FIRST
+   ═══════════════════════════════════════════════════════════ */
 .page-wrap{
     margin-left:var(--sbw);
     min-height:100vh;
     display:flex;
     flex-direction:column;
+    transition:margin-left 0.3s ease;
 }
+
 .topbar{
     background:rgba(248,250,252,0.95);
     backdrop-filter:blur(12px);
@@ -556,41 +592,78 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     position:sticky;
     top:0;
     z-index:100;
+    transition:padding 0.3s ease;
 }
-.topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;font-size:1.2rem;}
-.topbar-title{font-size:1.05rem;font-weight:700;color:var(--text);flex:1;display:flex;align-items:center;gap:8px;}
-.topbar-title i{color:var(--o5);}
 
-/* ── FEED LAYOUT ─────────────────────────────────────────── */
+.topbar-hamburger{
+    display:none;
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text2);
+    padding:8px;
+    border-radius:8px;
+    font-size:1.3rem;
+    transition:background 0.2s;
+}
+
+.topbar-hamburger:hover{
+    background:var(--bg);
+}
+
+.topbar-hamburger:active{
+    transform:scale(0.95);
+}
+
+.topbar-title{
+    font-size:1.05rem;
+    font-weight:700;
+    color:var(--text);
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.topbar-title i{
+    color:var(--o5);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEED CONTAINER
+   ═══════════════════════════════════════════════════════════ */
 .feed-container{
     max-width:900px;
     margin:0 auto;
-    padding:24px;
+    padding:var(--page-padding);
     flex:1;
+    width:100%;
 }
 
-@media(min-width:1400px){
-    .feed-container{max-width:1000px;}
-}
-@media(min-width:1600px){
-    .feed-container{max-width:1100px;}
-}
-
-/* ── CREATE POST CARD ────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   CREATE POST CARD
+   ═══════════════════════════════════════════════════════════ */
 .create-post-card{
     background:var(--card);
-    border-radius:14px;
-    padding:22px;
-    margin-bottom:24px;
+    border-radius:var(--card-radius);
+    padding:var(--card-padding);
+    margin-bottom:var(--card-gap);
     box-shadow:0 1px 3px rgba(0,0,0,0.08);
     border:1px solid var(--border);
+    transition:box-shadow 0.3s ease;
 }
+
+.create-post-card:hover{
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
 .create-post-header{
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     gap:14px;
     margin-bottom:14px;
 }
+
 .user-avatar{
     width:48px;
     height:48px;
@@ -604,22 +677,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     font-size:1.05rem;
     flex-shrink:0;
 }
-.user-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+.user-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+}
+
 .create-post-input{
     flex:1;
     padding:14px 18px;
     border:1.5px solid var(--border);
     border-radius:16px;
-    font-size:.92rem;
+    font-size:0.92rem;
     font-family:inherit;
     outline:none;
     resize:none;
-    transition:border-color .2s;
+    transition:all 0.2s;
     background:var(--bg);
     min-height:80px;
     max-height:200px;
+    line-height:1.5;
 }
-.create-post-input:focus{border-color:var(--o5);background:var(--card);}
+
+.create-post-input:focus{
+    border-color:var(--o5);
+    background:var(--card);
+    box-shadow:0 0 0 3px rgba(249,115,22,0.1);
+}
+
 .create-post-actions{
     display:flex;
     align-items:center;
@@ -627,57 +714,96 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     margin-top:12px;
     padding-top:12px;
     border-top:1px solid var(--border);
+    flex-wrap:wrap;
+    gap:10px;
 }
+
 .media-preview{
     display:none;
     margin:12px 0;
     position:relative;
-    border-radius:8px;
+    border-radius:12px;
     overflow:hidden;
 }
-.media-preview.active{display:block;}
+
+.media-preview.active{
+    display:block;
+}
+
 .media-preview img, .media-preview video{
     width:100%;
     max-height:300px;
     object-fit:cover;
-    border-radius:8px;
+    border-radius:12px;
+    display:block;
 }
+
 .media-preview-remove{
     position:absolute;
-    top:8px;
-    right:8px;
+    top:10px;
+    right:10px;
     background:rgba(0,0,0,0.7);
     border:none;
     color:#fff;
-    width:32px;
-    height:32px;
+    width:36px;
+    height:36px;
     border-radius:50%;
     cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:.95rem;
+    font-size:1rem;
+    transition:background 0.2s;
+    z-index:1;
 }
-.post-actions-left{display:flex;gap:8px;align-items:center;}
+
+.media-preview-remove:hover{
+    background:rgba(0,0,0,0.85);
+}
+
+.post-actions-left{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
 .post-action-btn{
     background:none;
     border:none;
     cursor:pointer;
     padding:8px 14px;
     border-radius:8px;
-    font-size:.88rem;
+    font-size:0.88rem;
     color:var(--text2);
     display:flex;
     align-items:center;
     gap:6px;
-    transition:all .2s;
+    transition:all 0.2s;
     font-weight:500;
+    white-space:nowrap;
 }
-.post-action-btn:hover{background:var(--bg);color:var(--text);}
-.post-action-btn i{font-size:1rem;}
 
-/* Emoji Picker */
-.emoji-picker-container{position:relative;}
+.post-action-btn:hover{
+    background:var(--bg);
+    color:var(--text);
+}
+
+.post-action-btn:active{
+    transform:scale(0.97);
+}
+
+.post-action-btn i{
+    font-size:1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EMOJI PICKER
+   ═══════════════════════════════════════════════════════════ */
+.emoji-picker-container{
+    position:relative;
+}
+
 .emoji-picker-popup{
     display:none;
     position:absolute;
@@ -688,227 +814,119 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     border:1px solid var(--border);
     border-radius:12px;
     padding:12px;
-    box-shadow:0 4px 20px rgba(0,0,0,0.15);
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
     z-index:1000;
     width:320px;
-    max-height:240px;
+    max-height:280px;
     overflow-y:auto;
 }
-.emoji-picker-popup.active{display:block;}
-.emoji-category{margin-bottom:12px;}
+
+.emoji-picker-popup.active{
+    display:block;
+}
+
+.emoji-category{
+    margin-bottom:14px;
+}
+
+.emoji-category:last-child{
+    margin-bottom:0;
+}
+
 .emoji-category-title{
-    font-size:.75rem;
+    font-size:0.72rem;
     font-weight:700;
     color:var(--text3);
     margin-bottom:8px;
     text-transform:uppercase;
-    letter-spacing:.5px;
+    letter-spacing:0.5px;
 }
+
 .emoji-grid{
     display:grid;
     grid-template-columns:repeat(8,1fr);
     gap:4px;
 }
+
 .emoji-item{
     font-size:1.5rem;
     cursor:pointer;
     padding:6px;
     border-radius:6px;
-    transition:background .15s;
+    transition:all 0.15s;
     text-align:center;
     user-select:none;
 }
-.emoji-item:hover{background:var(--bg);transform:scale(1.2);}
 
-/* Edit Modal */
-.edit-modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.6);
-    z-index:9998;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    backdrop-filter:blur(4px);
-}
-.edit-modal.open{display:flex;}
-.edit-modal-content{
-    background:var(--card);
-    border-radius:16px;
-    padding:24px;
-    width:100%;
-    max-width:600px;
-    max-height:90vh;
-    overflow-y:auto;
-    box-shadow:0 20px 60px rgba(0,0,0,0.3);
-}
-.edit-modal-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    margin-bottom:20px;
-    padding-bottom:16px;
-    border-bottom:1px solid var(--border);
-}
-.edit-modal-title{
-    font-size:1.15rem;
-    font-weight:700;
-    color:var(--text);
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-.edit-modal-title i{color:var(--o5);}
-.edit-modal-close{
-    background:none;
-    border:none;
-    cursor:pointer;
-    color:var(--text3);
-    font-size:1.3rem;
-    padding:4px;
-    width:32px;
-    height:32px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    transition:all .2s;
-}
-.edit-modal-close:hover{background:var(--bg);color:var(--text);}
-.edit-modal-body{margin-bottom:20px;}
-.edit-textarea{
-    width:100%;
-    padding:14px 16px;
-    border:1.5px solid var(--border);
-    border-radius:12px;
-    font-size:.92rem;
-    font-family:inherit;
-    outline:none;
-    resize:vertical;
-    min-height:120px;
-    max-height:300px;
-    transition:border-color .2s;
-    margin-bottom:16px;
-}
-.edit-textarea:focus{border-color:var(--o5);}
-.edit-media-section{margin-bottom:16px;}
-.edit-current-media{
-    border-radius:12px;
-    overflow:hidden;
-    margin-bottom:12px;
-    position:relative;
-}
-.edit-current-media img{
-    width:100%;
-    max-height:300px;
-    object-fit:cover;
-    display:block;
-}
-.edit-current-media video{
-    width:100%;
-    max-height:300px;
-    border-radius:12px;
-}
-.edit-remove-media{
-    position:absolute;
-    top:8px;
-    right:8px;
-    background:rgba(0,0,0,0.7);
-    border:none;
-    color:#fff;
-    width:32px;
-    height:32px;
-    border-radius:50%;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:.95rem;
-    transition:background .2s;
-}
-.edit-remove-media:hover{background:rgba(0,0,0,0.85);}
-.edit-media-label{
-    display:inline-block;
-    padding:10px 18px;
+.emoji-item:hover{
     background:var(--bg);
-    border:1.5px solid var(--border);
-    border-radius:8px;
-    cursor:pointer;
-    font-size:.88rem;
-    font-weight:600;
-    color:var(--text);
-    transition:all .2s;
+    transform:scale(1.2);
 }
-.edit-media-label:hover{border-color:var(--o5);background:var(--card);}
-.edit-media-label i{margin-right:6px;color:var(--o5);}
-.edit-modal-footer{
-    display:flex;
-    gap:10px;
-    justify-content:flex-end;
-    padding-top:16px;
-    border-top:1px solid var(--border);
+
+.emoji-item:active{
+    transform:scale(1.1);
 }
-.edit-modal-btn{
-    padding:10px 24px;
-    border-radius:8px;
-    border:none;
-    cursor:pointer;
-    font-size:.9rem;
-    font-weight:600;
-    font-family:inherit;
-    transition:opacity .2s;
-    display:flex;
-    align-items:center;
-    gap:6px;
-}
-.edit-modal-btn.cancel{
-    background:var(--bg);
-    border:1.5px solid var(--border);
-    color:var(--text2);
-}
-.edit-modal-btn.save{
-    background:linear-gradient(135deg,var(--o5),var(--o4));
-    color:#fff;
-    box-shadow:0 2px 8px rgba(249,115,22,0.3);
-}
-.edit-modal-btn:hover{opacity:.9;}
-.edit-modal-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ═══════════════════════════════════════════════════════════
+   POST BUTTON
+   ═══════════════════════════════════════════════════════════ */
 .btn-post{
     background:linear-gradient(135deg,var(--o5),var(--o4));
     border:none;
     color:#fff;
-    padding:8px 24px;
+    padding:9px 24px;
     border-radius:24px;
     cursor:pointer;
-    font-size:.88rem;
+    font-size:0.88rem;
     font-weight:600;
     display:flex;
     align-items:center;
     gap:6px;
-    transition:opacity .2s;
+    transition:all 0.2s;
     box-shadow:0 2px 8px rgba(249,115,22,0.3);
+    white-space:nowrap;
 }
-.btn-post:hover{opacity:.9;}
-.btn-post:disabled{opacity:.5;cursor:not-allowed;}
 
-/* ── POST CARD ───────────────────────────────────────────── */
+.btn-post:hover{
+    opacity:0.9;
+    transform:translateY(-1px);
+    box-shadow:0 4px 12px rgba(249,115,22,0.4);
+}
+
+.btn-post:active{
+    transform:translateY(0);
+}
+
+.btn-post:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+    transform:none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   POST CARD
+   ═══════════════════════════════════════════════════════════ */
 .post-card{
     background:var(--card);
-    border-radius:14px;
-    padding:22px;
+    border-radius:var(--card-radius);
+    padding:var(--card-padding);
     margin-bottom:20px;
     box-shadow:0 1px 3px rgba(0,0,0,0.08);
     border:1px solid var(--border);
-    transition:box-shadow .2s;
+    transition:box-shadow 0.3s ease;
 }
-.post-card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+
+.post-card:hover{
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+
 .post-header{
     display:flex;
     align-items:center;
     gap:14px;
     margin-bottom:16px;
 }
+
 .post-avatar{
     width:48px;
     height:48px;
@@ -922,54 +940,92 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     font-size:1rem;
     flex-shrink:0;
 }
-.post-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.post-author-info{flex:1;}
-.post-author-name{font-size:.92rem;font-weight:700;color:var(--text);margin-bottom:2px;}
-.post-meta{font-size:.75rem;color:var(--text3);display:flex;align-items:center;gap:4px;}
+
+.post-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+}
+
+.post-author-info{
+    flex:1;
+    min-width:0;
+}
+
+.post-author-name{
+    font-size:0.92rem;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:2px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.post-meta{
+    font-size:0.75rem;
+    color:var(--text3);
+    display:flex;
+    align-items:center;
+    gap:4px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
 .post-options{
     background:none;
     border:none;
     cursor:pointer;
     color:var(--text3);
     padding:6px;
-    border-radius:6px;
+    border-radius:8px;
     font-size:1.1rem;
-    transition:background .2s;
+    transition:all 0.2s;
+    flex-shrink:0;
 }
-.post-options:hover{background:var(--bg);}
+
+.post-options:hover{
+    background:var(--bg);
+    color:var(--text);
+}
+
 .post-content{
-    font-size:.95rem;
+    font-size:0.95rem;
     line-height:1.65;
     color:var(--text);
     margin-bottom:14px;
     white-space:pre-wrap;
     word-break:break-word;
 }
+
 .post-media{
     margin-bottom:16px;
     border-radius:12px;
     overflow:hidden;
 }
+
 .post-media img{
     width:100%;
     max-height:600px;
     object-fit:cover;
     cursor:pointer;
     display:block;
+    transition:transform 0.3s ease;
 }
+
+.post-media img:hover{
+    transform:scale(1.02);
+}
+
 .post-media video{
     width:100%;
     max-height:600px;
     border-radius:10px;
+    display:block;
 }
 
-/* Responsive media heights */
-@media(max-width:768px){
-    .post-media img, .post-media video{max-height:400px;}
-}
-@media(max-width:480px){
-    .post-media img, .post-media video{max-height:300px;}
-}
 .post-stats{
     display:flex;
     align-items:center;
@@ -977,16 +1033,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     padding:10px 0;
     border-bottom:1px solid var(--border);
     margin-bottom:10px;
-    font-size:.82rem;
+    font-size:0.82rem;
     color:var(--text3);
+    gap:10px;
+    flex-wrap:wrap;
 }
+
 .stat-item{
     display:flex;
     align-items:center;
     gap:4px;
     cursor:pointer;
+    transition:color 0.2s;
 }
-.stat-item:hover{color:var(--text2);}
+
+.stat-item:hover{
+    color:var(--text2);
+}
+
 .post-interactions{
     display:flex;
     align-items:center;
@@ -994,6 +1058,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     padding-bottom:10px;
     border-bottom:1px solid var(--border);
 }
+
 .interaction-btn{
     flex:1;
     background:none;
@@ -1001,31 +1066,56 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     cursor:pointer;
     padding:10px;
     border-radius:8px;
-    font-size:.88rem;
+    font-size:0.88rem;
     color:var(--text2);
     display:flex;
     align-items:center;
     justify-content:center;
     gap:6px;
-    transition:all .2s;
+    transition:all 0.2s;
     font-weight:600;
 }
-.interaction-btn:hover{background:var(--bg);}
-.interaction-btn.liked{color:var(--o5);}
-.interaction-btn.liked i{animation:likeAnim .4s ease;}
-@keyframes likeAnim{0%{transform:scale(1);}50%{transform:scale(1.3);}100%{transform:scale(1);}}
 
-/* ── COMMENTS ────────────────────────────────────────────── */
+.interaction-btn:hover{
+    background:var(--bg);
+}
+
+.interaction-btn:active{
+    transform:scale(0.97);
+}
+
+.interaction-btn.liked{
+    color:var(--o5);
+}
+
+.interaction-btn.liked i{
+    animation:likeAnim 0.4s ease;
+}
+
+@keyframes likeAnim{
+    0%{transform:scale(1);}
+    50%{transform:scale(1.3);}
+    100%{transform:scale(1);}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMMENTS SECTION
+   ═══════════════════════════════════════════════════════════ */
 .comments-section{
     margin-top:12px;
     display:none;
 }
-.comments-section.active{display:block;}
+
+.comments-section.active{
+    display:block;
+}
+
 .comment-input-wrap{
     display:flex;
     gap:10px;
     margin-bottom:14px;
 }
+
 .comment-avatar{
     width:34px;
     height:34px;
@@ -1036,135 +1126,114 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     align-items:center;
     justify-content:center;
     font-weight:700;
-    font-size:.85rem;
+    font-size:0.85rem;
     flex-shrink:0;
 }
-.comment-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.comment-input-form{flex:1;display:flex;gap:8px;}
+
+.comment-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+}
+
+.comment-input-form{
+    flex:1;
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+}
+
 .comment-input{
     flex:1;
     padding:10px 14px;
     border:1.5px solid var(--border);
     border-radius:20px;
-    font-size:.85rem;
+    font-size:0.85rem;
     font-family:inherit;
     outline:none;
     resize:none;
-    transition:border-color .2s;
+    transition:all 0.2s;
+    min-height:40px;
+    max-height:120px;
 }
-.comment-input:focus{border-color:var(--o5);}
+
+.comment-input:focus{
+    border-color:var(--o5);
+    box-shadow:0 0 0 3px rgba(249,115,22,0.1);
+}
+
 .btn-comment{
     background:var(--o5);
     border:none;
     color:#fff;
     padding:0 18px;
+    height:40px;
     border-radius:20px;
     cursor:pointer;
-    font-size:.85rem;
+    font-size:0.85rem;
     font-weight:600;
-    transition:opacity .2s;
+    transition:all 0.2s;
+    white-space:nowrap;
+    flex-shrink:0;
 }
-.btn-comment:hover{opacity:.9;}
-.btn-comment:disabled{opacity:.5;cursor:not-allowed;}
+
+.btn-comment:hover{
+    opacity:0.9;
+    transform:translateY(-1px);
+}
+
+.btn-comment:active{
+    transform:translateY(0);
+}
+
+.btn-comment:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+
 .comments-list{
     display:flex;
     flex-direction:column;
     gap:12px;
 }
+
 .comment-item{
     display:flex;
     gap:10px;
 }
+
 .comment-content{
     flex:1;
     background:var(--bg);
     padding:10px 14px;
     border-radius:12px;
+    min-width:0;
 }
+
 .comment-author{
-    font-size:.82rem;
+    font-size:0.82rem;
     font-weight:700;
     color:var(--text);
     margin-bottom:4px;
 }
+
 .comment-text{
-    font-size:.85rem;
+    font-size:0.85rem;
     line-height:1.5;
     color:var(--text2);
     word-break:break-word;
 }
+
 .comment-time{
-    font-size:.72rem;
+    font-size:0.72rem;
     color:var(--text3);
     margin-top:4px;
 }
 
-/* ── LOADING & EMPTY STATES ──────────────────────────────── */
-.loading-posts{
-    text-align:center;
-    padding:40px 20px;
-    color:var(--text3);
-}
-.loading-spinner{
-    display:inline-block;
-    width:32px;
-    height:32px;
-    border:3px solid var(--border);
-    border-top-color:var(--o5);
-    border-radius:50%;
-    animation:spin 1s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-.no-posts{
-    text-align:center;
-    padding:60px 20px;
-    color:var(--text3);
-}
-.no-posts i{
-    font-size:3.5rem;
-    opacity:.15;
-    margin-bottom:16px;
-    display:block;
-}
-.no-posts h3{
-    font-size:1.1rem;
-    font-weight:600;
-    margin-bottom:6px;
-    color:var(--text2);
-}
-
-/* ── IMAGE MODAL ─────────────────────────────────────────── */
-.image-modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.9);
-    z-index:9999;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-}
-.image-modal.open{display:flex;}
-.image-modal img{
-    max-width:90%;
-    max-height:90vh;
-    border-radius:8px;
-}
-.image-modal-close{
-    position:absolute;
-    top:20px;
-    right:20px;
-    background:rgba(255,255,255,0.2);
-    border:none;
-    color:#fff;
-    width:40px;
-    height:40px;
-    border-radius:50%;
-    cursor:pointer;
-    font-size:1.2rem;
-}
-
-/* ── OPTIONS MENU ────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   OPTIONS MENU
+   ═══════════════════════════════════════════════════════════ */
 .options-menu{
     display:none;
     position:absolute;
@@ -1176,59 +1245,778 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     box-shadow:0 4px 12px rgba(0,0,0,0.15);
     min-width:160px;
     z-index:100;
+    overflow:hidden;
 }
-.options-menu.active{display:block;}
+
+.options-menu.active{
+    display:block;
+}
+
 .option-item{
     padding:10px 16px;
     cursor:pointer;
-    font-size:.88rem;
+    font-size:0.88rem;
     color:var(--text);
-    transition:background .15s;
+    transition:background 0.15s;
     display:flex;
     align-items:center;
     gap:10px;
 }
-.option-item:first-child{border-radius:8px 8px 0 0;}
-.option-item:last-child{border-radius:0 0 8px 8px;}
-.option-item:hover{background:var(--bg);}
-.option-item.danger{color:#ef4444;}
-.option-item.danger:hover{background:#fef2f2;}
-.option-item i{width:16px;text-align:center;}
 
-/* ── RESPONSIVE ──────────────────────────────────────────── */
-/* Tablet view (768px - 1024px) */
+.option-item:hover{
+    background:var(--bg);
+}
+
+.option-item:active{
+    transform:scale(0.98);
+}
+
+.option-item.danger{
+    color:#ef4444;
+}
+
+.option-item.danger:hover{
+    background:#fef2f2;
+}
+
+.option-item i{
+    width:16px;
+    text-align:center;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODALS
+   ═══════════════════════════════════════════════════════════ */
+.edit-modal, .image-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    z-index:9998;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(4px);
+}
+
+.edit-modal.open, .image-modal.open{
+    display:flex;
+}
+
+.edit-modal-content{
+    background:var(--card);
+    border-radius:16px;
+    padding:24px;
+    width:100%;
+    max-width:600px;
+    max-height:90vh;
+    overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+
+.edit-modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+}
+
+.edit-modal-title{
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.edit-modal-title i{
+    color:var(--o5);
+}
+
+.edit-modal-close{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text3);
+    font-size:1.3rem;
+    padding:4px;
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all 0.2s;
+}
+
+.edit-modal-close:hover{
+    background:var(--bg);
+    color:var(--text);
+}
+
+.edit-modal-body{
+    margin-bottom:20px;
+}
+
+.edit-textarea{
+    width:100%;
+    padding:14px 16px;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    font-size:0.92rem;
+    font-family:inherit;
+    outline:none;
+    resize:vertical;
+    min-height:120px;
+    max-height:300px;
+    transition:border-color 0.2s;
+    margin-bottom:16px;
+    line-height:1.5;
+}
+
+.edit-textarea:focus{
+    border-color:var(--o5);
+    box-shadow:0 0 0 3px rgba(249,115,22,0.1);
+}
+
+.edit-media-section{
+    margin-bottom:16px;
+}
+
+.edit-current-media{
+    border-radius:12px;
+    overflow:hidden;
+    margin-bottom:12px;
+    position:relative;
+}
+
+.edit-current-media img{
+    width:100%;
+    max-height:300px;
+    object-fit:cover;
+    display:block;
+}
+
+.edit-current-media video{
+    width:100%;
+    max-height:300px;
+    border-radius:12px;
+}
+
+.edit-remove-media{
+    position:absolute;
+    top:10px;
+    right:10px;
+    background:rgba(0,0,0,0.7);
+    border:none;
+    color:#fff;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1rem;
+    transition:background 0.2s;
+}
+
+.edit-remove-media:hover{
+    background:rgba(0,0,0,0.85);
+}
+
+.edit-media-label{
+    display:inline-block;
+    padding:10px 18px;
+    background:var(--bg);
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    cursor:pointer;
+    font-size:0.88rem;
+    font-weight:600;
+    color:var(--text);
+    transition:all 0.2s;
+}
+
+.edit-media-label:hover{
+    border-color:var(--o5);
+    background:var(--card);
+}
+
+.edit-media-label i{
+    margin-right:6px;
+    color:var(--o5);
+}
+
+.edit-modal-footer{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+}
+
+.edit-modal-btn{
+    padding:10px 24px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    font-size:0.9rem;
+    font-weight:600;
+    font-family:inherit;
+    transition:all 0.2s;
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.edit-modal-btn.cancel{
+    background:var(--bg);
+    border:1.5px solid var(--border);
+    color:var(--text2);
+}
+
+.edit-modal-btn.cancel:hover{
+    background:var(--card);
+    border-color:var(--text3);
+}
+
+.edit-modal-btn.save{
+    background:linear-gradient(135deg,var(--o5),var(--o4));
+    color:#fff;
+    box-shadow:0 2px 8px rgba(249,115,22,0.3);
+}
+
+.edit-modal-btn.save:hover{
+    opacity:0.9;
+    transform:translateY(-1px);
+}
+
+.edit-modal-btn:active{
+    transform:translateY(0);
+}
+
+.edit-modal-btn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+
+/* Image Modal */
+.image-modal img{
+    max-width:90%;
+    max-height:90vh;
+    border-radius:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+
+.image-modal-close{
+    position:absolute;
+    top:20px;
+    right:20px;
+    background:rgba(255,255,255,0.2);
+    border:none;
+    color:#fff;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:1.3rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background 0.2s;
+}
+
+.image-modal-close:hover{
+    background:rgba(255,255,255,0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOADING & EMPTY STATES
+   ═══════════════════════════════════════════════════════════ */
+.loading-posts{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--text3);
+}
+
+.loading-spinner{
+    display:inline-block;
+    width:32px;
+    height:32px;
+    border:3px solid var(--border);
+    border-top-color:var(--o5);
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+    to{transform:rotate(360deg);}
+}
+
+.no-posts{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text3);
+}
+
+.no-posts i{
+    font-size:3.5rem;
+    opacity:0.15;
+    margin-bottom:16px;
+    display:block;
+}
+
+.no-posts h3{
+    font-size:1.1rem;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--text2);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN - TABLET (768px - 1024px)
+   ═══════════════════════════════════════════════════════════ */
 @media(max-width:1024px) and (min-width:769px){
+    :root{
+        --page-padding:20px;
+        --card-padding:18px;
+        --card-gap:20px;
+    }
+    
     .feed-container{
         max-width:750px;
-        padding:20px;
-    }
-    .create-post-card, .post-card{
-        padding:18px;
     }
 }
 
-/* Mobile view (≤768px) */
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN - MOBILE (≤768px)
+   ═══════════════════════════════════════════════════════════ */
 @media(max-width:768px){
-    .page-wrap{margin-left:0;}
-    .topbar-hamburger{display:flex;}
-    .feed-container{padding:14px;}
-    .create-post-card, .post-card{border-radius:10px;padding:16px;margin-bottom:14px;}
-    .post-content{font-size:.9rem;line-height:1.6;}
-    .user-avatar{width:40px;height:40px;font-size:.95rem;}
-    .post-avatar{width:42px;height:42px;font-size:.95rem;}
-    .comment-avatar{width:34px;height:34px;font-size:.85rem;}
-    .create-post-header, .post-header{gap:12px;}
+    :root{
+        --sbw:0;
+        --page-padding:14px;
+        --card-padding:16px;
+        --card-radius:12px;
+        --card-gap:16px;
+    }
+    
+    body{
+        font-size:15px;
+    }
+    
+    /* Layout adjustments */
+    .page-wrap{
+        margin-left:0;
+    }
+    
+    .topbar{
+        padding:10px 14px;
+    }
+    
+    .topbar-hamburger{
+        display:flex;
+    }
+    
+    .topbar-title{
+        font-size:1rem;
+    }
+    
+    /* Feed container */
+    .feed-container{
+        padding:var(--page-padding);
+        max-width:100%;
+    }
+    
+    /* Create post adjustments */
+    .create-post-card, .post-card{
+        border-radius:var(--card-radius);
+        padding:var(--card-padding);
+        margin-bottom:var(--card-gap);
+    }
+    
+    .create-post-header, .post-header{
+        gap:12px;
+    }
+    
+    .user-avatar, .post-avatar{
+        width:42px;
+        height:42px;
+        font-size:0.95rem;
+    }
+    
+    .create-post-input{
+        font-size:0.9rem;
+        padding:12px 16px;
+        min-height:70px;
+    }
+    
+    /* Action buttons - stack on very small screens */
+    .create-post-actions{
+        gap:8px;
+    }
+    
+    .post-action-btn{
+        padding:7px 12px;
+        font-size:0.85rem;
+    }
+    
+    .post-action-btn span{
+        display:none;
+    }
+    
+    .btn-post{
+        padding:8px 20px;
+        font-size:0.85rem;
+    }
+    
+    /* Media preview */
+    .media-preview img, .media-preview video{
+        max-height:250px;
+    }
+    
+    /* Post content */
+    .post-content{
+        font-size:0.9rem;
+        line-height:1.6;
+    }
+    
+    .post-media img, .post-media video{
+        max-height:400px;
+    }
+    
+    /* Interaction buttons */
+    .interaction-btn{
+        padding:8px;
+        font-size:0.85rem;
+        gap:5px;
+    }
+    
+    /* Comments */
+    .comment-avatar{
+        width:32px;
+        height:32px;
+        font-size:0.82rem;
+    }
+    
+    .comment-input{
+        font-size:0.82rem;
+        padding:9px 12px;
+    }
+    
+    .btn-comment{
+        font-size:0.82rem;
+        padding:0 16px;
+    }
+    
+    /* Emoji picker - adjust for mobile */
+    .emoji-picker-popup{
+        width:calc(100vw - 40px);
+        max-width:320px;
+        max-height:240px;
+    }
+    
+    .emoji-grid{
+        grid-template-columns:repeat(6,1fr);
+    }
+    
+    .emoji-item{
+        font-size:1.3rem;
+        padding:5px;
+    }
+    
+    /* Edit modal */
+    .edit-modal-content{
+        padding:20px;
+        max-width:calc(100vw - 32px);
+    }
+    
+    .edit-modal-title{
+        font-size:1rem;
+    }
+    
+    .edit-textarea{
+        font-size:0.9rem;
+        padding:12px 14px;
+    }
+    
+    .edit-modal-footer{
+        flex-wrap:wrap;
+    }
+    
+    .edit-modal-btn{
+        flex:1;
+        min-width:calc(50% - 5px);
+        justify-content:center;
+    }
 }
 
-/* Small mobile (≤480px) */
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN - SMALL MOBILE (≤480px)
+   ═══════════════════════════════════════════════════════════ */
 @media(max-width:480px){
-    .feed-container{padding:10px;}
-    .create-post-card, .post-card{padding:14px;border-radius:8px;margin-bottom:12px;}
-    .topbar{padding:10px 14px;}
-    .user-avatar{width:38px;height:38px;}
-    .post-avatar{width:40px;height:40px;}
-    .comment-avatar{width:32px;height:32px;}
-    .create-post-header, .post-header{gap:10px;}
+    :root{
+        --page-padding:10px;
+        --card-padding:14px;
+        --card-radius:10px;
+        --card-gap:12px;
+    }
+    
+    body{
+        font-size:14px;
+    }
+    
+    .topbar{
+        padding:8px 12px;
+    }
+    
+    .topbar-title{
+        font-size:0.95rem;
+    }
+    
+    .topbar-hamburger{
+        font-size:1.2rem;
+        padding:6px;
+    }
+    
+    /* Avatars */
+    .user-avatar, .post-avatar{
+        width:38px;
+        height:38px;
+        font-size:0.9rem;
+    }
+    
+    .comment-avatar{
+        width:30px;
+        height:30px;
+        font-size:0.8rem;
+    }
+    
+    /* Create post */
+    .create-post-header, .post-header{
+        gap:10px;
+    }
+    
+    .create-post-input{
+        padding:10px 14px;
+        font-size:0.88rem;
+        min-height:60px;
+    }
+    
+    .post-actions-left{
+        gap:4px;
+    }
+    
+    .post-action-btn{
+        padding:6px 10px;
+        font-size:0.82rem;
+        gap:4px;
+    }
+    
+    .btn-post{
+        padding:7px 18px;
+        font-size:0.82rem;
+        gap:5px;
+    }
+    
+    /* Media */
+    .media-preview img, .media-preview video{
+        max-height:200px;
+    }
+    
+    .post-media img, .post-media video{
+        max-height:300px;
+    }
+    
+    /* Typography */
+    .post-author-name{
+        font-size:0.88rem;
+    }
+    
+    .post-meta{
+        font-size:0.72rem;
+    }
+    
+    .post-content{
+        font-size:0.88rem;
+        line-height:1.55;
+    }
+    
+    .post-stats{
+        font-size:0.78rem;
+    }
+    
+    /* Interactions */
+    .interaction-btn{
+        padding:7px;
+        font-size:0.82rem;
+        gap:4px;
+    }
+    
+    /* Comments */
+    .comment-input-wrap{
+        gap:8px;
+    }
+    
+    .comment-input-form{
+        gap:6px;
+    }
+    
+    .comment-input{
+        font-size:0.8rem;
+        padding:8px 12px;
+    }
+    
+    .btn-comment{
+        font-size:0.8rem;
+        padding:0 14px;
+        height:36px;
+    }
+    
+    .comment-author{
+        font-size:0.8rem;
+    }
+    
+    .comment-text{
+        font-size:0.82rem;
+    }
+    
+    .comment-time{
+        font-size:0.7rem;
+    }
+    
+    /* Emoji picker */
+    .emoji-picker-popup{
+        width:calc(100vw - 24px);
+        max-height:200px;
+    }
+    
+    .emoji-grid{
+        grid-template-columns:repeat(5,1fr);
+        gap:3px;
+    }
+    
+    .emoji-item{
+        font-size:1.2rem;
+        padding:4px;
+    }
+    
+    /* Modals */
+    .edit-modal, .image-modal{
+        padding:12px;
+    }
+    
+    .edit-modal-content{
+        padding:16px;
+    }
+    
+    .edit-modal-header{
+        margin-bottom:16px;
+        padding-bottom:12px;
+    }
+    
+    .edit-modal-title{
+        font-size:0.95rem;
+    }
+    
+    .edit-textarea{
+        font-size:0.88rem;
+        padding:10px 12px;
+        min-height:100px;
+    }
+    
+    .edit-modal-footer{
+        padding-top:12px;
+    }
+    
+    .edit-modal-btn{
+        padding:9px 20px;
+        font-size:0.85rem;
+    }
+    
+    .image-modal img{
+        max-width:95%;
+        max-height:85vh;
+    }
+    
+    .image-modal-close{
+        top:12px;
+        right:12px;
+        width:40px;
+        height:40px;
+        font-size:1.2rem;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LANDSCAPE MODE ADJUSTMENTS (Mobile)
+   ═══════════════════════════════════════════════════════════ */
+@media(max-width:896px) and (orientation:landscape){
+    .feed-container{
+        padding:12px 20px;
+    }
+    
+    .post-media img, .post-media video{
+        max-height:50vh;
+    }
+    
+    .media-preview img, .media-preview video{
+        max-height:30vh;
+    }
+    
+    .edit-modal-content{
+        max-height:85vh;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACCESSIBILITY & TOUCH IMPROVEMENTS
+   ═══════════════════════════════════════════════════════════ */
+@media(hover:none){
+    /* Larger touch targets for mobile */
+    .post-action-btn,
+    .interaction-btn,
+    .post-options,
+    .topbar-hamburger{
+        min-height:44px;
+        min-width:44px;
+    }
+    
+    .emoji-item{
+        min-width:40px;
+        min-height:40px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SMOOTH SCROLLING
+   ═══════════════════════════════════════════════════════════ */
+html{
+    scroll-behavior:smooth;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WEBKIT SCROLLBAR STYLING
+   ═══════════════════════════════════════════════════════════ */
+::-webkit-scrollbar{
+    width:8px;
+    height:8px;
+}
+
+::-webkit-scrollbar-track{
+    background:var(--bg);
+}
+
+::-webkit-scrollbar-thumb{
+    background:var(--border);
+    border-radius:4px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+    background:var(--text3);
 }
 </style>
 </head>
@@ -1237,12 +2025,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 <div class="page-wrap">
     <div class="topbar">
-        <button class="topbar-hamburger" onclick="toggleSidebar()">
+        <button class="topbar-hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">
             <i class="fas fa-bars"></i>
         </button>
         <div class="topbar-title">
             <i class="fas fa-rss"></i>
-            Social Feed
+            <span>Social Feed</span>
         </div>
     </div>
 
@@ -1250,9 +2038,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         <!-- Create Post Card -->
         <div class="create-post-card">
             <div class="create-post-header">
-                <div class="user-avatar">
+                <div class="user-avatar" aria-label="Your profile">
                     <?php if ($student['profile_photo']): ?>
-                        <img src="<?php echo htmlspecialchars($student['profile_photo']); ?>" alt="">
+                        <img src="<?php echo htmlspecialchars($student['profile_photo']); ?>" alt="Your profile">
                     <?php else: ?>
                         <?php echo strtoupper(substr($student['full_name'], 0, 1)); ?>
                     <?php endif; ?>
@@ -1261,110 +2049,113 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                     class="create-post-input" 
                     id="postContent" 
                     placeholder="What's on your mind, <?php echo htmlspecialchars(explode(' ', $student['full_name'])[0]); ?>?"
-                    rows="1"></textarea>
+                    rows="1"
+                    aria-label="Post content"></textarea>
             </div>
             
             <div class="media-preview" id="mediaPreview">
-                <img id="previewImage" src="" alt="" style="display:none;">
+                <img id="previewImage" src="" alt="Preview" style="display:none;">
                 <video id="previewVideo" controls style="display:none;"></video>
-                <button class="media-preview-remove" onclick="removeMediaPreview()">
+                <button class="media-preview-remove" onclick="removeMediaPreview()" aria-label="Remove media">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="create-post-actions">
                 <div class="post-actions-left">
-                    <input type="file" id="mediaInput" style="display:none;" accept="image/*,video/*" onchange="handleMediaSelect(this)">
-                    <button class="post-action-btn" onclick="document.getElementById('mediaInput').click()">
-                        <i class="fas fa-image"></i> Photo/Video
+                    <input type="file" id="mediaInput" style="display:none;" accept="image/*,video/*" onchange="handleMediaSelect(this)" aria-label="Upload media">
+                    <button class="post-action-btn" onclick="document.getElementById('mediaInput').click()" aria-label="Add photo or video">
+                        <i class="fas fa-image"></i>
+                        <span>Photo/Video</span>
                     </button>
                     <div class="emoji-picker-container">
-                        <button class="post-action-btn" onclick="toggleEmojiPicker()">
-                            <i class="fas fa-smile"></i> Emoji
+                        <button class="post-action-btn" onclick="toggleEmojiPicker()" aria-label="Add emoji">
+                            <i class="fas fa-smile"></i>
+                            <span>Emoji</span>
                         </button>
-                        <div class="emoji-picker-popup" id="emojiPicker">
+                        <div class="emoji-picker-popup" id="emojiPicker" role="dialog" aria-label="Emoji picker">
                             <div class="emoji-category">
                                 <div class="emoji-category-title">Smileys</div>
                                 <div class="emoji-grid">
-                                    <span class="emoji-item" onclick="insertEmoji('😀')">😀</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😃')">😃</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😄')">😄</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😁')">😁</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😅')">😅</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😊')">😊</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😇')">😇</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🙂')">🙂</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🙃')">🙃</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😉')">😉</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😌')">😌</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😍')">😍</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🥰')">🥰</span>
-                                    <span class="emoji-item" onclick="insertEmoji('😘')">😘</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😀')" role="button" tabindex="0">😀</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😃')" role="button" tabindex="0">😃</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😄')" role="button" tabindex="0">😄</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😁')" role="button" tabindex="0">😁</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😅')" role="button" tabindex="0">😅</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😂')" role="button" tabindex="0">😂</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤣')" role="button" tabindex="0">🤣</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😊')" role="button" tabindex="0">😊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😇')" role="button" tabindex="0">😇</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙂')" role="button" tabindex="0">🙂</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙃')" role="button" tabindex="0">🙃</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😉')" role="button" tabindex="0">😉</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😌')" role="button" tabindex="0">😌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😍')" role="button" tabindex="0">😍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🥰')" role="button" tabindex="0">🥰</span>
+                                    <span class="emoji-item" onclick="insertEmoji('😘')" role="button" tabindex="0">😘</span>
                                 </div>
                             </div>
                             <div class="emoji-category">
                                 <div class="emoji-category-title">Gestures</div>
                                 <div class="emoji-grid">
-                                    <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
-                                    <span class="emoji-item" onclick="insertEmoji('👎')">👎</span>
-                                    <span class="emoji-item" onclick="insertEmoji('👏')">👏</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🙌')">🙌</span>
-                                    <span class="emoji-item" onclick="insertEmoji('👊')">👊</span>
-                                    <span class="emoji-item" onclick="insertEmoji('✊')">✊</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤝')">🤝</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🙏')">🙏</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💪')">💪</span>
-                                    <span class="emoji-item" onclick="insertEmoji('👌')">👌</span>
-                                    <span class="emoji-item" onclick="insertEmoji('✌️')">✌️</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤞')">🤞</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤙')">🤙</span>
-                                    <span class="emoji-item" onclick="insertEmoji('👋')">👋</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤚')">🤚</span>
-                                    <span class="emoji-item" onclick="insertEmoji('✋')">✋</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👍')" role="button" tabindex="0">👍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👎')" role="button" tabindex="0">👎</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👏')" role="button" tabindex="0">👏</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙌')" role="button" tabindex="0">🙌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👊')" role="button" tabindex="0">👊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✊')" role="button" tabindex="0">✊</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤝')" role="button" tabindex="0">🤝</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🙏')" role="button" tabindex="0">🙏</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💪')" role="button" tabindex="0">💪</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👌')" role="button" tabindex="0">👌</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✌️')" role="button" tabindex="0">✌️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤞')" role="button" tabindex="0">🤞</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤙')" role="button" tabindex="0">🤙</span>
+                                    <span class="emoji-item" onclick="insertEmoji('👋')" role="button" tabindex="0">👋</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤚')" role="button" tabindex="0">🤚</span>
+                                    <span class="emoji-item" onclick="insertEmoji('✋')" role="button" tabindex="0">✋</span>
                                 </div>
                             </div>
                             <div class="emoji-category">
                                 <div class="emoji-category-title">Hearts & Symbols</div>
                                 <div class="emoji-grid">
-                                    <span class="emoji-item" onclick="insertEmoji('❤️')">❤️</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🧡')">🧡</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💛')">💛</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💚')">💚</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💙')">💙</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💜')">💜</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🖤')">🖤</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤍')">🤍</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🤎')">🤎</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💔')">💔</span>
-                                    <span class="emoji-item" onclick="insertEmoji('❣️')">❣️</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💕')">💕</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💞')">💞</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💓')">💓</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💗')">💗</span>
-                                    <span class="emoji-item" onclick="insertEmoji('💖')">💖</span>
+                                    <span class="emoji-item" onclick="insertEmoji('❤️')" role="button" tabindex="0">❤️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🧡')" role="button" tabindex="0">🧡</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💛')" role="button" tabindex="0">💛</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💚')" role="button" tabindex="0">💚</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💙')" role="button" tabindex="0">💙</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💜')" role="button" tabindex="0">💜</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🖤')" role="button" tabindex="0">🖤</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤍')" role="button" tabindex="0">🤍</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🤎')" role="button" tabindex="0">🤎</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💔')" role="button" tabindex="0">💔</span>
+                                    <span class="emoji-item" onclick="insertEmoji('❣️')" role="button" tabindex="0">❣️</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💕')" role="button" tabindex="0">💕</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💞')" role="button" tabindex="0">💞</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💓')" role="button" tabindex="0">💓</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💗')" role="button" tabindex="0">💗</span>
+                                    <span class="emoji-item" onclick="insertEmoji('💖')" role="button" tabindex="0">💖</span>
                                 </div>
                             </div>
                             <div class="emoji-category">
                                 <div class="emoji-category-title">Activities</div>
                                 <div class="emoji-grid">
-                                    <span class="emoji-item" onclick="insertEmoji('⚽')">⚽</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🏀')">🏀</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🏈')">🏈</span>
-                                    <span class="emoji-item" onclick="insertEmoji('⚾')">⚾</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎾')">🎾</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🏐')">🏐</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🏓')">🏓</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎯')">🎯</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎮')">🎮</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎲')">🎲</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎨')">🎨</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎭')">🎭</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎪')">🎪</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎬')">🎬</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎤')">🎤</span>
-                                    <span class="emoji-item" onclick="insertEmoji('🎧')">🎧</span>
+                                    <span class="emoji-item" onclick="insertEmoji('⚽')" role="button" tabindex="0">⚽</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏀')" role="button" tabindex="0">🏀</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏈')" role="button" tabindex="0">🏈</span>
+                                    <span class="emoji-item" onclick="insertEmoji('⚾')" role="button" tabindex="0">⚾</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎾')" role="button" tabindex="0">🎾</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏐')" role="button" tabindex="0">🏐</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🏓')" role="button" tabindex="0">🏓</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎯')" role="button" tabindex="0">🎯</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎮')" role="button" tabindex="0">🎮</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎲')" role="button" tabindex="0">🎲</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎨')" role="button" tabindex="0">🎨</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎭')" role="button" tabindex="0">🎭</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎪')" role="button" tabindex="0">🎪</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎬')" role="button" tabindex="0">🎬</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎤')" role="button" tabindex="0">🎤</span>
+                                    <span class="emoji-item" onclick="insertEmoji('🎧')" role="button" tabindex="0">🎧</span>
                                 </div>
                             </div>
                         </div>
@@ -1398,30 +2189,30 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 
 <!-- Image Modal -->
-<div class="image-modal" id="imageModal" onclick="closeImageModal()">
-    <button class="image-modal-close"><i class="fas fa-times"></i></button>
-    <img id="imageModalImg" src="" alt="">
+<div class="image-modal" id="imageModal" onclick="closeImageModal()" role="dialog" aria-label="Image preview">
+    <button class="image-modal-close" aria-label="Close image preview"><i class="fas fa-times"></i></button>
+    <img id="imageModalImg" src="" alt="Full size image">
 </div>
 
 <!-- Edit Post Modal -->
-<div class="edit-modal" id="editModal">
+<div class="edit-modal" id="editModal" role="dialog" aria-labelledby="editModalTitle">
     <div class="edit-modal-content">
         <div class="edit-modal-header">
-            <div class="edit-modal-title">
+            <div class="edit-modal-title" id="editModalTitle">
                 <i class="fas fa-edit"></i>
                 Edit Post
             </div>
-            <button class="edit-modal-close" onclick="closeEditModal()">
+            <button class="edit-modal-close" onclick="closeEditModal()" aria-label="Close edit modal">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="edit-modal-body">
-            <textarea class="edit-textarea" id="editContent" placeholder="What's on your mind?"></textarea>
+            <textarea class="edit-textarea" id="editContent" placeholder="What's on your mind?" aria-label="Edit post content"></textarea>
             <div class="edit-media-section">
                 <div class="edit-current-media" id="editCurrentMedia" style="display:none;">
-                    <img id="editMediaImg" src="" alt="" style="display:none;">
+                    <img id="editMediaImg" src="" alt="Current media" style="display:none;">
                     <video id="editMediaVideo" controls style="display:none;"></video>
-                    <button class="edit-remove-media" onclick="removeEditMedia()">
+                    <button class="edit-remove-media" onclick="removeEditMedia()" aria-label="Remove media">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1457,7 +2248,9 @@ postContent.addEventListener('input', function() {
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 });
 
-// ─── EMOJI PICKER ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// EMOJI PICKER
+// ═══════════════════════════════════════════════════════════
 function toggleEmojiPicker() {
     const picker = document.getElementById('emojiPicker');
     picker.classList.toggle('active');
@@ -1492,9 +2285,17 @@ function insertEmoji(emoji) {
     // Trigger resize
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    
+    // Close picker on mobile after selection
+    if (window.innerWidth <= 768) {
+        const picker = document.getElementById('emojiPicker');
+        picker.classList.remove('active');
+    }
 }
 
-// ─── MEDIA HANDLING ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// MEDIA HANDLING
+// ═══════════════════════════════════════════════════════════
 function handleMediaSelect(input) {
     if (!input.files || !input.files[0]) return;
     selectedMedia = input.files[0];
@@ -1529,7 +2330,9 @@ function removeMediaPreview() {
     document.getElementById('previewVideo').src = '';
 }
 
-// ─── CREATE POST ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// CREATE POST
+// ═══════════════════════════════════════════════════════════
 function createPost() {
     const content = postContent.value.trim();
     if (!content && !selectedMedia) {
@@ -1550,7 +2353,7 @@ function createPost() {
         .then(r => r.json())
         .then(d => {
             if (d.success) {
-                location.reload(); // Reload to show new post
+                location.reload();
             } else {
                 alert('Error: ' + (d.error || 'Failed to create post'));
             }
@@ -1564,7 +2367,9 @@ function createPost() {
         });
 }
 
-// ─── TOGGLE LIKE ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// POST INTERACTIONS
+// ═══════════════════════════════════════════════════════════
 function toggleLike(postId) {
     const btn = document.querySelector(`[data-post-id="${postId}"] .interaction-btn.like-btn`);
     const countEl = btn.querySelector('.like-count');
@@ -1588,7 +2393,6 @@ function toggleLike(postId) {
         .catch(() => {});
 }
 
-// ─── TOGGLE COMMENTS ─────────────────────────────────────────
 function toggleComments(postId) {
     const section = document.getElementById('comments-' + postId);
     const wasActive = section.classList.contains('active');
@@ -1597,7 +2401,6 @@ function toggleComments(postId) {
         section.classList.remove('active');
     } else {
         section.classList.add('active');
-        // Load comments if not loaded yet
         if (!section.dataset.loaded) {
             loadComments(postId);
         }
@@ -1656,7 +2459,6 @@ function addComment(postId) {
                 list.insertAdjacentHTML('beforeend', renderComment(d.comment));
                 input.value = '';
                 
-                // Update comment count
                 const countEl = document.querySelector(`[data-post-id="${postId}"] .comment-count`);
                 if (countEl) countEl.textContent = d.comments_count + (d.comments_count === 1 ? ' Comment' : ' Comments');
             } else {
@@ -1675,7 +2477,7 @@ function renderComment(c) {
     const time = formatTime(c.created_at);
     const initial = c.full_name ? c.full_name[0].toUpperCase() : '?';
     const profileImg = c.profile_photo 
-        ? `<img src="${escHtml(c.profile_photo)}" alt="">`
+        ? `<img src="${escHtml(c.profile_photo)}" alt="${escHtml(c.full_name)}">`
         : initial;
     
     return `
@@ -1690,12 +2492,13 @@ function renderComment(c) {
     `;
 }
 
-// ─── POST OPTIONS ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// POST OPTIONS
+// ═══════════════════════════════════════════════════════════
 function togglePostOptions(btn, postId, isOwner) {
     const menu = btn.nextElementSibling;
     const wasActive = menu.classList.contains('active');
     
-    // Close all other menus
     document.querySelectorAll('.options-menu').forEach(m => m.classList.remove('active'));
     
     if (!wasActive) {
@@ -1711,7 +2514,9 @@ function togglePostOptions(btn, postId, isOwner) {
     }
 }
 
-// ─── EDIT POST ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// EDIT POST
+// ═══════════════════════════════════════════════════════════
 function openEditModal(postId) {
     editingPostId = postId;
     const postCard = document.querySelector(`[data-post-id="${postId}"]`);
@@ -1720,7 +2525,6 @@ function openEditModal(postId) {
     
     document.getElementById('editContent').value = content.trim();
     
-    // Show existing media
     const currentMedia = document.getElementById('editCurrentMedia');
     const editImg = document.getElementById('editMediaImg');
     const editVid = document.getElementById('editMediaVideo');
@@ -1743,6 +2547,7 @@ function openEditModal(postId) {
     
     editMediaToRemove = false;
     document.getElementById('editModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeEditModal() {
@@ -1752,6 +2557,7 @@ function closeEditModal() {
     document.getElementById('editCurrentMedia').style.display = 'none';
     editingPostId = null;
     editMediaToRemove = false;
+    document.body.style.overflow = '';
 }
 
 function handleEditMediaSelect(input) {
@@ -1813,7 +2619,6 @@ function saveEditPost() {
         .then(r => r.json())
         .then(d => {
             if (d.success) {
-                // Update post in DOM
                 const postCard = document.querySelector(`[data-post-id="${editingPostId}"]`);
                 const contentEl = postCard.querySelector('.post-content');
                 
@@ -1835,7 +2640,6 @@ function saveEditPost() {
                     contentEl.remove();
                 }
                 
-                // Update media if changed
                 if (d.media_path) {
                     let mediaEl = postCard.querySelector('.post-media');
                     if (!mediaEl) {
@@ -1885,7 +2689,6 @@ function deletePost(postId) {
         .then(d => {
             if (d.success) {
                 document.querySelector(`[data-post-id="${postId}"]`).remove();
-                // Check if no posts left
                 if (!document.querySelectorAll('.post-card').length) {
                     document.getElementById('postsContainer').innerHTML = `
                         <div class="no-posts">
@@ -1902,17 +2705,23 @@ function deletePost(postId) {
         .catch(() => alert('Error deleting post'));
 }
 
-// ─── IMAGE MODAL ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// IMAGE MODAL
+// ═══════════════════════════════════════════════════════════
 function openImageModal(src) {
     document.getElementById('imageModalImg').src = src;
     document.getElementById('imageModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeImageModal() {
     document.getElementById('imageModal').classList.remove('open');
+    document.body.style.overflow = '';
 }
 
-// ─── INFINITE SCROLL ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// INFINITE SCROLL
+// ═══════════════════════════════════════════════════════════
 window.addEventListener('scroll', () => {
     if (isLoadingMore || !hasMorePosts) return;
     
@@ -1957,7 +2766,7 @@ function renderPostHTML(post) {
     const time = formatTime(post.created_at);
     const initial = post.full_name ? post.full_name[0].toUpperCase() : '?';
     const profileImg = post.profile_photo 
-        ? `<img src="${escHtml(post.profile_photo)}" alt="">`
+        ? `<img src="${escHtml(post.profile_photo)}" alt="${escHtml(post.full_name)}">`
         : initial;
     const isOwner = post.student_id == MY_ID;
     const likedClass = post.has_liked ? 'liked' : '';
@@ -1982,7 +2791,7 @@ function renderPostHTML(post) {
                     </div>
                 </div>
                 <div style="position:relative;">
-                    <button class="post-options" onclick="togglePostOptions(this, ${post.id}, ${isOwner})">
+                    <button class="post-options" onclick="togglePostOptions(this, ${post.id}, ${isOwner})" aria-label="Post options">
                         <i class="fas fa-ellipsis-h"></i>
                     </button>
                     <div class="options-menu">
@@ -2005,11 +2814,11 @@ function renderPostHTML(post) {
                 </div>
             </div>
             <div class="post-interactions">
-                <button class="interaction-btn like-btn ${likedClass}" onclick="toggleLike(${post.id})">
+                <button class="interaction-btn like-btn ${likedClass}" onclick="toggleLike(${post.id})" aria-label="Like post">
                     <i class="fas fa-heart"></i>
                     <span class="like-count">${post.likes_count}</span>
                 </button>
-                <button class="interaction-btn" onclick="toggleComments(${post.id})">
+                <button class="interaction-btn" onclick="toggleComments(${post.id})" aria-label="Comment on post">
                     <i class="fas fa-comment"></i>
                     Comment
                 </button>
@@ -2018,7 +2827,7 @@ function renderPostHTML(post) {
                 <div class="comment-input-wrap">
                     <div class="comment-avatar"><?php echo $student['profile_photo'] ? '<img src="'.htmlspecialchars($student['profile_photo']).'" alt="">' : strtoupper(substr($student['full_name'], 0, 1)); ?></div>
                     <div class="comment-input-form">
-                        <textarea class="comment-input" id="comment-input-${post.id}" placeholder="Write a comment..." rows="1"></textarea>
+                        <textarea class="comment-input" id="comment-input-${post.id}" placeholder="Write a comment..." rows="1" aria-label="Comment input"></textarea>
                         <button class="btn-comment" onclick="addComment(${post.id})">Post</button>
                     </div>
                 </div>
@@ -2028,7 +2837,9 @@ function renderPostHTML(post) {
     `;
 }
 
-// ─── UTILITY FUNCTIONS ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════
 function escHtml(s) {
     if (!s) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2037,7 +2848,7 @@ function escHtml(s) {
 function formatTime(dateStr) {
     const date = new Date(dateStr);
     const now = new Date();
-    const diff = Math.floor((now - date) / 1000); // seconds
+    const diff = Math.floor((now - date) / 1000);
 
     if (diff < 60) return 'Just now';
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
@@ -2049,7 +2860,46 @@ function formatTime(dateStr) {
 
 function toggleSidebar() {
     // Add your sidebar toggle logic here
+    // This function should be connected to your sidebar.php
 }
+
+// Prevent modal close propagation
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeImageModal();
+    }
+});
+
+// Keyboard accessibility for emoji picker
+document.querySelectorAll('.emoji-item').forEach(item => {
+    item.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this.click();
+        }
+    });
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('editModal').classList.contains('open')) {
+            closeEditModal();
+        }
+        if (document.getElementById('imageModal').classList.contains('open')) {
+            closeImageModal();
+        }
+        if (document.getElementById('emojiPicker').classList.contains('active')) {
+            document.getElementById('emojiPicker').classList.remove('active');
+        }
+    }
+});
 </script>
 </body>
 </html>
@@ -2060,7 +2910,7 @@ function renderPost($post, $sid, $student) {
     $time = formatTimeAgo($post['created_at']);
     $initial = strtoupper(substr($post['full_name'], 0, 1));
     $profileImg = $post['profile_photo'] 
-        ? '<img src="' . htmlspecialchars($post['profile_photo']) . '" alt="">'
+        ? '<img src="' . htmlspecialchars($post['profile_photo']) . '" alt="' . htmlspecialchars($post['full_name']) . '">'
         : $initial;
     $isOwner = $post['student_id'] == $sid;
     $likedClass = $post['has_liked'] ? 'liked' : '';
@@ -2075,7 +2925,7 @@ function renderPost($post, $sid, $student) {
     echo $time . '</div>';
     echo '</div>';
     echo '<div style="position:relative;">';
-    echo '<button class="post-options" onclick="togglePostOptions(this, ' . $post['id'] . ', ' . ($isOwner ? 'true' : 'false') . ')">';
+    echo '<button class="post-options" onclick="togglePostOptions(this, ' . $post['id'] . ', ' . ($isOwner ? 'true' : 'false') . ')" aria-label="Post options">';
     echo '<i class="fas fa-ellipsis-h"></i></button>';
     echo '<div class="options-menu">';
     if ($isOwner) {
@@ -2105,9 +2955,9 @@ function renderPost($post, $sid, $student) {
     echo '</div>';
     
     echo '<div class="post-interactions">';
-    echo '<button class="interaction-btn like-btn ' . $likedClass . '" onclick="toggleLike(' . $post['id'] . ')">';
+    echo '<button class="interaction-btn like-btn ' . $likedClass . '" onclick="toggleLike(' . $post['id'] . ')" aria-label="Like post">';
     echo '<i class="fas fa-heart"></i> <span class="like-count">' . $post['likes_count'] . '</span></button>';
-    echo '<button class="interaction-btn" onclick="toggleComments(' . $post['id'] . ')">';
+    echo '<button class="interaction-btn" onclick="toggleComments(' . $post['id'] . ')" aria-label="Comment on post">';
     echo '<i class="fas fa-comment"></i> Comment</button>';
     echo '</div>';
     
@@ -2116,13 +2966,13 @@ function renderPost($post, $sid, $student) {
     echo '<div class="comment-input-wrap">';
     echo '<div class="comment-avatar">';
     if ($student['profile_photo']) {
-        echo '<img src="' . htmlspecialchars($student['profile_photo']) . '" alt="">';
+        echo '<img src="' . htmlspecialchars($student['profile_photo']) . '" alt="Your profile">';
     } else {
         echo strtoupper(substr($student['full_name'], 0, 1));
     }
     echo '</div>';
     echo '<div class="comment-input-form">';
-    echo '<textarea class="comment-input" id="comment-input-' . $post['id'] . '" placeholder="Write a comment..." rows="1"></textarea>';
+    echo '<textarea class="comment-input" id="comment-input-' . $post['id'] . '" placeholder="Write a comment..." rows="1" aria-label="Comment input"></textarea>';
     echo '<button class="btn-comment" onclick="addComment(' . $post['id'] . ')">Post</button>';
     echo '</div></div>';
     echo '<div class="comments-list"></div>';
