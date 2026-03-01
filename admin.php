@@ -224,7 +224,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span>
                 <?php endif; ?>
             </button>
-            <button class="tab" data-tab="all-submissions"><i class="fas fa-paper-plane"></i> All Submissions</button>
+            <button class="tab" data-tab="submissions"><i class="fas fa-paper-plane"></i> All Submissions</button>
             <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
             <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
         </div>
