@@ -120,7 +120,8 @@ $statsRes = $db->query("SELECT
     (SELECT COUNT(*) FROM internship_tasks WHERE status='active') as active_tasks,
     (SELECT COUNT(*) FROM task_submissions WHERE status='submitted' OR status='under_review') as pending_reviews,
     (SELECT COUNT(*) FROM task_submissions WHERE status='approved') as completed_tasks,
-    (SELECT COUNT(DISTINCT id) FROM internship_students WHERE is_active=1) as total_students
+    (SELECT COUNT(DISTINCT id) FROM internship_students WHERE is_active=1) as total_students,
+    (SELECT COUNT(*) FROM task_submissions) as total_submissions
 ");
 $stats = $statsRes->fetch_assoc();
 
@@ -165,6 +166,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         .sc-icon.blue{background:rgba(59,130,246,0.1);color:var(--blue);}
         .sc-icon.green{background:rgba(34,197,94,0.1);color:var(--green);}
         .sc-icon.purple{background:rgba(139,92,246,0.1);color:var(--purple);}
+        .sc-icon.yellow{background:rgba(234,179,8,0.1);color:#ca8a04;}
         .sc-value{font-size:2rem;font-weight:900;color:var(--text);line-height:1;}
         .sc-label{font-size:.82rem;color:var(--text3);margin-top:6px;font-weight:500;}
         .tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;}
@@ -207,16 +209,16 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <div class="stat-card"><div class="sc-top"><div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div></div><div class="sc-value"><?php echo $stats['active_tasks']; ?></div><div class="sc-label">Active Tasks</div></div>
             <div class="stat-card"><div class="sc-top"><div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div></div><div class="sc-value"><?php echo $stats['pending_reviews']; ?></div><div class="sc-label">Pending Reviews</div></div>
             <div class="stat-card"><div class="sc-top"><div class="sc-icon green"><i class="fas fa-circle-check"></i></div></div><div class="sc-value"><?php echo $stats['completed_tasks']; ?></div><div class="sc-label">Completed Tasks</div></div>
+            <div class="stat-card"><div class="sc-top"><div class="sc-icon yellow"><i class="fas fa-paper-plane"></i></div></div><div class="sc-value"><?php echo $stats['total_submissions']; ?></div><div class="sc-label">Total Submissions</div></div>
             <div class="stat-card"><div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div><div class="sc-value"><?php echo $stats['total_students']; ?></div><div class="sc-label">Active Students</div></div>
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('tasks')"><i class="fas fa-tasks"></i> Manage Tasks</button>
-            <button class="tab" onclick="showTab('reviews')"><i class="fas fa-clipboard-check"></i> Review Submissions<?php if ($stats['pending_reviews'] > 0): ?> <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span><?php endif; ?></button>
-            <button class="tab" onclick="showTab('attendance')"><i class="fas fa-calendar-check"></i> Attendance</button>
-            <button class="tab" onclick="showTab('submitted-tasks')"><i class="fas fa-paper-plane"></i> All Submissions</button>
-            <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Manage Users</button>
-
+            <button class="tab active" data-tab="tasks"><i class="fas fa-tasks"></i> Manage Tasks</button>
+            <button class="tab" data-tab="reviews"><i class="fas fa-clipboard-check"></i> Review Submissions<?php if ($stats['pending_reviews'] > 0): ?> <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span><?php endif; ?></button>
+            <button class="tab" data-tab="submitted-tasks"><i class="fas fa-paper-plane"></i> All Submissions</button>
+            <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
+            <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
         </div>
         
         <div id="tab-tasks" class="tab-content">
@@ -227,43 +229,72 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <?php include 'admin_modules/admin_review_submissions.php'; ?>
         </div>
         
+        <div id="tab-submitted-tasks" class="tab-content" style="display:none;">
+            <?php 
+            $module_path = 'admin_modules/admin_submitted_tasks.php';
+            if (file_exists($module_path)) {
+                include $module_path;
+            } else {
+                echo '<div style="padding:40px;text-align:center;color:var(--text3);">';
+                echo '<i class="fas fa-exclamation-triangle" style="font-size:3rem;margin-bottom:16px;display:block;"></i>';
+                echo '<h3>Module Not Found</h3>';
+                echo '<p>Please ensure admin_submitted_tasks.php is in the admin_modules folder</p>';
+                echo '</div>';
+            }
+            ?>
+        </div>
+        
         <div id="tab-attendance" class="tab-content" style="display:none;">
             <?php include 'admin_modules/admin_attendance_manage.php'; ?>
         </div>
-
-        <div id="tab-submitted-tasks" class="tab-content" style="display:none;">
-            <?php include 'admin_modules/admin_submitted_tasks.php'; ?>
-        </div>
-
+        
         <div id="tab-users" class="tab-content" style="display:none;">
             <?php include 'admin_modules/admin_user_management.php'; ?>
         </div>
     </div>
     
     <script>
-        function showTab(tab){
+        function showTab(tab, eventObj){
             document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
-            event.target.closest('.tab').classList.add('active');
+            
+            if(eventObj && eventObj.target){
+                eventObj.target.closest('.tab').classList.add('active');
+            } else {
+                document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+            }
+            
             document.getElementById('tab-'+tab).style.display='block';
             window.location.hash='tab-'+tab;
         }
         
-        setTimeout(()=>{
-            document.querySelectorAll('.alert').forEach(alert=>{
-                alert.style.opacity='0';
-                setTimeout(()=>alert.remove(),300);
+        // Initialize tabs on page load
+        document.addEventListener('DOMContentLoaded', function(){
+            // Add click listeners to tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function(e){
+                    const tabName = this.getAttribute('data-tab');
+                    showTab(tabName, e);
+                });
             });
-        },5000);
-        
-        if(window.location.hash){
-            const hash=window.location.hash.replace('#','');
-            if(hash.startsWith('tab-')){
-                const tabName=hash.replace('tab-','');
-                const tabBtn=document.querySelector(`.tab[onclick*="${tabName}"]`);
-                if(tabBtn)tabBtn.click();
+            
+            // Auto-dismiss alerts
+            setTimeout(()=>{
+                document.querySelectorAll('.alert').forEach(alert=>{
+                    alert.style.opacity='0';
+                    setTimeout(()=>alert.remove(),300);
+                });
+            },5000);
+            
+            // Handle hash navigation
+            if(window.location.hash){
+                const hash=window.location.hash.replace('#','');
+                if(hash.startsWith('tab-')){
+                    const tabName=hash.replace('tab-','');
+                    showTab(tabName);
+                }
             }
-        }
+        });
     </script>
 </body>
 </html>
