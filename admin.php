@@ -125,9 +125,9 @@ $statsRes = $db->query("SELECT
 ");
 $stats = $statsRes->fetch_assoc();
 
-// Get success/error messages from session if redirected from module pages
+// Get success/error messages from session
 $success = $_SESSION['admin_success'] ?? '';
-$error = $_SESSION['admin_error'] ?? '';
+$error   = $_SESSION['admin_error'] ?? '';
 unset($_SESSION['admin_success'], $_SESSION['admin_error']);
 ?>
 <!DOCTYPE html>
@@ -157,7 +157,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         .alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}
         .alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
         @keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-bottom:32px;}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px;}
         .stat-card{background:var(--card);border-radius:14px;padding:22px 24px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.06);transition:all .2s;}
         .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.1);}
         .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
@@ -174,6 +174,8 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         .tab:hover{background:var(--bg);color:var(--text);}
         .tab.active{background:var(--card);color:var(--o5);border:1px solid var(--border);border-bottom:2px solid var(--card);margin-bottom:-2px;}
         .tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--o5);}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
         @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
     </style>
 </head>
@@ -213,87 +215,91 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <div class="stat-card"><div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div><div class="sc-value"><?php echo $stats['total_students']; ?></div><div class="sc-label">Active Students</div></div>
         </div>
         
+        <!-- ═══ TABS — every button must have data-tab matching its panel id (without "tab-" prefix) ═══ -->
         <div class="tabs">
-            <button class="tab active" data-tab="tasks"><i class="fas fa-tasks"></i> Manage Tasks</button>
-            <button class="tab" data-tab="reviews"><i class="fas fa-clipboard-check"></i> Review Submissions<?php if ($stats['pending_reviews'] > 0): ?> <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span><?php endif; ?></button>
-            <button class="tab" data-tab="submitted-tasks"><i class="fas fa-paper-plane"></i> All Submissions</button>
+            <button class="tab" data-tab="tasks"><i class="fas fa-tasks"></i> Manage Tasks</button>
+            <button class="tab" data-tab="reviews">
+                <i class="fas fa-clipboard-check"></i> Review Submissions
+                <?php if ($stats['pending_reviews'] > 0): ?>
+                <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span>
+                <?php endif; ?>
+            </button>
+            <button class="tab" data-tab="all-submissions"><i class="fas fa-paper-plane"></i> All Submissions</button>
             <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
             <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
         </div>
         
+        <!-- Panel id = "tab-" + data-tab value. Nothing else here. No extra buttons. -->
+
         <div id="tab-tasks" class="tab-content">
             <?php include 'admin_modules/admin_manage_tasks.php'; ?>
         </div>
         
-        <div id="tab-reviews" class="tab-content" style="display:none;">
+        <div id="tab-reviews" class="tab-content">
             <?php include 'admin_modules/admin_review_submissions.php'; ?>
         </div>
-        
-        <div id="tab-submitted-tasks" class="tab-content" style="display:none;">
-            <?php 
-            $module_path = 'admin_modules/admin_all_submitted_tasks.php';
-            if (file_exists($module_path)) {
-                include $module_path;
-            } else {
-                echo '<div style="padding:40px;text-align:center;color:var(--text3);">';
-                echo '<i class="fas fa-exclamation-triangle" style="font-size:3rem;margin-bottom:16px;display:block;"></i>';
-                echo '<h3>Module Not Found</h3>';
-                echo '<p>Please ensure admin_submitted_tasks.php is in the admin_modules folder</p>';
-                echo '</div>';
-            }
-            ?>
+
+        <div id="tab-all-submissions" class="tab-content">
+            <?php include 'admin_modules/admin_all_submissions.php'; ?>
         </div>
         
-        <div id="tab-attendance" class="tab-content" style="display:none;">
+        <div id="tab-attendance" class="tab-content">
             <?php include 'admin_modules/admin_attendance_manage.php'; ?>
         </div>
         
-        <div id="tab-users" class="tab-content" style="display:none;">
+        <div id="tab-users" class="tab-content">
             <?php include 'admin_modules/admin_user_management.php'; ?>
         </div>
     </div>
     
     <script>
-        function showTab(tab, eventObj){
-            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
-            
-            if(eventObj && eventObj.target){
-                eventObj.target.closest('.tab').classList.add('active');
-            } else {
-                document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
-            }
-            
-            document.getElementById('tab-'+tab).style.display='block';
-            window.location.hash='tab-'+tab;
+        function showTab(tabName) {
+            // Deactivate all tabs and panels
+            document.querySelectorAll('.tab').forEach(function(t) {
+                t.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(function(c) {
+                c.classList.remove('active');
+            });
+
+            // Activate the matching tab button
+            var btn = document.querySelector('.tab[data-tab="' + tabName + '"]');
+            if (btn) btn.classList.add('active');
+
+            // Activate the matching panel
+            var panel = document.getElementById('tab-' + tabName);
+            if (panel) panel.classList.add('active');
+
+            // Update URL hash without scrolling
+            history.replaceState(null, '', '#tab-' + tabName);
         }
-        
-        // Initialize tabs on page load
-        document.addEventListener('DOMContentLoaded', function(){
-            // Add click listeners to tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function(e){
-                    const tabName = this.getAttribute('data-tab');
-                    showTab(tabName, e);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wire up all tab buttons
+            document.querySelectorAll('.tab[data-tab]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    showTab(this.getAttribute('data-tab'));
                 });
             });
-            
-            // Auto-dismiss alerts
-            setTimeout(()=>{
-                document.querySelectorAll('.alert').forEach(alert=>{
-                    alert.style.opacity='0';
-                    setTimeout(()=>alert.remove(),300);
+
+            // Dismiss alerts after 5s
+            setTimeout(function() {
+                document.querySelectorAll('.alert').forEach(function(a) {
+                    a.style.transition = 'opacity .3s';
+                    a.style.opacity = '0';
+                    setTimeout(function() { a.remove(); }, 300);
                 });
-            },5000);
-            
-            // Handle hash navigation
-            if(window.location.hash){
-                const hash=window.location.hash.replace('#','');
-                if(hash.startsWith('tab-')){
-                    const tabName=hash.replace('tab-','');
-                    showTab(tabName);
+            }, 5000);
+
+            // Restore tab from URL hash, default to 'tasks'
+            var defaultTab = 'tasks';
+            if (window.location.hash) {
+                var hash = window.location.hash.replace('#', '');
+                if (hash.startsWith('tab-')) {
+                    defaultTab = hash.replace('tab-', '');
                 }
             }
+            showTab(defaultTab);
         });
     </script>
 </body>
