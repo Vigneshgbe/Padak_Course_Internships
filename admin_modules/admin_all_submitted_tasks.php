@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_submission']))
                 }
             }
             $_SESSION['admin_success'] = 'Submission updated successfully!';
-            header('Location: admin.php#tab-all-submissions');
+            header('Location: admin.php#tab-submissions');
             exit;
         } else {
             $subError = 'Update failed: ' . $db->error;
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_submission']))
     $submissionId = (int)$_POST['submission_id'];
     if ($db->query("DELETE FROM task_submissions WHERE id = $submissionId")) {
         $_SESSION['admin_success'] = 'Submission deleted.';
-        header('Location: admin.php#tab-all-submissions');
+        header('Location: admin.php#tab-submissions');
         exit;
     } else {
         $subError = 'Delete failed: ' . $db->error;
@@ -257,7 +257,7 @@ $statusStyle = [
         ?>
         <div class="asub_pills">
             <?php foreach ($pillDefs as $pk => $pd): ?>
-            <a href="<?php echo $baseHref; ?>ssf=<?php echo $pk; ?>#tab-all-submissions"
+            <a href="<?php echo $baseHref; ?>ssf=<?php echo $pk; ?>#tab-submissions"
                class="asub_pill <?php echo $subFilterStatus===$pk?'on':''; ?>">
                 <i class="fas <?php echo $pd[1]; ?>"></i>
                 <?php echo $pd[0]; ?> (<?php echo $subCounts[$pk]??0; ?>)
@@ -282,7 +282,7 @@ $statusStyle = [
                        value="<?php echo htmlspecialchars($subFilterSearch); ?>"
                        onchange="document.getElementById('asubForm').submit()">
                 <?php if ($subFilterSearch||$subFilterTask||$subFilterStatus!=='all'): ?>
-                <a href="admin.php#tab-all-submissions" class="asub_clr"><i class="fas fa-xmark"></i> Clear</a>
+                <a href="admin.php#tab-submissions" class="asub_clr"><i class="fas fa-xmark"></i> Clear</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -394,7 +394,7 @@ $statusStyle = [
             <div class="asub_mtitle"><i class="fas fa-edit" style="color:#f97316;margin-right:7px;"></i>Edit / Review Submission</div>
             <button type="button" class="asub_mx" onclick="asubClose('asubEditModal')">&times;</button>
         </div>
-        <form method="POST" action="admin.php#tab-all-submissions">
+        <form method="POST" action="admin.php#tab-submissions">
             <div class="asub_mbody">
                 <input type="hidden" name="submission_id" id="asubEid">
                 <div style="padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;margin-bottom:16px;font-size:.83rem;">
@@ -442,7 +442,7 @@ $statusStyle = [
             <div class="asub_mtitle" style="color:#dc2626;"><i class="fas fa-triangle-exclamation" style="margin-right:7px;"></i>Confirm Delete</div>
             <button type="button" class="asub_mx" onclick="asubClose('asubDelModal')">&times;</button>
         </div>
-        <form method="POST" action="admin.php#tab-all-submissions">
+        <form method="POST" action="admin.php#tab-submissions">
             <div class="asub_mbody">
                 <input type="hidden" name="submission_id" id="asubDid">
                 <p style="font-size:.86rem;color:#475569;line-height:1.65;">

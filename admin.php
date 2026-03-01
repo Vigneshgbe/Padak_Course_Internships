@@ -1,306 +1,574 @@
 <?php
-session_start();
-require_once 'config.php';
-
-$db = getPadakDB();
-
-define('ADMIN_USERNAME', 'admin');
-define('ADMIN_PASSWORD', 'vigneshg091002');
-
-$loginError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_login'])) {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-    
-    if ($username === ADMIN_USERNAME && $password === ADMIN_PASSWORD) {
-        $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_username'] = $username;
-        header('Location: admin.php');
-        exit;
-    } else {
-        $loginError = 'Invalid username or password';
-    }
-}
-
-if (isset($_GET['logout'])) {
-    unset($_SESSION['admin_logged_in']);
-    unset($_SESSION['admin_username']);
+// admin_modules/admin_all_submitted_tasks.php
+if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
     header('Location: admin.php');
     exit;
 }
 
-$isLoggedIn = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$subSuccess = '';
+$subError   = '';
 
-if (!$isLoggedIn) {
-    ?>
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Admin Login</title>
-        <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            *{margin:0;padding:0;box-sizing:border-box;}
-            :root{--o5:#f97316;--o4:#fb923c;--o6:#ea580c;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--red:#ef4444;}
-            body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-            .login-box{background:var(--card);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:100%;max-width:420px;overflow:hidden;}
-            .login-header{background:linear-gradient(135deg,var(--o5),var(--o4));padding:32px 28px;text-align:center;color:#fff;}
-            .login-header i{font-size:3rem;margin-bottom:12px;display:block;opacity:.9;}
-            .login-header h1{font-size:1.5rem;font-weight:800;margin-bottom:6px;}
-            .login-header p{font-size:.875rem;opacity:.85;}
-            .login-body{padding:32px 28px;}
-            .form-group{margin-bottom:20px;}
-            .form-label{display:block;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:8px;}
-            .form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;color:var(--text);outline:none;transition:all .2s;}
-            .form-input:focus{border-color:var(--o5);box-shadow:0 0 0 3px rgba(249,115,22,0.1);}
-            .input-group{position:relative;}
-            .input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:.9rem;}
-            .input-group .form-input{padding-left:42px;}
-            .btn-login{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;font-size:.9rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(249,115,22,0.3);}
-            .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(249,115,22,0.45);}
-            .alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;font-size:.82rem;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
-            .login-footer{padding:0 28px 28px;text-align:center;font-size:.75rem;color:var(--text3);}
-            .back-btn-login{position:fixed;top:20px;left:20px;width:44px;height:44px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;text-decoration:none;transition:all .2s;z-index:1000;backdrop-filter:blur(10px);}
-            .back-btn-login:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.4);transform:translateX(-3px);}
-        </style>
-    </head>
-    <body>
-        <a href="index.php" class="back-btn-login" title="Back to Home">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-        <div class="login-box">
-            <div class="login-header">
-                <i class="fas fa-shield-halved"></i>
-                <h1>Admin Access</h1>
-                <p>Task Management Portal</p>
-            </div>
-            <div class="login-body">
-                <?php if ($loginError): ?>
-                <div class="alert-error">
-                    <i class="fas fa-circle-exclamation"></i>
-                    <?php echo htmlspecialchars($loginError); ?>
-                </div>
-                <?php endif; ?>
-                <form method="POST" action="">
-                    <input type="hidden" name="admin_login" value="1">
-                    <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <div class="input-group">
-                            <i class="fas fa-user input-icon"></i>
-                            <input type="text" name="username" class="form-input" placeholder="Enter username" required autofocus>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <div class="input-group">
-                            <i class="fas fa-lock input-icon"></i>
-                            <input type="password" name="password" class="form-input" placeholder="Enter password" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-login">
-                        <i class="fas fa-sign-in-alt"></i> Sign In
-                    </button>
-                </form>
-            </div>
-            <div class="login-footer">
-                <i class="fas fa-info-circle"></i> Authorized personnel only
-            </div>
-        </div>
-    </body>
-    </html>
-    <?php
-    exit;
-}
+// Handle Update Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_submission'])) {
+    $submissionId = (int)$_POST['submission_id'];
+    $newStatus    = trim($_POST['sub_status'] ?? '');
+    $feedback     = trim($_POST['sub_feedback'] ?? '');
+    $pointsEarned = max(0, (int)$_POST['sub_points_earned']);
+    $reviewedBy   = trim($_POST['sub_reviewed_by'] ?? 'Admin');
 
-// Get Statistics
-$statsRes = $db->query("SELECT 
-    (SELECT COUNT(*) FROM internship_tasks WHERE status='active') as active_tasks,
-    (SELECT COUNT(*) FROM task_submissions WHERE status='submitted' OR status='under_review') as pending_reviews,
-    (SELECT COUNT(*) FROM task_submissions WHERE status='approved') as completed_tasks,
-    (SELECT COUNT(DISTINCT id) FROM internship_students WHERE is_active=1) as total_students,
-    (SELECT COUNT(*) FROM task_submissions) as total_submissions
-");
-$stats = $statsRes->fetch_assoc();
+    $allowed = ['draft','submitted','under_review','approved','rejected','revision_requested'];
+    if (!in_array($newStatus, $allowed)) {
+        $subError = 'Invalid status.';
+    } else {
+        $feedbackEsc   = $db->real_escape_string($feedback);
+        $reviewedByEsc = $db->real_escape_string($reviewedBy);
 
-// Get success/error messages from session
-$success = $_SESSION['admin_success'] ?? '';
-$error   = $_SESSION['admin_error'] ?? '';
-unset($_SESSION['admin_success'], $_SESSION['admin_error']);
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Padak</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-        :root{--o5:#f97316;--o4:#fb923c;--o6:#ea580c;--o1:#fff7ed;--o2:#ffedd5;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--red:#ef4444;--green:#22c55e;--blue:#3b82f6;--yellow:#eab308;--purple:#8b5cf6;}
-        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-        .admin-header{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;padding:20px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
-        .ah-left{display:flex;align-items:center;gap:16px;}
-        .ah-logo{width:48px;height:48px;background:linear-gradient(135deg,var(--o5),var(--o4));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(249,115,22,0.3);}
-        .ah-title h1{font-size:1.5rem;font-weight:800;margin-bottom:2px;}
-        .ah-title p{font-size:.82rem;opacity:.7;}
-        .ah-right{display:flex;align-items:center;gap:14px;}
-        .ah-user{display:flex;align-items:center;gap:10px;padding:8px 16px;background:rgba(255,255,255,0.1);border-radius:10px;font-size:.85rem;}
-        .ah-user i{color:var(--o4);}
-        .btn-logout{padding:8px 16px;background:rgba(239,68,68,0.2);border:1.5px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;display:flex;align-items:center;gap:6px;}
-        .btn-logout:hover{background:rgba(239,68,68,0.3);border-color:rgba(239,68,68,0.5);}
-        .admin-container{max-width:1400px;margin:0 auto;padding:28px;}
-        .alert{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:20px;animation:slideIn .3s ease;}
-        .alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}
-        .alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
-        @keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px;}
-        .stat-card{background:var(--card);border-radius:14px;padding:22px 24px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.06);transition:all .2s;}
-        .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.1);}
-        .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-        .sc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
-        .sc-icon.orange{background:var(--o1);color:var(--o6);}
-        .sc-icon.blue{background:rgba(59,130,246,0.1);color:var(--blue);}
-        .sc-icon.green{background:rgba(34,197,94,0.1);color:var(--green);}
-        .sc-icon.purple{background:rgba(139,92,246,0.1);color:var(--purple);}
-        .sc-icon.yellow{background:rgba(234,179,8,0.1);color:#ca8a04;}
-        .sc-value{font-size:2rem;font-weight:900;color:var(--text);line-height:1;}
-        .sc-label{font-size:.82rem;color:var(--text3);margin-top:6px;font-weight:500;}
-        .tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;}
-        .tab{padding:12px 20px;border-radius:10px 10px 0 0;border:none;background:none;font-size:.875rem;font-weight:600;color:var(--text2);cursor:pointer;transition:all .2s;position:relative;font-family:inherit;}
-        .tab:hover{background:var(--bg);color:var(--text);}
-        .tab.active{background:var(--card);color:var(--o5);border:1px solid var(--border);border-bottom:2px solid var(--card);margin-bottom:-2px;}
-        .tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--o5);}
-        .tab-content{display:none;}
-        .tab-content.active{display:block;}
-        @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
-    </style>
-</head>
-<body>
-    <div class="admin-header">
-        <div class="ah-left">
-            <div class="ah-logo"><i class="fas fa-tasks"></i></div>
-            <div class="ah-title">
-                <h1>Admin Dashboard</h1>
-                <p>Task & Attendance Management</p>
-            </div>
-        </div>
-        <div class="ah-right">
-            <div class="ah-user">
-                <i class="fas fa-user-shield"></i>
-                <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
-            </div>
-            <a href="?logout=1" class="btn-logout">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </div>
-    </div>
-    
-    <div class="admin-container">
-        <?php if ($success): ?>
-        <div class="alert alert-success"><i class="fas fa-circle-check"></i><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
-        <?php if ($error): ?>
-        <div class="alert alert-error"><i class="fas fa-circle-exclamation"></i><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        
-        <div class="stats-grid">
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div></div><div class="sc-value"><?php echo $stats['active_tasks']; ?></div><div class="sc-label">Active Tasks</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div></div><div class="sc-value"><?php echo $stats['pending_reviews']; ?></div><div class="sc-label">Pending Reviews</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon green"><i class="fas fa-circle-check"></i></div></div><div class="sc-value"><?php echo $stats['completed_tasks']; ?></div><div class="sc-label">Completed Tasks</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon yellow"><i class="fas fa-paper-plane"></i></div></div><div class="sc-value"><?php echo $stats['total_submissions']; ?></div><div class="sc-label">Total Submissions</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div><div class="sc-value"><?php echo $stats['total_students']; ?></div><div class="sc-label">Active Students</div></div>
-        </div>
-        
-        <!-- ═══ TABS — every button must have data-tab matching its panel id (without "tab-" prefix) ═══ -->
-        <div class="tabs">
-            <button class="tab" data-tab="tasks"><i class="fas fa-tasks"></i> Manage Tasks</button>
-            <button class="tab" data-tab="reviews">
-                <i class="fas fa-clipboard-check"></i> Review Submissions
-                <?php if ($stats['pending_reviews'] > 0): ?>
-                <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span>
-                <?php endif; ?>
-            </button>
-            <button class="tab" data-tab="submissions"><i class="fas fa-paper-plane"></i> All Submissions</button>
-            <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
-            <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
-        </div>
-        
-        <!-- Panel id = "tab-" + data-tab value. Nothing else here. No extra buttons. -->
+        $updateSql = "UPDATE task_submissions SET
+                        status         = '$newStatus',
+                        feedback       = '$feedbackEsc',
+                        points_earned  = $pointsEarned,
+                        reviewed_by    = '$reviewedByEsc',
+                        reviewed_at    = NOW(),
+                        updated_at     = NOW()
+                      WHERE id = $submissionId";
 
-        <div id="tab-tasks" class="tab-content">
-            <?php include 'admin_modules/admin_manage_tasks.php'; ?>
-        </div>
-        
-        <div id="tab-reviews" class="tab-content">
-            <?php include 'admin_modules/admin_review_submissions.php'; ?>
-        </div>
-
-        <div id="tab-all-submissions" class="tab-content">
-            <?php include 'admin_modules/admin_all_submitted_tasks.php'; ?>
-        </div>
-        
-        <div id="tab-attendance" class="tab-content">
-            <?php include 'admin_modules/admin_attendance_manage.php'; ?>
-        </div>
-        
-        <div id="tab-users" class="tab-content">
-            <?php include 'admin_modules/admin_user_management.php'; ?>
-        </div>
-    </div>
-    
-    <script>
-        function showTab(tabName) {
-            // Deactivate all tabs and panels
-            document.querySelectorAll('.tab').forEach(function(t) {
-                t.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-content').forEach(function(c) {
-                c.classList.remove('active');
-            });
-
-            // Activate the matching tab button
-            var btn = document.querySelector('.tab[data-tab="' + tabName + '"]');
-            if (btn) btn.classList.add('active');
-
-            // Activate the matching panel
-            var panel = document.getElementById('tab-' + tabName);
-            if (panel) panel.classList.add('active');
-
-            // Update URL hash without scrolling
-            history.replaceState(null, '', '#tab-' + tabName);
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Wire up all tab buttons
-            document.querySelectorAll('.tab[data-tab]').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    showTab(this.getAttribute('data-tab'));
-                });
-            });
-
-            // Dismiss alerts after 5s
-            setTimeout(function() {
-                document.querySelectorAll('.alert').forEach(function(a) {
-                    a.style.transition = 'opacity .3s';
-                    a.style.opacity = '0';
-                    setTimeout(function() { a.remove(); }, 300);
-                });
-            }, 5000);
-
-            // Restore tab from URL hash, default to 'tasks'
-            var defaultTab = 'tasks';
-            if (window.location.hash) {
-                var hash = window.location.hash.replace('#', '');
-                if (hash.startsWith('tab-')) {
-                    defaultTab = hash.replace('tab-', '');
+        if ($db->query($updateSql)) {
+            // Get student info for notification
+            $studentRes = $db->query("SELECT student_id FROM task_submissions WHERE id = $submissionId");
+            if ($studentRes && $studentRes->num_rows > 0) {
+                $studentData = $studentRes->fetch_assoc();
+                $studentId = (int)$studentData['student_id'];
+                
+                if ($newStatus === 'approved' && $pointsEarned > 0) {
+                    $db->query("UPDATE internship_students SET total_points = total_points + $pointsEarned WHERE id = $studentId");
+                    
+                    // Create notification
+                    $title = $db->real_escape_string('Task Approved');
+                    $message = $db->real_escape_string("Your submission was approved! You earned $pointsEarned points.");
+                    $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at) 
+                               VALUES ($studentId, '$title', '$message', 'grade', NOW())");
+                } elseif (in_array($newStatus, ['rejected', 'revision_requested'])) {
+                    $title = $db->real_escape_string($newStatus === 'rejected' ? 'Submission Rejected' : 'Revision Requested');
+                    $message = $db->real_escape_string($feedback ?: 'Please check your submission for updates.');
+                    $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at) 
+                               VALUES ($studentId, '$title', '$message', 'task', NOW())");
                 }
             }
-            showTab(defaultTab);
-        });
-    </script>
-</body>
-</html>
+            
+            $_SESSION['admin_success'] = 'Submission updated successfully!';
+            header('Location: admin.php#tab-all-submissions');
+            exit;
+        } else {
+            $subError = 'Update failed: ' . $db->error;
+        }
+    }
+}
+
+// Handle Delete Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_submission'])) {
+    $submissionId = (int)$_POST['submission_id'];
+    if ($db->query("DELETE FROM task_submissions WHERE id = $submissionId")) {
+        $_SESSION['admin_success'] = 'Submission deleted successfully.';
+        header('Location: admin.php#tab-all-submissions');
+        exit;
+    } else {
+        $subError = 'Delete failed: ' . $db->error;
+    }
+}
+
+// Filters
+$subFilterStatus = $_GET['ssf'] ?? 'all';
+$subFilterSearch = trim($_GET['sss'] ?? '');
+$subFilterTask   = (int)($_GET['sst'] ?? 0);
+
+$subWhere = [];
+if ($subFilterStatus !== 'all') {
+    $sfe = $db->real_escape_string($subFilterStatus);
+    $subWhere[] = "ts.status = '$sfe'";
+}
+if ($subFilterSearch !== '') {
+    $sse = $db->real_escape_string($subFilterSearch);
+    $subWhere[] = "(s.full_name LIKE '%$sse%' OR s.email LIKE '%$sse%' OR t.title LIKE '%$sse%')";
+}
+if ($subFilterTask > 0) {
+    $subWhere[] = "ts.task_id = $subFilterTask";
+}
+$subWhereSQL = $subWhere ? 'WHERE ' . implode(' AND ', $subWhere) : '';
+
+// Status counts
+$cntRes = $db->query("SELECT status, COUNT(*) as c FROM task_submissions GROUP BY status");
+$subCounts = ['all' => 0];
+while ($r = $cntRes->fetch_assoc()) {
+    $subCounts[$r['status']] = (int)$r['c'];
+    $subCounts['all'] += (int)$r['c'];
+}
+
+// Tasks dropdown
+$taskDropList = [];
+$tdr = $db->query("SELECT id, title FROM internship_tasks ORDER BY title ASC");
+if ($tdr) {
+    while ($r = $tdr->fetch_assoc()) {
+        $taskDropList[] = $r;
+    }
+}
+
+// Main query
+$subsRes = $db->query("
+    SELECT  ts.*,
+            s.full_name, 
+            s.email,
+            t.title AS task_title, 
+            t.max_points AS task_max_pts
+    FROM    task_submissions ts
+    LEFT JOIN internship_students s ON ts.student_id = s.id
+    LEFT JOIN internship_tasks    t ON ts.task_id    = t.id
+    $subWhereSQL
+    ORDER BY ts.submitted_at DESC
+");
+
+$allSubs = [];
+if ($subsRes) {
+    while ($r = $subsRes->fetch_assoc()) {
+        $allSubs[] = $r;
+    }
+}
+
+$statusLabel = [
+    'draft'              => 'Draft',
+    'submitted'          => 'Submitted',
+    'under_review'       => 'Under Review',
+    'approved'           => 'Approved',
+    'rejected'           => 'Rejected',
+    'revision_requested' => 'Revision Req.',
+];
+
+$statusStyle = [
+    'draft'              => 'background:rgba(100,116,139,.12);color:#475569',
+    'submitted'          => 'background:rgba(59,130,246,.12);color:#1d4ed8',
+    'under_review'       => 'background:rgba(234,179,8,.12);color:#854d0e',
+    'approved'           => 'background:rgba(34,197,94,.12);color:#16a34a',
+    'rejected'           => 'background:rgba(239,68,68,.12);color:#dc2626',
+    'revision_requested' => 'background:rgba(139,92,246,.12);color:#6d28d9',
+];
+?>
+
+<?php if ($subSuccess): ?>
+<div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:18px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;">
+    <i class="fas fa-circle-check"></i> <?php echo htmlspecialchars($subSuccess); ?>
+</div>
+<?php endif; ?>
+<?php if ($subError): ?>
+<div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:18px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
+    <i class="fas fa-circle-exclamation"></i> <?php echo htmlspecialchars($subError); ?>
+</div>
+<?php endif; ?>
+
+<style>
+/* All classes prefixed asub_ to avoid collisions */
+.asub_card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:24px;}
+.asub_card_head{padding:16px 22px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.asub_card_title{font-size:1.05rem;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:9px;}
+.asub_card_title i{color:#f97316;}
+.asub_card_body{padding:22px;}
+
+.asub_pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.asub_pill{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;text-decoration:none;color:#475569;transition:all .15s;}
+.asub_pill:hover{border-color:#f97316;color:#f97316;}
+.asub_pill.on{background:#f97316;border-color:#f97316;color:#fff;}
+
+.asub_filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
+.asub_sel{padding:7px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.81rem;font-family:inherit;color:#0f172a;outline:none;background:#fff;}
+.asub_sel:focus{border-color:#f97316;}
+.asub_txt{padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.81rem;font-family:inherit;color:#0f172a;outline:none;min-width:200px;}
+.asub_txt:focus{border-color:#f97316;}
+.asub_clr{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;color:#475569;text-decoration:none;transition:all .15s;}
+.asub_clr:hover{border-color:#f97316;color:#f97316;}
+
+.asub_table_wrap{overflow-x:auto;}
+.asub_table{width:100%;border-collapse:collapse;}
+.asub_table th{background:#f8fafc;padding:10px 13px;text-align:left;font-size:.71rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e2e8f0;white-space:nowrap;}
+.asub_table td{padding:12px 13px;border-bottom:1px solid #e2e8f0;font-size:.82rem;color:#475569;vertical-align:middle;}
+.asub_table tr:last-child td{border-bottom:none;}
+.asub_table tr:hover td{background:#f8fafc;}
+.asub_av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f97316,#fb923c);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.77rem;flex-shrink:0;}
+.asub_bdg{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:.69rem;font-weight:700;white-space:nowrap;}
+
+.asub_btn{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:7px;font-size:.74rem;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
+.asub_btn_v{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;}
+.asub_btn_v:hover{background:#dbeafe;}
+.asub_btn_e{background:linear-gradient(135deg,#f97316,#fb923c);color:#fff;box-shadow:0 3px 10px rgba(249,115,22,.25);}
+.asub_btn_e:hover{box-shadow:0 5px 16px rgba(249,115,22,.4);}
+.asub_btn_d{background:#fef2f2;border:1.5px solid #fecaca;color:#dc2626;}
+.asub_btn_d:hover{background:#fee2e2;}
+.asub_btn_cancel{background:#fff;border:1.5px solid #e2e8f0;color:#475569;padding:9px 20px;font-size:.84rem;}
+.asub_btn_cancel:hover{border-color:#f97316;color:#f97316;}
+.asub_btn_save{background:linear-gradient(135deg,#f97316,#fb923c);color:#fff;border:none;padding:9px 22px;font-size:.84rem;box-shadow:0 4px 14px rgba(249,115,22,.3);}
+.asub_btn_save:hover{box-shadow:0 6px 20px rgba(249,115,22,.45);}
+.asub_btn_del_c{background:#dc2626;color:#fff;border:none;padding:9px 22px;font-size:.84rem;}
+.asub_btn_del_c:hover{background:#b91c1c;}
+
+.asub_empty{text-align:center;padding:52px 20px;color:#94a3b8;}
+.asub_empty i{font-size:2.5rem;margin-bottom:12px;display:block;opacity:.3;}
+
+/* Modals */
+.asub_overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:9999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
+.asub_overlay.asub_show{display:flex;}
+.asub_mbox{background:#fff;border-radius:16px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.28);}
+.asub_mbox_lg{max-width:680px;}
+.asub_mbox_sm{max-width:440px;}
+.asub_mhead{padding:17px 22px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;}
+.asub_mtitle{font-size:1rem;font-weight:700;color:#0f172a;}
+.asub_mx{background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer;line-height:1;padding:2px 6px;}
+.asub_mx:hover{color:#ef4444;}
+.asub_mbody{padding:22px;}
+.asub_mfoot{padding:13px 22px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;}
+
+.asub_frow{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.asub_fg{margin-bottom:13px;}
+.asub_fg_full{grid-column:1/-1;}
+.asub_fl{display:block;font-size:.77rem;font-weight:700;color:#0f172a;margin-bottom:6px;}
+.asub_fi,.asub_fsel,.asub_fta{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.84rem;font-family:inherit;color:#0f172a;outline:none;background:#fff;transition:border-color .2s;}
+.asub_fi:focus,.asub_fsel:focus,.asub_fta:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.1);}
+.asub_fta{resize:vertical;min-height:86px;}
+
+.asub_igrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.asub_icell{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 13px;}
+.asub_icell_full{grid-column:1/-1;}
+.asub_ilbl{font-size:.69rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px;}
+.asub_ival{font-size:.83rem;font-weight:600;color:#0f172a;word-break:break-word;}
+.asub_cbox{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:11px;font-size:.81rem;color:#475569;line-height:1.65;white-space:pre-wrap;word-break:break-word;margin-top:5px;}
+.asub_lchip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:6px;font-size:.74rem;color:#1d4ed8;text-decoration:none;font-weight:600;}
+.asub_lchip:hover{background:rgba(59,130,246,.18);}
+
+@media(max-width:600px){.asub_frow{grid-template-columns:1fr;}.asub_igrid{grid-template-columns:1fr;}}
+</style>
+
+<!-- Main Card -->
+<div class="asub_card">
+    <div class="asub_card_head">
+        <div class="asub_card_title">
+            <i class="fas fa-paper-plane"></i> All Task Submissions
+        </div>
+        <span style="font-size:.82rem;color:#94a3b8;"><?php echo count($allSubs); ?> result<?php echo count($allSubs) !== 1 ? 's' : ''; ?></span>
+    </div>
+    <div class="asub_card_body">
+
+        <!-- Status pill filters -->
+        <?php
+        $pillDefs = [
+            'all'               => ['All', 'fa-list'],
+            'submitted'         => ['Submitted', 'fa-paper-plane'],
+            'under_review'      => ['Under Review', 'fa-eye'],
+            'approved'          => ['Approved', 'fa-circle-check'],
+            'rejected'          => ['Rejected', 'fa-circle-xmark'],
+            'revision_requested'=> ['Revision Req.', 'fa-rotate'],
+            'draft'             => ['Draft', 'fa-file-pen'],
+        ];
+        $baseHref = '?';
+        if ($subFilterTask)   $baseHref .= 'sst=' . $subFilterTask . '&';
+        if ($subFilterSearch) $baseHref .= 'sss=' . urlencode($subFilterSearch) . '&';
+        ?>
+        <div class="asub_pills">
+            <?php foreach ($pillDefs as $pk => $pd): ?>
+            <a href="<?php echo $baseHref; ?>ssf=<?php echo $pk; ?>#tab-all-submissions"
+               class="asub_pill <?php echo $subFilterStatus === $pk ? 'on' : ''; ?>">
+                <i class="fas <?php echo $pd[1]; ?>"></i>
+                <?php echo $pd[0]; ?> (<?php echo $subCounts[$pk] ?? 0; ?>)
+            </a>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Task + search filters -->
+        <form method="GET" id="asubForm" style="margin:0;">
+            <input type="hidden" name="ssf" value="<?php echo htmlspecialchars($subFilterStatus); ?>">
+            <div class="asub_filters">
+                <select name="sst" class="asub_sel" onchange="document.getElementById('asubForm').submit()">
+                    <option value="0">All Tasks</option>
+                    <?php foreach ($taskDropList as $td): ?>
+                    <option value="<?php echo $td['id']; ?>" <?php echo $subFilterTask == $td['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars(mb_strimwidth($td['title'], 0, 55, '…')); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="text" name="sss" class="asub_txt"
+                       placeholder="Search name, email or task…"
+                       value="<?php echo htmlspecialchars($subFilterSearch); ?>"
+                       onchange="document.getElementById('asubForm').submit()">
+                <?php if ($subFilterSearch || $subFilterTask || $subFilterStatus !== 'all'): ?>
+                <a href="admin.php#tab-all-submissions" class="asub_clr"><i class="fas fa-xmark"></i> Clear</a>
+                <?php endif; ?>
+            </div>
+        </form>
+
+        <!-- Table -->
+        <?php if (empty($allSubs)): ?>
+        <div class="asub_empty">
+            <i class="fas fa-inbox"></i>
+            <p><?php echo ($subFilterSearch || $subFilterStatus !== 'all' || $subFilterTask) ? 'No submissions match your filters.' : 'No submissions yet.'; ?></p>
+        </div>
+        <?php else: ?>
+        <div class="asub_table_wrap">
+            <table class="asub_table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Task</th>
+                        <th>Status</th>
+                        <th>Points</th>
+                        <th>Submitted</th>
+                        <th>Reviewed By</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($allSubs as $sub): ?>
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:9px;">
+                                <div class="asub_av"><?php echo strtoupper(substr($sub['full_name'] ?? '?', 0, 2)); ?></div>
+                                <div>
+                                    <div style="font-weight:600;color:#0f172a;"><?php echo htmlspecialchars($sub['full_name'] ?? '—'); ?></div>
+                                    <div style="font-size:.71rem;color:#94a3b8;"><?php echo htmlspecialchars($sub['email'] ?? ''); ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:#0f172a;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?php echo htmlspecialchars($sub['task_title'] ?? ''); ?>">
+                                <?php echo htmlspecialchars($sub['task_title'] ?? '—'); ?>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="asub_bdg" style="<?php echo $statusStyle[$sub['status']] ?? 'background:#f1f5f9;color:#475569'; ?>">
+                                <?php echo $statusLabel[$sub['status']] ?? ucfirst($sub['status']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <?php if ($sub['points_earned'] !== null): ?>
+                            <strong style="color:#f97316;"><?php echo $sub['points_earned']; ?></strong>
+                            <span style="color:#94a3b8;font-size:.74rem;"> / <?php echo $sub['task_max_pts'] ?? '—'; ?></span>
+                            <?php else: ?><span style="color:#94a3b8;">—</span><?php endif; ?>
+                        </td>
+                        <td style="font-size:.76rem;color:#94a3b8;white-space:nowrap;">
+                            <?php echo $sub['submitted_at'] ? date('d M Y', strtotime($sub['submitted_at'])) : '—'; ?>
+                        </td>
+                        <td style="font-size:.79rem;"><?php echo htmlspecialchars($sub['reviewed_by'] ?? '—'); ?></td>
+                        <td>
+                            <div style="display:flex;gap:5px;justify-content:flex-end;">
+                                <button type="button" class="asub_btn asub_btn_v"
+                                        onclick="asubView(<?php echo htmlspecialchars(json_encode($sub), ENT_QUOTES); ?>)"
+                                        title="View">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="asub_btn asub_btn_e"
+                                        onclick="asubEdit(<?php echo htmlspecialchars(json_encode($sub), ENT_QUOTES); ?>)"
+                                        title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="asub_btn asub_btn_d"
+                                        onclick="asubDel(<?php echo $sub['id']; ?>, '<?php echo htmlspecialchars(addslashes($sub['full_name'] ?? ''), ENT_QUOTES); ?>')"
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+
+    </div>
+</div>
+
+<!-- View Modal -->
+<div id="asubViewModal" class="asub_overlay">
+    <div class="asub_mbox asub_mbox_lg">
+        <div class="asub_mhead">
+            <div class="asub_mtitle"><i class="fas fa-eye" style="color:#f97316;margin-right:7px;"></i>Submission Details</div>
+            <button type="button" class="asub_mx" onclick="asubClose('asubViewModal')">&times;</button>
+        </div>
+        <div class="asub_mbody" id="asubViewBody"></div>
+        <div class="asub_mfoot">
+            <button type="button" class="asub_btn asub_btn_cancel" onclick="asubClose('asubViewModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="asubEditModal" class="asub_overlay">
+    <div class="asub_mbox asub_mbox_lg">
+        <div class="asub_mhead">
+            <div class="asub_mtitle"><i class="fas fa-edit" style="color:#f97316;margin-right:7px;"></i>Edit / Review Submission</div>
+            <button type="button" class="asub_mx" onclick="asubClose('asubEditModal')">&times;</button>
+        </div>
+        <form method="POST" action="admin.php#tab-all-submissions">
+            <div class="asub_mbody">
+                <input type="hidden" name="submission_id" id="asubEid">
+                <div style="padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;margin-bottom:16px;font-size:.83rem;">
+                    <strong id="asubEname" style="color:#0f172a;"></strong><span style="color:#94a3b8;"> — </span><span id="asubEtask" style="color:#ea580c;font-weight:600;"></span>
+                </div>
+                <div class="asub_frow">
+                    <div class="asub_fg">
+                        <label class="asub_fl">Status <span style="color:#ef4444;">*</span></label>
+                        <select name="sub_status" id="asubEstat" class="asub_fsel" required>
+                            <option value="submitted">Submitted</option>
+                            <option value="under_review">Under Review</option>
+                            <option value="approved">Approved ✅</option>
+                            <option value="rejected">Rejected ❌</option>
+                            <option value="revision_requested">Revision Requested 🔄</option>
+                            <option value="draft">Draft</option>
+                        </select>
+                    </div>
+                    <div class="asub_fg">
+                        <label class="asub_fl">Points Earned</label>
+                        <input type="number" name="sub_points_earned" id="asubEpts" class="asub_fi" min="0" max="9999" placeholder="0">
+                    </div>
+                    <div class="asub_fg">
+                        <label class="asub_fl">Reviewed By</label>
+                        <input type="text" name="sub_reviewed_by" id="asubErev" class="asub_fi" placeholder="Admin">
+                    </div>
+                    <div class="asub_fg asub_fg_full">
+                        <label class="asub_fl">Feedback for Student</label>
+                        <textarea name="sub_feedback" id="asubEfb" class="asub_fta" placeholder="Write feedback…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="asub_mfoot">
+                <button type="button" class="asub_btn asub_btn_cancel" onclick="asubClose('asubEditModal')">Cancel</button>
+                <button type="submit" name="update_submission" class="asub_btn asub_btn_save"><i class="fas fa-save"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="asubDelModal" class="asub_overlay">
+    <div class="asub_mbox asub_mbox_sm">
+        <div class="asub_mhead">
+            <div class="asub_mtitle" style="color:#dc2626;"><i class="fas fa-triangle-exclamation" style="margin-right:7px;"></i>Confirm Delete</div>
+            <button type="button" class="asub_mx" onclick="asubClose('asubDelModal')">&times;</button>
+        </div>
+        <form method="POST" action="admin.php#tab-all-submissions">
+            <div class="asub_mbody">
+                <input type="hidden" name="submission_id" id="asubDid">
+                <p style="font-size:.86rem;color:#475569;line-height:1.65;">
+                    Delete submission by <strong id="asubDname" style="color:#0f172a;"></strong>? This cannot be undone.
+                </p>
+            </div>
+            <div class="asub_mfoot">
+                <button type="button" class="asub_btn asub_btn_cancel" onclick="asubClose('asubDelModal')">Cancel</button>
+                <button type="submit" name="delete_submission" class="asub_btn asub_btn_del_c"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Close modal functions
+    window.asubClose = function(id) {
+        document.getElementById(id).classList.remove('asub_show');
+    };
+
+    // Edit function
+    window.asubEdit = function(sub) {
+        document.getElementById('asubEid').value = sub.id;
+        document.getElementById('asubEstat').value = sub.status || 'submitted';
+        document.getElementById('asubEpts').value = (sub.points_earned !== null && sub.points_earned !== undefined) ? sub.points_earned : '';
+        document.getElementById('asubEfb').value = sub.feedback || '';
+        document.getElementById('asubErev').value = sub.reviewed_by || 'Admin';
+        document.getElementById('asubEname').textContent = sub.full_name || '—';
+        document.getElementById('asubEtask').textContent = sub.task_title || '—';
+        document.getElementById('asubEditModal').classList.add('asub_show');
+    };
+
+    // View function
+    window.asubView = function(sub) {
+        function escapeHtml(s) { 
+            if (!s) return '—';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+        
+        function formatDate(d) {
+            if (!d) return '—';
+            try {
+                var dt = new Date(d);
+                return isNaN(dt) ? d : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch(e) {
+                return d;
+            }
+        }
+        
+        var statusLabels = {
+            'submitted': 'Submitted',
+            'under_review': 'Under Review',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'revision_requested': 'Revision Requested',
+            'draft': 'Draft'
+        };
+        
+        var statusColors = {
+            'submitted': '#1d4ed8',
+            'under_review': '#854d0e',
+            'approved': '#16a34a',
+            'rejected': '#dc2626',
+            'revision_requested': '#6d28d9',
+            'draft': '#475569'
+        };
+
+        var links = '';
+        if (sub.submission_url) {
+            links += '<a href="' + escapeHtml(sub.submission_url) + '" target="_blank" rel="noopener" class="asub_lchip"><i class="fas fa-link"></i> View URL</a> ';
+        }
+        if (sub.github_link) {
+            links += '<a href="' + escapeHtml(sub.github_link) + '" target="_blank" rel="noopener" class="asub_lchip"><i class="fab fa-github"></i> GitHub</a> ';
+        }
+        if (sub.file_name) {
+            links += '<span class="asub_lchip" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#16a34a;"><i class="fas fa-file"></i> ' + escapeHtml(sub.file_name) + '</span>';
+        }
+
+        var html = '<div class="asub_igrid">'
+            + '<div class="asub_icell"><div class="asub_ilbl">Student</div><div class="asub_ival">' + escapeHtml(sub.full_name) + '</div><div style="font-size:.71rem;color:#94a3b8;margin-top:2px;">' + escapeHtml(sub.email) + '</div></div>'
+            + '<div class="asub_icell"><div class="asub_ilbl">Task</div><div class="asub_ival">' + escapeHtml(sub.task_title) + '</div></div>'
+            + '<div class="asub_icell"><div class="asub_ilbl">Status</div><div class="asub_ival" style="color:' + (statusColors[sub.status] || '#475569') + '">' + (statusLabels[sub.status] || sub.status) + '</div></div>'
+            + '<div class="asub_icell"><div class="asub_ilbl">Points</div><div class="asub_ival" style="color:#f97316;">' + ((sub.points_earned !== null && sub.points_earned !== undefined) ? sub.points_earned + ' / ' + (sub.task_max_pts || '—') : '—') + '</div></div>'
+            + '<div class="asub_icell"><div class="asub_ilbl">Submitted</div><div class="asub_ival" style="font-size:.81rem;">' + formatDate(sub.submitted_at) + '</div></div>'
+            + '<div class="asub_icell"><div class="asub_ilbl">Reviewed By</div><div class="asub_ival" style="font-size:.81rem;">' + escapeHtml(sub.reviewed_by) + '</div><div style="font-size:.71rem;color:#94a3b8;margin-top:2px;">' + formatDate(sub.reviewed_at) + '</div></div>';
+
+        if (sub.submission_text) {
+            html += '<div class="asub_icell asub_icell_full"><div class="asub_ilbl">Submission Text</div><div class="asub_cbox">' + escapeHtml(sub.submission_text) + '</div></div>';
+        }
+        if (links) {
+            html += '<div class="asub_icell asub_icell_full"><div class="asub_ilbl" style="margin-bottom:7px;">Links / Files</div><div style="display:flex;flex-wrap:wrap;gap:7px;">' + links + '</div></div>';
+        }
+        if (sub.feedback) {
+            html += '<div class="asub_icell asub_icell_full" style="background:#fff7ed;border-color:#fed7aa;"><div class="asub_ilbl">Admin Feedback</div><div class="asub_cbox" style="background:transparent;border:none;padding:4px 0;">' + escapeHtml(sub.feedback) + '</div></div>';
+        }
+
+        html += '</div>';
+        document.getElementById('asubViewBody').innerHTML = html;
+        document.getElementById('asubViewModal').classList.add('asub_show');
+    };
+
+    // Delete function
+    window.asubDel = function(id, name) {
+        document.getElementById('asubDid').value = id;
+        document.getElementById('asubDname').textContent = name;
+        document.getElementById('asubDelModal').classList.add('asub_show');
+    };
+
+    // Close on backdrop click
+    ['asubViewModal', 'asubEditModal', 'asubDelModal'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', function(ev) {
+                if (ev.target === this) {
+                    this.classList.remove('asub_show');
+                }
+            });
+        }
+    });
+})();
+</script>
