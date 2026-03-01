@@ -240,7 +240,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         </div>
 
         <div id="tab-all-submissions" class="tab-content">
-            <?php include 'admin_modules/admin_all_submissions.php'; ?>
+            <?php include 'admin_modules/admin_all_submitted_tasks.php'; ?>
         </div>
         
         <div id="tab-attendance" class="tab-content">
