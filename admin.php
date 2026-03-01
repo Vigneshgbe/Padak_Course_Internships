@@ -217,7 +217,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         </div>
         
         <div id="tab-tasks" class="tab-content">
-            <?php include 'admin_manage_tasks.php'; ?>
+            <?php include '/admin_modules/admin_manage_tasks.php'; ?>
         </div>
         
         <div id="tab-reviews" class="tab-content" style="display:none;">

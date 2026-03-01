@@ -1,6 +1,12 @@
 <?php
-// Admin Review Submissions Module
-// This file handles submission reviews and approvals
+// admin_review_submissions.php - Review Submissions Module
+if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+    header('Location: admin.php');
+    exit;
+}
+
+$success = '';
+$error = '';
 
 // Handle Submission Review
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission'])) {
@@ -40,9 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission']))
                 
                 $db->query("UPDATE internship_students SET total_points=$totalPoints WHERE id=$studentId");
                 
-                $success = "Submission approved! $pointsEarned points awarded to student.";
+                $_SESSION['admin_success'] = "Submission approved! $pointsEarned points awarded to student.";
             } else {
-                $success = 'Submission reviewed successfully!';
+                $_SESSION['admin_success'] = 'Submission reviewed successfully!';
             }
             
             $notifMsg = $reviewStatus === 'approved' ? 
@@ -53,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission']))
             $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
                        VALUES ($studentId, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
         }
+        header('Location: admin.php#tab-reviews');
+        exit;
     } else {
         $error = 'Failed to review submission';
     }
@@ -65,16 +73,67 @@ $pendingSubsRes = $db->query("SELECT ts.*, t.title as task_title, t.max_points, 
     JOIN internship_students s ON s.id = ts.student_id
     WHERE ts.status IN ('submitted', 'under_review')
     ORDER BY ts.submitted_at DESC
-    LIMIT 50");
+    LIMIT 10");
 $pendingSubs = [];
 while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 ?>
+
+<style>
+    .section{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:24px;}
+    .section-header{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    .sh-title{font-size:1.1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;}
+    .sh-title i{color:var(--o5);}
+    .section-body{padding:24px;}
+    .btn{padding:10px 18px;border-radius:9px;font-size:.875rem;font-weight:600;font-family:inherit;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;text-decoration:none;transition:all .2s;}
+    .btn-primary{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;box-shadow:0 4px 14px rgba(249,115,22,0.3);}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(249,115,22,0.45);}
+    .btn-secondary{background:var(--card);border:1.5px solid var(--border);color:var(--text2);}
+    .btn-secondary:hover{border-color:var(--o5);color:var(--o5);}
+    .btn-sm{padding:6px 12px;font-size:.75rem;}
+    .form-group{margin-bottom:18px;}
+    .form-label{display:block;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:8px;}
+    .form-label .required{color:var(--red);}
+    .form-input,.form-textarea,.form-select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:.875rem;font-family:inherit;color:var(--text);outline:none;transition:all .2s;background:var(--card);}
+    .form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--o5);box-shadow:0 0 0 3px rgba(249,115,22,0.1);}
+    .form-textarea{resize:vertical;min-height:100px;}
+    .form-hint{font-size:.73rem;color:var(--text3);margin-top:5px;}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;white-space:nowrap;}
+    .badge-submitted{background:rgba(59,130,246,0.12);color:#1d4ed8;}
+    .badge-review{background:rgba(139,92,246,0.12);color:#6d28d9;}
+    .badge-approved{background:rgba(34,197,94,0.12);color:#16a34a;}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+    .modal.active{display:flex;}
+    .modal-content{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+    .modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .mh-title{font-size:1.2rem;font-weight:700;color:var(--text);}
+    .modal-close{background:none;border:none;font-size:1.5rem;color:var(--text3);cursor:pointer;padding:4px;transition:color .2s;}
+    .modal-close:hover{color:var(--red);}
+    .modal-body{padding:24px;}
+    .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+    .empty-state{text-align:center;padding:60px 20px;color:var(--text3);}
+    .empty-state i{font-size:3rem;margin-bottom:16px;display:block;opacity:.3;}
+    .empty-state h3{font-size:1.1rem;color:var(--text2);margin-bottom:8px;}
+    .sub-card{border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;transition:all .2s;}
+    .sub-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+    .sub-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+    .sub-title{font-size:.95rem;font-weight:700;color:var(--text);}
+    .sub-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:.75rem;color:var(--text3);margin-bottom:12px;}
+    .sub-meta-item{display:flex;align-items:center;gap:4px;}
+    .sub-content{font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:12px;background:var(--bg);padding:12px;border-radius:8px;}
+    .sub-actions{display:flex;gap:8px;flex-wrap:wrap;}
+</style>
 
 <div class="section">
     <div class="section-header">
         <div class="sh-title"><i class="fas fa-clipboard-check"></i>Pending Submissions</div>
     </div>
     <div class="section-body">
+        <?php if ($error): ?>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:20px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
+            <i class="fas fa-circle-exclamation"></i><?php echo htmlspecialchars($error); ?>
+        </div>
+        <?php endif; ?>
+        
         <?php if (empty($pendingSubs)): ?>
         <div class="empty-state">
             <i class="fas fa-clipboard-check"></i>
@@ -82,70 +141,76 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
             <p>All submissions have been reviewed!</p>
         </div>
         <?php else: ?>
-        
-        <?php foreach ($pendingSubs as $sub): ?>
-        <div class="sub-card">
-            <div class="sub-header">
-                <div>
-                    <div class="sub-title"><?php echo htmlspecialchars($sub['task_title']); ?></div>
-                    <div class="sub-meta">
-                        <span class="sub-meta-item"><i class="fas fa-user"></i><?php echo htmlspecialchars($sub['student_name']); ?></span>
-                        <span class="sub-meta-item"><i class="fas fa-envelope"></i><?php echo htmlspecialchars($sub['student_email']); ?></span>
-                        <span class="sub-meta-item"><i class="fas fa-clock"></i><?php echo date('M d, Y g:i A', strtotime($sub['submitted_at'])); ?></span>
-                        <span class="sub-meta-item"><i class="fas fa-star"></i>Max: <?php echo $sub['max_points']; ?> pts</span>
+            <?php foreach ($pendingSubs as $sub): ?>
+            <div class="sub-card">
+                <div class="sub-header">
+                    <div>
+                        <div class="sub-title"><?php echo htmlspecialchars($sub['task_title']); ?></div>
+                        <div class="sub-meta">
+                            <span class="sub-meta-item">
+                                <i class="fas fa-user"></i><?php echo htmlspecialchars($sub['student_name']); ?>
+                            </span>
+                            <span class="sub-meta-item">
+                                <i class="fas fa-envelope"></i><?php echo htmlspecialchars($sub['student_email']); ?>
+                            </span>
+                            <span class="sub-meta-item">
+                                <i class="fas fa-clock"></i><?php echo date('M d, Y g:i A', strtotime($sub['submitted_at'])); ?>
+                            </span>
+                            <span class="sub-meta-item">
+                                <i class="fas fa-star"></i>Max: <?php echo $sub['max_points']; ?> pts
+                            </span>
+                        </div>
                     </div>
+                    <span class="badge badge-<?php echo $sub['status']; ?>">
+                        <?php echo $sub['status']==='under_review'?'In Review':'Submitted'; ?>
+                    </span>
                 </div>
-                <span class="badge badge-<?php echo $sub['status']; ?>">
-                    <?php echo $sub['status']==='under_review'?'In Review':'Submitted'; ?>
-                </span>
+                
+                <?php if ($sub['submission_text']): ?>
+                <div class="sub-content">
+                    <strong>Description:</strong><br>
+                    <?php echo nl2br(htmlspecialchars(substr($sub['submission_text'], 0, 300))); ?>
+                    <?php if (strlen($sub['submission_text']) > 300) echo '...'; ?>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($sub['github_link']): ?>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:.82rem;">GitHub:</strong> 
+                    <a href="<?php echo htmlspecialchars($sub['github_link']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
+                        <i class="fab fa-github"></i> <?php echo htmlspecialchars($sub['github_link']); ?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($sub['submission_url']): ?>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:.82rem;">Live URL:</strong> 
+                    <a href="<?php echo htmlspecialchars($sub['submission_url']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
+                        <i class="fas fa-globe"></i> <?php echo htmlspecialchars($sub['submission_url']); ?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($sub['file_name']): ?>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:.82rem;">File:</strong> 
+                    <a href="<?php echo htmlspecialchars($sub['file_path']); ?>" download style="color:var(--blue);font-size:.82rem;">
+                        <i class="fas fa-download"></i> <?php echo htmlspecialchars($sub['file_name']); ?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
+                <div class="sub-actions">
+                    <button class="btn btn-primary btn-sm" onclick='reviewSubmission(<?php echo json_encode($sub); ?>)'>
+                        <i class="fas fa-clipboard-check"></i> Review
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick='viewFullSubmission(<?php echo json_encode($sub); ?>)'>
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                </div>
             </div>
-            
-            <?php if ($sub['submission_text']): ?>
-            <div class="sub-content">
-                <strong>Description:</strong><br>
-                <?php echo nl2br(htmlspecialchars(substr($sub['submission_text'], 0, 300))); ?>
-                <?php if (strlen($sub['submission_text']) > 300) echo '...'; ?>
-            </div>
-            <?php endif; ?>
-            
-            <?php if ($sub['github_link']): ?>
-            <div style="margin-bottom:10px;">
-                <strong style="font-size:.82rem;">GitHub:</strong> 
-                <a href="<?php echo htmlspecialchars($sub['github_link']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
-                    <i class="fab fa-github"></i> <?php echo htmlspecialchars($sub['github_link']); ?>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <?php if ($sub['submission_url']): ?>
-            <div style="margin-bottom:10px;">
-                <strong style="font-size:.82rem;">Live URL:</strong> 
-                <a href="<?php echo htmlspecialchars($sub['submission_url']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
-                    <i class="fas fa-globe"></i> <?php echo htmlspecialchars($sub['submission_url']); ?>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <?php if ($sub['file_name']): ?>
-            <div style="margin-bottom:10px;">
-                <strong style="font-size:.82rem;">File:</strong> 
-                <a href="<?php echo htmlspecialchars($sub['file_path']); ?>" download style="color:var(--blue);font-size:.82rem;">
-                    <i class="fas fa-download"></i> <?php echo htmlspecialchars($sub['file_name']); ?>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <div class="sub-actions">
-                <button class="btn btn-primary btn-sm" onclick='reviewSubmission(<?php echo json_encode($sub); ?>)'>
-                    <i class="fas fa-clipboard-check"></i> Review
-                </button>
-                <button class="btn btn-secondary btn-sm" onclick='viewFullSubmission(<?php echo json_encode($sub); ?>)'>
-                    <i class="fas fa-eye"></i> View Details
-                </button>
-            </div>
-        </div>
-        <?php endforeach; ?>
-        
+            <?php endforeach; ?>
         <?php endif; ?>
     </div>
 </div>
@@ -160,7 +225,6 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
         <form method="POST">
             <div class="modal-body">
                 <input type="hidden" name="submission_id" id="review_sub_id">
-                
                 <div id="reviewTaskInfo" style="padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px;"></div>
                 
                 <div class="form-group">
@@ -211,75 +275,60 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 </div>
 
 <script>
-function reviewSubmission(sub) {
-    document.getElementById('review_sub_id').value = sub.id;
-    document.getElementById('review_points').max = sub.max_points;
-    document.getElementById('review_points').placeholder = 'Max: ' + sub.max_points + ' points';
-    
-    const info = `<strong style="font-size:.95rem;">${sub.task_title}</strong><br>
-        <div style="margin-top:8px;font-size:.8rem;color:var(--text3);">
-            <i class="fas fa-user"></i> ${sub.student_name} &nbsp;•&nbsp;
-            <i class="fas fa-star"></i> Max Points: ${sub.max_points}
-        </div>`;
-    document.getElementById('reviewTaskInfo').innerHTML = info;
-    document.getElementById('reviewModal').classList.add('active');
-}
-
-function viewFullSubmission(sub) {
-    let content = '<div style="line-height:1.8;">';
-    content += '<h3 style="color:var(--o5);margin-bottom:16px;font-size:1.2rem;"><i class="fas fa-clipboard-list"></i> ' + sub.task_title + '</h3>';
-    
-    content += '<div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;">';
-    content += '<strong style="color:var(--text);"><i class="fas fa-user"></i> Student:</strong> ' + sub.student_name + ' <span style="color:var(--text3);">(' + sub.student_email + ')</span><br>';
-    content += '<strong style="color:var(--text);"><i class="fas fa-clock"></i> Submitted:</strong> ' + sub.submitted_at + '<br>';
-    content += '<strong style="color:var(--text);"><i class="fas fa-star"></i> Max Points:</strong> ' + sub.max_points + ' pts<br>';
-    content += '<strong style="color:var(--text);"><i class="fas fa-info-circle"></i> Status:</strong> <span class="badge badge-' + sub.status + '">' + (sub.status === 'under_review' ? 'In Review' : 'Submitted') + '</span>';
-    content += '</div>';
-    
-    if (sub.submission_text) {
-        content += '<div style="margin-bottom:16px;">';
-        content += '<strong style="color:var(--text);display:block;margin-bottom:8px;"><i class="fas fa-align-left"></i> Description:</strong>';
-        content += '<div style="background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;color:var(--text2);font-size:.9rem;line-height:1.6;">' + sub.submission_text + '</div>';
-        content += '</div>';
+    function closeModal(id){
+        document.getElementById(id).classList.remove('active');
     }
     
-    if (sub.github_link) {
-        content += '<div style="margin-bottom:12px;">';
-        content += '<strong style="color:var(--text);"><i class="fab fa-github"></i> GitHub:</strong><br>';
-        content += '<a href="' + sub.github_link + '" target="_blank" style="color:var(--blue);word-break:break-all;">' + sub.github_link + ' <i class="fas fa-external-link-alt fa-xs"></i></a>';
-        content += '</div>';
+    function reviewSubmission(sub){
+        document.getElementById('review_sub_id').value=sub.id;
+        document.getElementById('review_points').max=sub.max_points;
+        document.getElementById('review_points').placeholder='Max: '+sub.max_points+' points';
+        
+        const info=`<strong style="font-size:.95rem;">${sub.task_title}</strong><br><div style="margin-top:8px;font-size:.8rem;color:var(--text3);"><i class="fas fa-user"></i> ${sub.student_name} &nbsp;•&nbsp;<i class="fas fa-star"></i> Max Points: ${sub.max_points}</div>`;
+        document.getElementById('reviewTaskInfo').innerHTML=info;
+        document.getElementById('reviewModal').classList.add('active');
     }
     
-    if (sub.submission_url) {
-        content += '<div style="margin-bottom:12px;">';
-        content += '<strong style="color:var(--text);"><i class="fas fa-globe"></i> Live URL:</strong><br>';
-        content += '<a href="' + sub.submission_url + '" target="_blank" style="color:var(--blue);word-break:break-all;">' + sub.submission_url + ' <i class="fas fa-external-link-alt fa-xs"></i></a>';
-        content += '</div>';
-    }
-    
-    if (sub.file_name) {
-        content += '<div style="margin-bottom:12px;">';
-        content += '<strong style="color:var(--text);"><i class="fas fa-file"></i> Attached File:</strong><br>';
-        content += '<a href="' + sub.file_path + '" download style="color:var(--blue);"><i class="fas fa-download"></i> ' + sub.file_name + '</a>';
-        content += '</div>';
-    }
-    
-    content += '</div>';
-    
-    document.getElementById('fullSubmissionContent').innerHTML = content;
-    document.getElementById('viewDetailsModal').classList.add('active');
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
-}
-
-// Close modals on outside click
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.classList.remove('active');
+    function viewFullSubmission(sub){
+        let content='<div style="line-height:1.8;"><h3 style="color:var(--o5);margin-bottom:16px;font-size:1.2rem;"><i class="fas fa-clipboard-list"></i> '+sub.task_title+'</h3>';
+        
+        content+='<div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;">';
+        content+='<strong style="color:var(--text);"><i class="fas fa-user"></i> Student:</strong> '+sub.student_name+' <span style="color:var(--text3);">('+sub.student_email+')</span><br>';
+        content+='<strong style="color:var(--text);"><i class="fas fa-clock"></i> Submitted:</strong> '+sub.submitted_at+'<br>';
+        content+='<strong style="color:var(--text);"><i class="fas fa-star"></i> Max Points:</strong> '+sub.max_points+' pts<br>';
+        content+='<strong style="color:var(--text);"><i class="fas fa-info-circle"></i> Status:</strong> <span class="badge badge-'+sub.status+'">'+(sub.status==='under_review'?'In Review':'Submitted')+'</span>';
+        content+='</div>';
+        
+        if(sub.submission_text){
+            content+='<div style="margin-bottom:16px;"><strong style="color:var(--text);display:block;margin-bottom:8px;"><i class="fas fa-align-left"></i> Description:</strong>';
+            content+='<div style="background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;color:var(--text2);font-size:.9rem;line-height:1.6;">'+sub.submission_text+'</div></div>';
         }
+        
+        if(sub.github_link){
+            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fab fa-github"></i> GitHub:</strong><br>';
+            content+='<a href="'+sub.github_link+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.github_link+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';
+        }
+        
+        if(sub.submission_url){
+            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-globe"></i> Live URL:</strong><br>';
+            content+='<a href="'+sub.submission_url+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.submission_url+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';
+        }
+        
+        if(sub.file_name){
+            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-file"></i> Attached File:</strong><br>';
+            content+='<a href="'+sub.file_path+'" download style="color:var(--blue);"><i class="fas fa-download"></i> '+sub.file_name+'</a></div>';
+        }
+        
+        content+='</div>';
+        document.getElementById('fullSubmissionContent').innerHTML=content;
+        document.getElementById('viewDetailsModal').classList.add('active');
+    }
+    
+    document.querySelectorAll('.modal').forEach(modal=>{
+        modal.addEventListener('click',function(e){
+            if(e.target===this){
+                this.classList.remove('active');
+            }
+        });
     });
-});
 </script>
