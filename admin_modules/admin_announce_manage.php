@@ -22,7 +22,7 @@ if ($action === 'delete' && $announcement_id > 0 && $_SERVER['REQUEST_METHOD'] =
     } else {
         $_SESSION['admin_error'] = 'Failed to delete announcement';
     }
-    header('Location: admin.php#tab-announcements');
+    echo '<script>window.location.href="admin.php#tab-announcements";</script>';
     exit;
 }
 
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_announcement']))
             $stmt->bind_param("ssssiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active, $edit_id);
             if ($stmt->execute()) {
                 $_SESSION['admin_success'] = 'Announcement updated successfully';
-                header('Location: admin.php#tab-announcements');
+                echo '<script>window.location.href="admin.php#tab-announcements";</script>';
                 exit;
             } else {
                 $_SESSION['admin_error'] = 'Failed to update announcement';
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_announcement']))
             $stmt->bind_param("ssssiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active);
             if ($stmt->execute()) {
                 $_SESSION['admin_success'] = 'Announcement created successfully';
-                header('Location: admin.php#tab-announcements');
+                echo '<script>window.location.href="admin.php#tab-announcements";</script>';
                 exit;
             } else {
                 $_SESSION['admin_error'] = 'Failed to create announcement';
@@ -90,7 +90,7 @@ if ($action === 'edit' && $announcement_id > 0) {
     $announcement = $stmt->get_result()->fetch_assoc();
     if (!$announcement) {
         $_SESSION['admin_error'] = 'Announcement not found';
-        header('Location: admin.php#tab-announcements');
+        echo '<script>window.location.href="admin.php#tab-announcements";</script>';
         exit;
     }
 }
@@ -211,7 +211,7 @@ if (!empty($params)) {
 <!-- CREATE/EDIT FORM -->
 <div class="ann-header">
     <h2><i class="fas fa-<?php echo $action === 'edit' ? 'edit' : 'plus-circle'; ?>"></i> <?php echo $action === 'edit' ? 'Edit' : 'Create'; ?> Announcement</h2>
-    <a href="?#tab-announcements" class="btn-secondary" onclick="showTab('announcements'); return false;">
+    <a href="admin.php?#tab-announcements" class="btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to List
     </a>
 </div>
@@ -319,7 +319,7 @@ if (!empty($params)) {
         <button type="submit" name="save_announcement" class="btn-primary">
             <i class="fas fa-save"></i> <?php echo $action === 'edit' ? 'Update' : 'Create'; ?> Announcement
         </button>
-        <a href="?#tab-announcements" class="btn-secondary" onclick="showTab('announcements'); return false;">
+        <a href="admin.php?#tab-announcements" class="btn-secondary">
             <i class="fas fa-times"></i> Cancel
         </a>
     </div>
@@ -329,7 +329,7 @@ if (!empty($params)) {
 <!-- LIST VIEW -->
 <div class="ann-header">
     <h2><i class="fas fa-bullhorn"></i> Announcement Management</h2>
-    <a href="?action=create#tab-announcements" class="btn-primary" onclick="showTab('announcements'); return false;">
+    <a href="admin.php?action=create#tab-announcements" class="btn-primary">
         <i class="fas fa-plus-circle"></i> Create New
     </a>
 </div>
@@ -384,7 +384,7 @@ if (!empty($params)) {
     <?php if ($filter_type || $filter_priority || $filter_active !== '' || $search): ?>
     <div class="filter-group">
         <label class="filter-label">&nbsp;</label>
-        <a href="?#tab-announcements" class="btn-secondary" onclick="showTab('announcements'); return false;">
+        <a href="admin.php?#tab-announcements" class="btn-secondary">
             <i class="fas fa-times"></i> Clear
         </a>
     </div>
@@ -464,9 +464,8 @@ if (!empty($params)) {
                 </td>
                 <td>
                     <div class="action-btns">
-                        <a href="?action=edit&id=<?php echo $ann['id']; ?>#tab-announcements" 
-                           class="btn-secondary btn-sm" title="Edit"
-                           onclick="showTab('announcements'); return false;">
+                        <a href="admin.php?action=edit&id=<?php echo $ann['id']; ?>#tab-announcements" 
+                           class="btn-secondary btn-sm" title="Edit">
                             <i class="fas fa-edit"></i>
                         </a>
                         <button type="button" class="btn-danger btn-sm" 
@@ -486,7 +485,7 @@ if (!empty($params)) {
     <i class="fas fa-inbox"></i>
     <h3>No Announcements Found</h3>
     <p>Create your first announcement to get started</p>
-    <a href="?action=create#tab-announcements" class="btn-primary" style="margin-top:16px;" onclick="showTab('announcements'); return false;">
+    <a href="admin.php?action=create#tab-announcements" class="btn-primary" style="margin-top:16px;">
         <i class="fas fa-plus-circle"></i> Create Announcement
     </a>
 </div>
@@ -500,7 +499,7 @@ function deleteAnnouncement(id) {
     
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '?action=delete&id=' + id + '#tab-announcements';
+    form.action = 'admin.php?action=delete&id=' + id + '#tab-announcements';
     document.body.appendChild(form);
     form.submit();
 }
