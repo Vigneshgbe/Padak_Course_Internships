@@ -1,5 +1,4 @@
 <?php
-// admin_announcement_management.php - Announcement Management Module
 if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
     header('Location: admin.php');
     exit;

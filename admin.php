@@ -121,7 +121,8 @@ $statsRes = $db->query("SELECT
     (SELECT COUNT(*) FROM task_submissions WHERE status='submitted' OR status='under_review') as pending_reviews,
     (SELECT COUNT(*) FROM task_submissions WHERE status='approved') as completed_tasks,
     (SELECT COUNT(DISTINCT id) FROM internship_students WHERE is_active=1) as total_students,
-    (SELECT COUNT(*) FROM task_submissions) as total_submissions
+    (SELECT COUNT(*) FROM task_submissions) as total_submissions,
+    (SELECT COUNT(*) FROM announcements WHERE is_active=1) as active_announcements
 ");
 $stats = $statsRes->fetch_assoc();
 
@@ -167,6 +168,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         .sc-icon.green{background:rgba(34,197,94,0.1);color:var(--green);}
         .sc-icon.purple{background:rgba(139,92,246,0.1);color:var(--purple);}
         .sc-icon.yellow{background:rgba(234,179,8,0.1);color:#ca8a04;}
+        .sc-icon.cyan{background:rgba(6,182,212,0.1);color:#0891b2;}
         .sc-value{font-size:2rem;font-weight:900;color:var(--text);line-height:1;}
         .sc-label{font-size:.82rem;color:var(--text3);margin-top:6px;font-weight:500;}
         .tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;}
@@ -176,6 +178,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         .tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--o5);}
         .tab-content{display:none;}
         .tab-content.active{display:block;}
+        .badge-count{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;}
         @media(max-width:768px){.admin-header{flex-direction:column;align-items:flex-start;gap:12px;}.stats-grid{grid-template-columns:1fr;}.admin-container{padding:16px;}}
     </style>
 </head>
@@ -208,29 +211,64 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         <?php endif; ?>
         
         <div class="stats-grid">
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div></div><div class="sc-value"><?php echo $stats['active_tasks']; ?></div><div class="sc-label">Active Tasks</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div></div><div class="sc-value"><?php echo $stats['pending_reviews']; ?></div><div class="sc-label">Pending Reviews</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon green"><i class="fas fa-circle-check"></i></div></div><div class="sc-value"><?php echo $stats['completed_tasks']; ?></div><div class="sc-label">Completed Tasks</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon yellow"><i class="fas fa-paper-plane"></i></div></div><div class="sc-value"><?php echo $stats['total_submissions']; ?></div><div class="sc-label">Total Submissions</div></div>
-            <div class="stat-card"><div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div><div class="sc-value"><?php echo $stats['total_students']; ?></div><div class="sc-label">Active Students</div></div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon orange"><i class="fas fa-clipboard-list"></i></div></div>
+                <div class="sc-value"><?php echo $stats['active_tasks']; ?></div>
+                <div class="sc-label">Active Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon blue"><i class="fas fa-hourglass-half"></i></div></div>
+                <div class="sc-value"><?php echo $stats['pending_reviews']; ?></div>
+                <div class="sc-label">Pending Reviews</div>
+            </div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon green"><i class="fas fa-circle-check"></i></div></div>
+                <div class="sc-value"><?php echo $stats['completed_tasks']; ?></div>
+                <div class="sc-label">Completed Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon cyan"><i class="fas fa-bullhorn"></i></div></div>
+                <div class="sc-value"><?php echo $stats['active_announcements']; ?></div>
+                <div class="sc-label">Active Announcements</div>
+            </div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon yellow"><i class="fas fa-paper-plane"></i></div></div>
+                <div class="sc-value"><?php echo $stats['total_submissions']; ?></div>
+                <div class="sc-label">Total Submissions</div>
+            </div>
+            <div class="stat-card">
+                <div class="sc-top"><div class="sc-icon purple"><i class="fas fa-users"></i></div></div>
+                <div class="sc-value"><?php echo $stats['total_students']; ?></div>
+                <div class="sc-label">Active Students</div>
+            </div>
         </div>
         
-        <!-- ═══ TABS — every button must have data-tab matching its panel id (without "tab-" prefix) ═══ -->
+        <!-- Tab Navigation -->
         <div class="tabs">
-            <button class="tab" data-tab="tasks"><i class="fas fa-tasks"></i> Manage Tasks</button>
+            <button class="tab" data-tab="tasks">
+                <i class="fas fa-tasks"></i> Manage Tasks
+            </button>
             <button class="tab" data-tab="reviews">
                 <i class="fas fa-clipboard-check"></i> Review Submissions
                 <?php if ($stats['pending_reviews'] > 0): ?>
-                <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span>
+                <span class="badge-count"><?php echo $stats['pending_reviews']; ?></span>
                 <?php endif; ?>
             </button>
-            <button class="tab" data-tab="all_submissions"><i class="fas fa-inbox"></i> All Submissions</button>
-            <button class="tab" data-tab="attendance"><i class="fas fa-calendar-check"></i> Attendance</button>
-            <button class="tab" data-tab="users"><i class="fas fa-users"></i> User Management</button>
+            <button class="tab" data-tab="all_submissions">
+                <i class="fas fa-inbox"></i> All Submissions
+            </button>
+            <button class="tab" data-tab="announcements">
+                <i class="fas fa-bullhorn"></i> Announcements
+            </button>
+            <button class="tab" data-tab="attendance">
+                <i class="fas fa-calendar-check"></i> Attendance
+            </button>
+            <button class="tab" data-tab="users">
+                <i class="fas fa-users"></i> User Management
+            </button>
         </div>
         
-        <!-- Panel id = "tab-" + data-tab value. Nothing else here. No extra buttons. -->
-
+        <!-- Tab Content Panels -->
         <div id="tab-tasks" class="tab-content">
             <?php include 'admin_modules/admin_manage_tasks.php'; ?>
         </div>
@@ -241,6 +279,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
 
         <div id="tab-all_submissions" class="tab-content">
             <?php include 'admin_modules/admin_all_submissions.php'; ?>
+        </div>
+        
+        <div id="tab-announcements" class="tab-content">
+            <?php include 'admin_modules/admin_announce_manage.php'; ?>
         </div>
         
         <div id="tab-attendance" class="tab-content">
