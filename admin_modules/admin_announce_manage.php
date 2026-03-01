@@ -1,5 +1,4 @@
 <?php
-// admin_announcement_management.php
 // Handles: Create, Edit, Delete, List announcements with filtering and read tracking
 
 if (!defined('ADMIN_USERNAME')) {
