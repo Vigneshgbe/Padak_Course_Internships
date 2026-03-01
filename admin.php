@@ -214,6 +214,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <button class="tab active" onclick="showTab('tasks')"><i class="fas fa-tasks"></i> Manage Tasks</button>
             <button class="tab" onclick="showTab('reviews')"><i class="fas fa-clipboard-check"></i> Review Submissions<?php if ($stats['pending_reviews'] > 0): ?> <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:rgba(239,68,68,0.12);color:#dc2626;margin-left:6px;"><?php echo $stats['pending_reviews']; ?></span><?php endif; ?></button>
             <button class="tab" onclick="showTab('attendance')"><i class="fas fa-calendar-check"></i> Attendance</button>
+            <button class="tab" onclick="showTab('submitted-tasks')"><i class="fas fa-paper-plane"></i> All Submissions</button>
             <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Manage Users</button>
 
         </div>
@@ -228,6 +229,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         
         <div id="tab-attendance" class="tab-content" style="display:none;">
             <?php include 'admin_modules/admin_attendance_manage.php'; ?>
+        </div>
+
+        <div id="tab-submitted-tasks" class="tab-content" style="display:none;">
+            <?php include 'admin_modules/admin_submitted_tasks.php'; ?>
         </div>
 
         <div id="tab-users" class="tab-content" style="display:none;">
