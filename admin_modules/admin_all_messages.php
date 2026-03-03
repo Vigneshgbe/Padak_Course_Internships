@@ -1,6 +1,4 @@
 <?php
-// Admin Messages Management Module - Professional Version
-// This file should be included in admin.php as: include 'admin_modules/admin_messages_manage.php';
 
 if (!isset($db)) {
     die('Database connection required');
@@ -81,186 +79,154 @@ while ($row = $roomsResult->fetch_assoc()) {
 ?>
 
 <style>
-.messages-header{background:#fff;padding:32px 28px;border-radius:12px;margin-bottom:28px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.messages-header h2{font-size:1.65rem;font-weight:800;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:12px;}
-.messages-header h2 i{color:var(--o5);font-size:1.5rem;}
-.messages-header p{font-size:.9rem;color:var(--text2);}
-
-.msg-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
-.msg-stat-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.msg-stat-box:hover{box-shadow:0 4px 12px rgba(0,0,0,0.08);transform:translateY(-2px);}
-.msb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.msb-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
-.msb-icon.orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);color:var(--o6);}
-.msb-icon.blue{background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#1e40af;}
-.msb-icon.green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#166534;}
-.msb-icon.red{background:linear-gradient(135deg,#fef2f2,#fee2e2);color:#991b1b;}
-.msb-value{font-size:2rem;font-weight:900;color:var(--text);line-height:1;margin-bottom:6px;}
-.msb-label{font-size:.8rem;color:var(--text3);font-weight:600;}
-
-.filters-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.filters-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:center;}
-.filter-field{display:flex;flex-direction:column;gap:6px;}
-.filter-field label{font-size:.75rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;}
-.filter-field input,.filter-field select{padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit;background:#fff;color:var(--text);outline:none;transition:all .2s;}
-.filter-field input:focus,.filter-field select:focus{border-color:var(--o5);box-shadow:0 0 0 3px rgba(249,115,22,0.08);}
-.btn-reset{padding:10px 18px;background:var(--text2);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:20px;display:flex;align-items:center;gap:6px;}
-.btn-reset:hover{background:var(--text);transform:translateY(-1px);}
-
-.messages-list{display:flex;flex-direction:column;gap:16px;}
-.msg-item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.msg-item:hover{box-shadow:0 6px 20px rgba(0,0,0,0.06);border-color:var(--o4);}
-.msg-item.deleted{background:#fefce8;border-color:#fde047;}
-
-.msg-top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border);}
-.msg-conversation{display:flex;align-items:center;gap:16px;flex:1;}
-
-.msg-user{display:flex;align-items:center;gap:12px;}
-.msg-user-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;}
-.msg-user-placeholder{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o6));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0;}
-.msg-user-info{display:flex;flex-direction:column;gap:2px;}
-.msg-user-name{font-size:.95rem;font-weight:700;color:var(--text);line-height:1.2;}
-.msg-user-email{font-size:.78rem;color:var(--text3);}
-
-.msg-arrow{font-size:1.6rem;color:var(--o5);flex-shrink:0;}
-.msg-arrow.group{color:#a855f7;}
-
-.msg-meta-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-.msg-id-badge{font-size:.75rem;font-weight:800;color:var(--text2);background:var(--bg);padding:5px 10px;border-radius:6px;}
-.msg-type-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:.75rem;font-weight:700;}
-.msg-type-badge.direct{background:#dbeafe;color:#1e40af;}
-.msg-type-badge.group{background:#fce7f3;color:#be185d;}
-.msg-time{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:4px;}
-
-.msg-reply-box{background:#eff6ff;border-left:3px solid #3b82f6;padding:12px 14px;border-radius:6px;margin-bottom:14px;font-size:.85rem;color:var(--text2);}
-.msg-reply-box strong{color:var(--text);}
-
-.msg-content{font-size:1rem;line-height:1.7;color:var(--text);background:#f8fafc;padding:16px;border-radius:8px;margin-bottom:16px;}
-
-.msg-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.msg-badges{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.msg-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;font-size:.8rem;font-weight:600;}
-.msg-badge.attachment{background:#fff7ed;color:var(--o6);border:1px solid #fed7aa;}
-.msg-badge.reactions{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
-.msg-badge.status-active{background:#dcfce7;color:#166534;border:1px solid #86efac;}
-.msg-badge.status-deleted{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
-
-.btn-view-details{padding:10px 18px;background:linear-gradient(135deg,var(--o5),var(--o6));color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
-.btn-view-details:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(249,115,22,0.35);}
-
-.modal{display:none;position:fixed;z-index:10000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);animation:fadeIn .25s;}
-.modal-content{background:#fff;margin:2% auto;padding:0;border-radius:16px;max-width:750px;max-height:90vh;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.25);animation:slideUp .25s;}
+.messages-header{background:linear-gradient(135deg,var(--o5),var(--o4));padding:24px;border-radius:12px;color:#fff;margin-bottom:24px;box-shadow:0 4px 14px rgba(249,115,22,0.25);}
+.messages-header h2{font-size:1.5rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.messages-header p{font-size:.875rem;opacity:.9;}
+.msg-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.msg-stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:all .2s;}
+.msg-stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.1);}
+.msc-label{font-size:.75rem;color:var(--text3);font-weight:600;margin-bottom:6px;}
+.msc-value{font-size:1.75rem;font-weight:900;color:var(--text);}
+.msc-icon{font-size:1.1rem;color:var(--o5);margin-right:6px;}
+.messages-filters{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;}
+.filters-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.filter-input{padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:inherit;min-width:180px;outline:none;transition:all .2s;}
+.filter-input:focus{border-color:var(--o5);box-shadow:0 0 0 3px rgba(249,115,22,0.1);}
+.btn-filter{padding:8px 16px;background:var(--o5);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-filter:hover{background:var(--o6);transform:translateY(-1px);}
+.btn-reset{background:var(--text3);color:#fff;}
+.btn-reset:hover{background:var(--text2);}
+.messages-container{display:flex;flex-direction:column;gap:12px;}
+.message-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:all .2s;}
+.message-card:hover{box-shadow:0 6px 16px rgba(0,0,0,0.08);border-color:var(--o5);}
+.message-card.deleted{background:#fef2f2;border-color:#fecaca;}
+.msg-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid var(--border);}
+.msg-participants{display:flex;align-items:center;gap:12px;flex:1;}
+.msg-person{display:flex;align-items:center;gap:8px;}
+.msg-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
+.msg-avatar-placeholder{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--o4),var(--o5));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;}
+.msg-person-info h4{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+.msg-person-info p{font-size:.72rem;color:var(--text3);}
+.msg-arrow{font-size:1.5rem;color:var(--o5);margin:0 8px;}
+.msg-arrow.group{color:var(--purple);}
+.msg-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.msg-id{font-size:.75rem;font-weight:700;color:var(--text3);background:var(--bg);padding:4px 8px;border-radius:6px;}
+.msg-timestamp{font-size:.72rem;color:var(--text3);}
+.msg-room-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;}
+.msg-room-badge.direct{background:#dbeafe;color:#1e40af;}
+.msg-room-badge.group{background:#fce7f3;color:#be185d;}
+.msg-card-body{margin-bottom:14px;}
+.msg-text{font-size:.95rem;line-height:1.7;color:var(--text);background:var(--bg);padding:14px;border-radius:8px;border-left:3px solid var(--o5);word-break:break-word;}
+.msg-reply-context{background:#eff6ff;border-left:3px solid var(--blue);padding:10px 12px;border-radius:6px;margin-bottom:10px;font-size:.82rem;color:var(--text2);}
+.msg-reply-context i{color:var(--blue);margin-right:4px;}
+.msg-card-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.msg-indicators{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.msg-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;font-size:.75rem;font-weight:600;}
+.msg-indicator.attachment{background:var(--o1);color:var(--o6);}
+.msg-indicator.reactions{background:#f0fdf4;color:#166534;}
+.msg-indicator.status-active{background:#dcfce7;color:#166534;}
+.msg-indicator.status-deleted{background:#fee2e2;color:#991b1b;}
+.msg-actions{display:flex;gap:8px;}
+.btn-action{padding:8px 14px;border:none;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.btn-view{background:#dbeafe;color:#1e40af;}
+.btn-view:hover{background:#bfdbfe;transform:translateY(-1px);}
+.modal{display:none;position:fixed;z-index:10000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);animation:fadeIn .3s;}
+.modal-content{background:var(--card);margin:3% auto;padding:0;border-radius:16px;max-width:800px;max-height:85vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp .3s;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-@keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-.modal-header{background:linear-gradient(135deg,var(--o5),var(--o6));color:#fff;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;}
-.modal-header h3{font-size:1.3rem;font-weight:800;display:flex;align-items:center;gap:10px;}
-.modal-close{background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:1.5rem;width:40px;height:40px;border-radius:8px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
-.modal-close:hover{background:rgba(255,255,255,0.25);}
-.modal-body{padding:28px;max-height:calc(90vh - 100px);overflow-y:auto;}
-.modal-section{margin-bottom:24px;padding:18px;background:var(--bg);border-radius:10px;border:1px solid var(--border);}
-.modal-section h4{font-size:.82rem;font-weight:800;color:var(--text2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}
-.modal-section-content{font-size:.95rem;color:var(--text);line-height:1.7;}
-
-.no-messages{text-align:center;padding:80px 20px;background:#fff;border-radius:12px;border:1px solid var(--border);}
-.no-messages i{font-size:3.5rem;color:var(--text3);opacity:.4;margin-bottom:16px;}
-.no-messages p{font-size:1rem;color:var(--text2);}
-
-.group-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(139,92,246,0.1);color:#7c3aed;padding:4px 10px;border-radius:5px;font-size:.78rem;font-weight:700;}
-
-@media(max-width:1200px){
-    .msg-stats-row{grid-template-columns:repeat(2,1fr);}
-    .filters-grid{grid-template-columns:1fr;gap:16px;}
-    .btn-reset{margin-top:0;}
-}
-@media(max-width:768px){
-    .msg-stats-row{grid-template-columns:1fr;}
-    .msg-conversation{flex-direction:column;align-items:flex-start;}
-    .msg-arrow{display:none;}
-}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-header{background:linear-gradient(135deg,var(--o5),var(--o4));color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;}
+.modal-header h3{font-size:1.2rem;font-weight:700;}
+.modal-close{background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.5rem;width:36px;height:36px;border-radius:8px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:rgba(255,255,255,0.3);}
+.modal-body{padding:24px;max-height:calc(85vh - 140px);overflow-y:auto;}
+.msg-detail-section{margin-bottom:20px;padding:16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);}
+.msg-detail-section h4{font-size:.85rem;font-weight:700;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.msg-detail-content{font-size:.95rem;color:var(--text);line-height:1.6;}
+.msg-attachment-preview{margin-top:10px;}
+.msg-attachment-preview img{max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+.msg-attachment-file{display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--border);}
+.msg-attachment-file i{font-size:1.5rem;color:var(--o5);}
+.no-messages{text-align:center;padding:60px 20px;color:var(--text3);}
+.no-messages i{font-size:3rem;margin-bottom:16px;color:var(--text3);opacity:.5;}
+.no-messages p{font-size:.95rem;}
+.room-stats{margin-bottom:24px;}
+.room-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
+.room-stat-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;transition:all .2s;}
+.room-stat-item:hover{box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.room-stat-info h4{font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:4px;}
+.room-stat-info p{font-size:.7rem;color:var(--text3);}
+.room-stat-count{font-size:1.3rem;font-weight:900;color:var(--o5);}
+.group-indicator{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--purple);background:rgba(139,92,246,0.1);padding:3px 8px;border-radius:4px;font-weight:600;}
 </style>
 
-<div class="messages-header">
-    <h2><i class="fas fa-comments"></i> Message Center</h2>
-    <p>Monitor and manage all conversations across your platform</p>
-</div>
-
-<div class="msg-stats-row">
-    <div class="msg-stat-box">
-        <div class="msb-top">
-            <div class="msb-icon orange"><i class="fas fa-envelope"></i></div>
-        </div>
-        <div class="msb-value"><?php echo $totalMessages; ?></div>
-        <div class="msb-label">Total Messages</div>
+<div class="msg-stats-grid">
+    <div class="msg-stat-card">
+        <div class="msc-label"><i class="fas fa-envelope msc-icon"></i>Total Messages</div>
+        <div class="msc-value"><?php echo $totalMessages; ?></div>
     </div>
-    <div class="msg-stat-box">
-        <div class="msb-top">
-            <div class="msb-icon blue"><i class="fas fa-check-circle"></i></div>
-        </div>
-        <div class="msb-value"><?php echo $activeMessages; ?></div>
-        <div class="msb-label">Active Messages</div>
+    <div class="msg-stat-card">
+        <div class="msc-label"><i class="fas fa-check-circle msc-icon"></i>Active Messages</div>
+        <div class="msc-value"><?php echo $activeMessages; ?></div>
     </div>
-    <div class="msg-stat-box">
-        <div class="msb-top">
-            <div class="msb-icon green"><i class="fas fa-paperclip"></i></div>
-        </div>
-        <div class="msb-value"><?php echo $messagesWithAttachments; ?></div>
-        <div class="msb-label">With Attachments</div>
+    <div class="msg-stat-card">
+        <div class="msc-label"><i class="fas fa-trash msc-icon"></i>Deleted Messages</div>
+        <div class="msc-value"><?php echo $deletedMessages; ?></div>
     </div>
-    <div class="msg-stat-box">
-        <div class="msb-top">
-            <div class="msb-icon red"><i class="fas fa-trash"></i></div>
-        </div>
-        <div class="msb-value"><?php echo $deletedMessages; ?></div>
-        <div class="msb-label">Deleted</div>
+    <div class="msg-stat-card">
+        <div class="msc-label"><i class="fas fa-paperclip msc-icon"></i>With Attachments</div>
+        <div class="msc-value"><?php echo $messagesWithAttachments; ?></div>
     </div>
 </div>
 
-<div class="filters-bar">
-    <div class="filters-grid">
-        <div class="filter-field">
-            <label>Search</label>
-            <input type="text" id="searchMessage" placeholder="Search messages, names...">
+<?php if (!empty($rooms)): ?>
+<div class="room-stats">
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:14px;color:var(--text);"><i class="fas fa-door-open" style="color:var(--o5);margin-right:8px;"></i>Active Chat Rooms</h3>
+    <div class="room-stats-grid">
+        <?php foreach ($rooms as $room): ?>
+        <div class="room-stat-item">
+            <div class="room-stat-info">
+                <h4><?php echo htmlspecialchars($room['room_name']); ?></h4>
+                <p><?php echo ucfirst($room['room_type']); ?> • <?php echo $room['member_count']; ?> members</p>
+            </div>
+            <div class="room-stat-count"><?php echo $room['message_count']; ?></div>
         </div>
-        <div class="filter-field">
-            <label>Room</label>
-            <select id="filterRoom">
-                <option value="">All Rooms</option>
-                <?php foreach ($rooms as $room): ?>
-                <option value="<?php echo $room['id']; ?>"><?php echo htmlspecialchars($room['room_name']); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="filter-field">
-            <label>Status</label>
-            <select id="filterStatus">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="deleted">Deleted</option>
-            </select>
-        </div>
-        <div class="filter-field">
-            <label>Type</label>
-            <select id="filterType">
-                <option value="">All</option>
-                <option value="direct">Direct</option>
-                <option value="group">Group</option>
-            </select>
-        </div>
-        <button class="btn-reset" onclick="resetFilters()">
-            <i class="fas fa-redo"></i> Reset
-        </button>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="messages-filters">
+    <div class="filters-row">
+        <input type="text" id="searchMessage" class="filter-input" placeholder="Search messages, senders, recipients...">
+        <select id="filterRoom" class="filter-input">
+            <option value="">All Rooms</option>
+            <?php foreach ($rooms as $room): ?>
+            <option value="<?php echo $room['id']; ?>"><?php echo htmlspecialchars($room['room_name']); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <select id="filterStatus" class="filter-input">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="deleted">Deleted</option>
+        </select>
+        <select id="filterType" class="filter-input">
+            <option value="">All Types</option>
+            <option value="direct">Direct Messages</option>
+            <option value="group">Group Messages</option>
+        </select>
+        <button class="btn-filter btn-reset" onclick="resetFilters()"><i class="fas fa-redo"></i> Reset</button>
     </div>
 </div>
 
-<div class="messages-list">
+<div class="messages-container">
     <?php if (empty($allMessages)): ?>
     <div class="no-messages">
         <i class="fas fa-inbox"></i>
-        <p>No messages found</p>
+        <p>No messages found in the system</p>
     </div>
     <?php else: ?>
         <?php foreach ($allMessages as $msg): ?>
-        <div class="msg-item <?php echo $msg['is_deleted'] ? 'deleted' : ''; ?>" 
+        <div class="message-card <?php echo $msg['is_deleted'] ? 'deleted' : ''; ?>" 
              data-room-id="<?php echo $msg['room_id']; ?>"
              data-status="<?php echo $msg['is_deleted'] ? 'deleted' : 'active'; ?>"
              data-type="<?php echo $msg['room_type']; ?>"
@@ -268,121 +234,129 @@ while ($row = $roomsResult->fetch_assoc()) {
              data-sender="<?php echo htmlspecialchars(strtolower($msg['sender_name'] ?? '')); ?>"
              data-recipient="<?php echo htmlspecialchars(strtolower($msg['recipient_name'] ?? '')); ?>">
             
-            <div class="msg-top">
-                <div class="msg-conversation">
+            <div class="msg-card-header">
+                <div class="msg-participants">
                     <!-- Sender -->
-                    <div class="msg-user">
+                    <div class="msg-person">
                         <?php if (!empty($msg['sender_photo'])): ?>
-                        <img src="<?php echo htmlspecialchars($msg['sender_photo']); ?>" class="msg-user-avatar">
+                        <img src="<?php echo htmlspecialchars($msg['sender_photo']); ?>" alt="Sender" class="msg-avatar">
                         <?php else: ?>
-                        <div class="msg-user-placeholder">
+                        <div class="msg-avatar-placeholder">
                             <?php echo strtoupper(substr($msg['sender_name'] ?? 'U', 0, 1)); ?>
                         </div>
                         <?php endif; ?>
-                        <div class="msg-user-info">
-                            <div class="msg-user-name"><?php echo htmlspecialchars($msg['sender_name'] ?? 'Unknown'); ?></div>
-                            <div class="msg-user-email"><?php echo htmlspecialchars($msg['sender_email'] ?? 'N/A'); ?></div>
+                        <div class="msg-person-info">
+                            <h4><?php echo htmlspecialchars($msg['sender_name'] ?? 'Unknown'); ?></h4>
+                            <p><?php echo htmlspecialchars($msg['sender_email'] ?? 'N/A'); ?></p>
                         </div>
                     </div>
                     
                     <!-- Arrow -->
-                    <i class="fas fa-arrow-right msg-arrow <?php echo $msg['room_type']; ?>"></i>
+                    <div class="msg-arrow <?php echo $msg['room_type']; ?>">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
                     
                     <!-- Recipient/Group -->
                     <?php if ($msg['room_type'] == 'direct'): ?>
-                    <div class="msg-user">
+                    <div class="msg-person">
                         <?php if (!empty($msg['recipient_photo'])): ?>
-                        <img src="<?php echo htmlspecialchars($msg['recipient_photo']); ?>" class="msg-user-avatar">
+                        <img src="<?php echo htmlspecialchars($msg['recipient_photo']); ?>" alt="Recipient" class="msg-avatar">
                         <?php else: ?>
-                        <div class="msg-user-placeholder">
+                        <div class="msg-avatar-placeholder">
                             <?php echo strtoupper(substr($msg['recipient_name'] ?? 'U', 0, 1)); ?>
                         </div>
                         <?php endif; ?>
-                        <div class="msg-user-info">
-                            <div class="msg-user-name"><?php echo htmlspecialchars($msg['recipient_name'] ?? 'Unknown'); ?></div>
-                            <div class="msg-user-email"><?php echo htmlspecialchars($msg['recipient_email'] ?? 'N/A'); ?></div>
+                        <div class="msg-person-info">
+                            <h4><?php echo htmlspecialchars($msg['recipient_name'] ?? 'Unknown'); ?></h4>
+                            <p><?php echo htmlspecialchars($msg['recipient_email'] ?? 'N/A'); ?></p>
                         </div>
                     </div>
                     <?php else: ?>
-                    <div class="msg-user">
-                        <div class="msg-user-placeholder" style="background:linear-gradient(135deg,#a855f7,#7c3aed);">
+                    <div class="msg-person">
+                        <div class="msg-avatar-placeholder" style="background:linear-gradient(135deg,var(--purple),#a855f7);">
                             <i class="fas fa-users"></i>
                         </div>
-                        <div class="msg-user-info">
-                            <div class="msg-user-name"><?php echo htmlspecialchars($msg['room_name']); ?></div>
-                            <div class="msg-user-email">
-                                <span class="group-badge">
+                        <div class="msg-person-info">
+                            <h4><?php echo htmlspecialchars($msg['room_name']); ?></h4>
+                            <p>
+                                <span class="group-indicator">
                                     <i class="fas fa-users"></i> <?php echo $msg['group_member_count'] ?? 0; ?> members
                                 </span>
-                            </div>
+                            </p>
                         </div>
                     </div>
                     <?php endif; ?>
                 </div>
                 
-                <div class="msg-meta-right">
-                    <span class="msg-id-badge">#<?php echo $msg['id']; ?></span>
-                    <span class="msg-type-badge <?php echo $msg['room_type']; ?>">
+                <div class="msg-meta">
+                    <span class="msg-id">#<?php echo $msg['id']; ?></span>
+                    <span class="msg-room-badge <?php echo $msg['room_type']; ?>">
                         <i class="fas fa-<?php echo $msg['room_type'] == 'direct' ? 'user' : 'users'; ?>"></i>
                         <?php echo ucfirst($msg['room_type']); ?>
                     </span>
-                    <span class="msg-time">
-                        <i class="fas fa-clock"></i> <?php echo date('M d, H:i', strtotime($msg['created_at'])); ?>
+                    <span class="msg-timestamp">
+                        <i class="fas fa-clock"></i> <?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?>
                     </span>
                 </div>
             </div>
             
-            <?php if ($msg['reply_to_id']): ?>
-            <div class="msg-reply-box">
-                <i class="fas fa-reply"></i>
-                <strong>Reply to <?php echo htmlspecialchars($msg['replied_to_person'] ?? 'someone'); ?>:</strong>
-                "<?php echo htmlspecialchars(substr($msg['replied_message'] ?? '', 0, 80)) . (strlen($msg['replied_message'] ?? '') > 80 ? '...' : ''); ?>"
+            <div class="msg-card-body">
+                <?php if ($msg['reply_to_id']): ?>
+                <div class="msg-reply-context">
+                    <i class="fas fa-reply"></i>
+                    <strong>Replying to <?php echo htmlspecialchars($msg['replied_to_person'] ?? 'someone'); ?>:</strong>
+                    "<?php echo htmlspecialchars(substr($msg['replied_message'] ?? '', 0, 60)) . (strlen($msg['replied_message'] ?? '') > 60 ? '...' : ''); ?>"
+                </div>
+                <?php endif; ?>
+                
+                <div class="msg-text">
+                    <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
+                </div>
             </div>
-            <?php endif; ?>
             
-            <div class="msg-content">
-                <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
-            </div>
-            
-            <div class="msg-footer">
-                <div class="msg-badges">
+            <div class="msg-card-footer">
+                <div class="msg-indicators">
                     <?php if (!empty($msg['attachment_path'])): ?>
-                    <span class="msg-badge attachment">
+                    <span class="msg-indicator attachment">
                         <i class="fas fa-<?php echo $msg['attachment_type'] == 'image' ? 'image' : 'file'; ?>"></i>
                         <?php echo htmlspecialchars($msg['attachment_name'] ?? 'Attachment'); ?>
                     </span>
                     <?php endif; ?>
                     
                     <?php if ($msg['reaction_count'] > 0): ?>
-                    <span class="msg-badge reactions">
+                    <span class="msg-indicator reactions">
                         <i class="fas fa-heart"></i>
-                        <?php echo $msg['reaction_count']; ?>
+                        <?php echo $msg['reaction_count']; ?> reaction<?php echo $msg['reaction_count'] != 1 ? 's' : ''; ?>
                     </span>
                     <?php endif; ?>
                     
-                    <span class="msg-badge <?php echo $msg['is_deleted'] ? 'status-deleted' : 'status-active'; ?>">
+                    <span class="msg-indicator <?php echo $msg['is_deleted'] ? 'status-deleted' : 'status-active'; ?>">
                         <i class="fas fa-<?php echo $msg['is_deleted'] ? 'trash' : 'check-circle'; ?>"></i>
                         <?php echo $msg['is_deleted'] ? 'Deleted' : 'Active'; ?>
                     </span>
                 </div>
                 
-                <button class="btn-view-details" onclick='viewMessage(<?php echo json_encode($msg); ?>)'>
-                    <i class="fas fa-eye"></i> View Details
-                </button>
+                <div class="msg-actions">
+                    <button class="btn-action btn-view" onclick='viewMessage(<?php echo json_encode($msg); ?>)'>
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
 
-<!-- Modal -->
+<!-- Message Detail Modal -->
 <div id="messageModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-envelope-open-text"></i> Message Details</h3>
             <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
-        <div class="modal-body" id="messageModalBody"></div>
+        <div class="modal-body" id="messageModalBody">
+            <!-- Content will be inserted by JavaScript -->
+        </div>
     </div>
 </div>
 
@@ -394,35 +368,28 @@ function viewMessage(msg) {
     let participantsHtml = '';
     if (msg.room_type === 'direct') {
         participantsHtml = `
-            <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:12px;">
-                <div style="text-align:center;">
-                    <strong style="display:block;margin-bottom:4px;color:var(--text2);font-size:.75rem;text-transform:uppercase;">From</strong>
-                    <div style="font-size:1.05rem;font-weight:700;color:var(--text);">${msg.sender_name || 'Unknown'}</div>
-                    <div style="font-size:.8rem;color:var(--text3);">${msg.sender_email || 'N/A'}</div>
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:10px;">
+                <div style="flex:1;text-align:center;">
+                    <strong>From:</strong><br>
+                    ${msg.sender_name || 'Unknown'}<br>
+                    <small style="color:var(--text3);">${msg.sender_email || 'N/A'}</small>
                 </div>
-                <i class="fas fa-arrow-right" style="font-size:1.8rem;color:var(--o5);"></i>
-                <div style="text-align:center;">
-                    <strong style="display:block;margin-bottom:4px;color:var(--text2);font-size:.75rem;text-transform:uppercase;">To</strong>
-                    <div style="font-size:1.05rem;font-weight:700;color:var(--text);">${msg.recipient_name || 'Unknown'}</div>
-                    <div style="font-size:.8rem;color:var(--text3);">${msg.recipient_email || 'N/A'}</div>
+                <i class="fas fa-arrow-right" style="font-size:1.5rem;color:var(--o5);"></i>
+                <div style="flex:1;text-align:center;">
+                    <strong>To:</strong><br>
+                    ${msg.recipient_name || 'Unknown'}<br>
+                    <small style="color:var(--text3);">${msg.recipient_email || 'N/A'}</small>
                 </div>
             </div>
         `;
     } else {
         participantsHtml = `
-            <div style="margin-bottom:12px;">
-                <div style="margin-bottom:8px;">
-                    <strong style="color:var(--text2);font-size:.85rem;">Sender:</strong>
-                    <span style="font-size:.95rem;color:var(--text);font-weight:600;"> ${msg.sender_name || 'Unknown'}</span>
-                    <span style="font-size:.8rem;color:var(--text3);"> (${msg.sender_email || 'N/A'})</span>
-                </div>
-                <div>
-                    <strong style="color:var(--text2);font-size:.85rem;">Group:</strong>
-                    <span style="font-size:.95rem;color:var(--text);font-weight:600;"> ${msg.room_name}</span>
-                    <span class="group-badge" style="margin-left:8px;">
-                        <i class="fas fa-users"></i> ${msg.group_member_count || 0} members
-                    </span>
-                </div>
+            <div style="margin-bottom:10px;">
+                <strong>Sender:</strong> ${msg.sender_name || 'Unknown'} (${msg.sender_email || 'N/A'})<br>
+                <strong>Group:</strong> ${msg.room_name} 
+                <span style="background:rgba(139,92,246,0.1);color:var(--purple);padding:2px 8px;border-radius:4px;font-size:.75rem;margin-left:8px;">
+                    <i class="fas fa-users"></i> ${msg.group_member_count || 0} members
+                </span>
             </div>
         `;
     }
@@ -431,24 +398,22 @@ function viewMessage(msg) {
     if (msg.attachment_path) {
         if (msg.attachment_type === 'image') {
             attachmentHtml = `
-                <div class="modal-section">
+                <div class="msg-detail-section">
                     <h4><i class="fas fa-image"></i> Image Attachment</h4>
-                    <div class="modal-section-content">
-                        <img src="${msg.attachment_path}" alt="${msg.attachment_name || 'Image'}" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                    <div class="msg-attachment-preview">
+                        <img src="${msg.attachment_path}" alt="${msg.attachment_name || 'Attachment'}">
                     </div>
                 </div>
             `;
         } else {
             attachmentHtml = `
-                <div class="modal-section">
+                <div class="msg-detail-section">
                     <h4><i class="fas fa-file"></i> File Attachment</h4>
-                    <div class="modal-section-content">
-                        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border-radius:8px;border:1px solid var(--border);">
-                            <i class="fas fa-file" style="font-size:1.8rem;color:var(--o5);"></i>
-                            <div>
-                                <div style="font-weight:700;margin-bottom:2px;">${msg.attachment_name || 'File'}</div>
-                                <div style="font-size:.8rem;color:var(--text3);">Type: ${msg.attachment_type}</div>
-                            </div>
+                    <div class="msg-attachment-file">
+                        <i class="fas fa-file"></i>
+                        <div>
+                            <strong>${msg.attachment_name || 'File'}</strong>
+                            <div style="font-size:.75rem;color:var(--text3);">Type: ${msg.attachment_type}</div>
                         </div>
                     </div>
                 </div>
@@ -457,14 +422,13 @@ function viewMessage(msg) {
     }
     
     body.innerHTML = `
-        <div class="modal-section">
-            <h4><i class="fas fa-users"></i> Conversation</h4>
-            <div class="modal-section-content">
+        <div class="msg-detail-section">
+            <h4><i class="fas fa-users"></i> Conversation Details</h4>
+            <div class="msg-detail-content">
                 ${participantsHtml}
-                <div style="padding-top:12px;border-top:1px solid var(--border);margin-top:12px;">
-                    <strong style="font-size:.85rem;color:var(--text2);">Room:</strong> 
-                    <span style="font-size:.95rem;color:var(--text);font-weight:600;">${msg.room_name}</span>
-                    <span class="msg-type-badge ${msg.room_type}" style="margin-left:10px;">
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                    <strong>Room:</strong> ${msg.room_name}<br>
+                    <strong>Type:</strong> <span class="msg-room-badge ${msg.room_type}">
                         <i class="fas fa-${msg.room_type === 'direct' ? 'user' : 'users'}"></i>
                         ${msg.room_type.charAt(0).toUpperCase() + msg.room_type.slice(1)}
                     </span>
@@ -473,40 +437,46 @@ function viewMessage(msg) {
         </div>
         
         ${msg.reply_to_id ? `
-        <div class="modal-section">
+        <div class="msg-detail-section">
             <h4><i class="fas fa-reply"></i> Reply Context</h4>
-            <div class="modal-section-content">
-                Replying to <strong>${msg.replied_to_person || 'someone'}</strong>
-                <div style="background:#eff6ff;padding:12px;border-radius:6px;margin-top:10px;font-style:italic;border-left:3px solid #3b82f6;">
+            <div class="msg-detail-content">
+                Replying to <strong>${msg.replied_to_person || 'someone'}</strong>:<br>
+                <div style="background:#eff6ff;padding:10px;border-radius:6px;margin-top:8px;font-style:italic;">
                     "${msg.replied_message || 'Message #' + msg.reply_to_id}"
                 </div>
             </div>
         </div>
         ` : ''}
         
-        <div class="modal-section">
-            <h4><i class="fas fa-message"></i> Message</h4>
-            <div class="modal-section-content" style="background:#fff;padding:16px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap;line-height:1.7;">
-${msg.message}
+        <div class="msg-detail-section">
+            <h4><i class="fas fa-message"></i> Message Content</h4>
+            <div class="msg-detail-content" style="white-space:pre-wrap;background:var(--card);padding:14px;border-radius:8px;border:1px solid var(--border);">
+                ${msg.message}
             </div>
         </div>
         
         ${attachmentHtml}
         
-        <div class="modal-section">
+        <div class="msg-detail-section">
             <h4><i class="fas fa-info-circle"></i> Metadata</h4>
-            <div class="modal-section-content">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div><strong>ID:</strong> #${msg.id}</div>
+            <div class="msg-detail-content">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <strong>Message ID:</strong> #${msg.id}
+                    </div>
                     <div>
                         <strong>Status:</strong> 
-                        <span class="msg-badge ${msg.is_deleted == 1 ? 'status-deleted' : 'status-active'}">
+                        <span class="msg-indicator ${msg.is_deleted == 1 ? 'status-deleted' : 'status-active'}">
                             <i class="fas fa-${msg.is_deleted == 1 ? 'trash' : 'check-circle'}"></i>
                             ${msg.is_deleted == 1 ? 'Deleted' : 'Active'}
                         </span>
                     </div>
-                    <div><strong>Reactions:</strong> ${msg.reaction_count || 0}</div>
-                    <div><strong>Sent:</strong> ${new Date(msg.created_at).toLocaleString()}</div>
+                    <div>
+                        <strong>Reactions:</strong> ${msg.reaction_count || 0}
+                    </div>
+                    <div>
+                        <strong>Sent:</strong> ${new Date(msg.created_at).toLocaleString()}
+                    </div>
                 </div>
             </div>
         </div>
@@ -521,9 +491,12 @@ function closeModal() {
 
 window.onclick = function(event) {
     const modal = document.getElementById('messageModal');
-    if (event.target === modal) closeModal();
+    if (event.target === modal) {
+        closeModal();
+    }
 }
 
+// Filter functionality
 const searchInput = document.getElementById('searchMessage');
 const roomFilter = document.getElementById('filterRoom');
 const statusFilter = document.getElementById('filterStatus');
@@ -535,20 +508,29 @@ function filterMessages() {
     const selectedStatus = statusFilter.value;
     const selectedType = typeFilter.value;
     
-    document.querySelectorAll('.msg-item').forEach(item => {
-        const message = item.getAttribute('data-message');
-        const sender = item.getAttribute('data-sender');
-        const recipient = item.getAttribute('data-recipient');
-        const roomId = item.getAttribute('data-room-id');
-        const status = item.getAttribute('data-status');
-        const type = item.getAttribute('data-type');
+    const cards = document.querySelectorAll('.message-card');
+    
+    cards.forEach(card => {
+        const message = card.getAttribute('data-message');
+        const sender = card.getAttribute('data-sender');
+        const recipient = card.getAttribute('data-recipient');
+        const roomId = card.getAttribute('data-room-id');
+        const status = card.getAttribute('data-status');
+        const type = card.getAttribute('data-type');
         
-        const matchesSearch = !searchTerm || message.includes(searchTerm) || sender.includes(searchTerm) || recipient.includes(searchTerm);
+        const matchesSearch = !searchTerm || 
+            message.includes(searchTerm) || 
+            sender.includes(searchTerm) || 
+            recipient.includes(searchTerm);
         const matchesRoom = !selectedRoom || roomId === selectedRoom;
         const matchesStatus = !selectedStatus || status === selectedStatus;
         const matchesType = !selectedType || type === selectedType;
         
-        item.style.display = (matchesSearch && matchesRoom && matchesStatus && matchesType) ? '' : 'none';
+        if (matchesSearch && matchesRoom && matchesStatus && matchesType) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
     });
 }
 
