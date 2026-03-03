@@ -268,6 +268,9 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <button class="tab" data-tab="users">
                 <i class="fas fa-users"></i> User Management
             </button>
+            <button class="tab" data-tab="messages">
+                <i class="fas fa-comments"></i> Messages
+            </button>
         </div>
         
         <!-- Tab Content Panels -->
@@ -293,6 +296,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         
         <div id="tab-users" class="tab-content">
             <?php include 'admin_modules/admin_user_management.php'; ?>
+        </div>
+
+        <div id="tab-messages" class="tab-content">
+            <?php include 'admin_modules/admin_messages_manage.php'; ?>
         </div>
     </div>
     
