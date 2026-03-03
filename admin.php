@@ -299,7 +299,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         </div>
 
         <div id="tab-messages" class="tab-content">
-            <?php include 'admin_modules/admin_messages_manage.php'; ?>
+            <?php include 'admin_modules/admin_all_messages.php'; ?>
         </div>
     </div>
     

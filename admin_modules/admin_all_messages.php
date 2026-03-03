@@ -1,5 +1,5 @@
 <?php
-// Admin Messages Management Module
+// Admin All Messages Module
 
 if (!isset($db)) {
     die('Database connection required');
@@ -132,11 +132,6 @@ while ($row = $roomsResult->fetch_assoc()) {
 .reactions-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
 .reaction-item{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg);border-radius:6px;font-size:.75rem;}
 </style>
-
-<div class="messages-header">
-    <h2><i class="fas fa-comments"></i> Messages Management</h2>
-    <p>View and manage all chat messages across rooms</p>
-</div>
 
 <div class="msg-stats-grid">
     <div class="msg-stat-card">
