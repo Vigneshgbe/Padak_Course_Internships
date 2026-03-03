@@ -1,6 +1,4 @@
 <?php
-// Admin Messages Management Module - Improved Version
-// This file should be included in admin.php as: include 'admin_modules/admin_messages_manage.php';
 
 if (!isset($db)) {
     die('Database connection required');
@@ -160,11 +158,6 @@ while ($row = $roomsResult->fetch_assoc()) {
 .room-stat-count{font-size:1.3rem;font-weight:900;color:var(--o5);}
 .group-indicator{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--purple);background:rgba(139,92,246,0.1);padding:3px 8px;border-radius:4px;font-weight:600;}
 </style>
-
-<div class="messages-header">
-    <h2><i class="fas fa-comments"></i> Messages Management</h2>
-    <p>View and manage all chat conversations with clear sender-receiver context</p>
-</div>
 
 <div class="msg-stats-grid">
     <div class="msg-stat-card">
