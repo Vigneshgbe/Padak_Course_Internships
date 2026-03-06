@@ -122,6 +122,69 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         header('Location: admin.php?tab=reviews');
         exit;
     }
+
+    // --- Update Single Submission Status (All Submissions tab) ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_submission_status'])) {
+        $submissionId = (int)$_POST['submission_id'];
+        $newStatus    = $db->real_escape_string(trim($_POST['status'] ?? ''));
+        $feedback     = $db->real_escape_string(trim($_POST['feedback'] ?? ''));
+        $pointsEarned = (isset($_POST['points_earned']) && $_POST['points_earned'] !== '') ? (int)$_POST['points_earned'] : null;
+        $reviewedBy   = $db->real_escape_string(trim($_SESSION['admin_username'] ?? 'Admin'));
+
+        $allowed = ['submitted','under_review','approved','rejected','revision_requested'];
+        if (in_array($newStatus, $allowed)) {
+            $pointsSQL = ($newStatus === 'approved' && $pointsEarned !== null) ? ", points_earned=$pointsEarned" : '';
+            $sql = "UPDATE task_submissions SET status='$newStatus', feedback='$feedback',
+                    reviewed_by='$reviewedBy', reviewed_at=NOW() $pointsSQL, updated_at=NOW()
+                    WHERE id=$submissionId";
+            if ($db->query($sql)) {
+                $subRow = $db->query("SELECT student_id FROM task_submissions WHERE id=$submissionId")->fetch_assoc();
+                if ($subRow) {
+                    $sid = (int)$subRow['student_id'];
+                    if ($newStatus === 'approved') {
+                        $db->query("UPDATE internship_students SET total_points = (
+                            SELECT COALESCE(SUM(points_earned),0) FROM task_submissions
+                            WHERE student_id=$sid AND status='approved'
+                        ) WHERE id=$sid");
+                    }
+                    $statusLabel = $db->real_escape_string(ucfirst(str_replace('_',' ',$newStatus)));
+                    $notifMsg    = $db->real_escape_string("Your submission has been updated to: $statusLabel." . ($feedback ? " Feedback: $feedback" : ''));
+                    $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
+                                VALUES ($sid, '$statusLabel', '$notifMsg', 'task', NOW())");
+                }
+                $_SESSION['admin_success'] = 'Submission updated successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to update submission: ' . $db->error;
+            }
+        } else {
+            $_SESSION['admin_error'] = 'Invalid status value.';
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=all_submissions');
+        exit;
+    }
+
+    // --- Bulk Submission Status Update ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_update_submissions'])) {
+        $ids        = $_POST['selected_ids'] ?? [];
+        $bulkStatus = $db->real_escape_string(trim($_POST['bulk_status'] ?? ''));
+        $allowed    = ['under_review','approved','rejected'];
+        if (!empty($ids) && in_array($bulkStatus, $allowed)) {
+            $idsInt     = array_map('intval', $ids);
+            $idList     = implode(',', $idsInt);
+            $reviewedBy = $db->real_escape_string($_SESSION['admin_username'] ?? 'Admin');
+            $db->query("UPDATE task_submissions SET status='$bulkStatus', reviewed_by='$reviewedBy',
+                        reviewed_at=NOW(), updated_at=NOW() WHERE id IN ($idList)");
+            $cnt = count($idsInt);
+            $_SESSION['admin_success'] = "$cnt submission(s) updated to " . ucfirst(str_replace('_',' ',$bulkStatus)) . '.';
+        } else {
+            $_SESSION['admin_error'] = 'Please select submissions and a valid bulk action.';
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=all_submissions');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 
