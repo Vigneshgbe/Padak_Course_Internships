@@ -185,6 +185,60 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    // --- Save Announcement (Create or Update) ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_announcement'])) {
+        $title          = trim($_POST['title'] ?? '');
+        $content        = trim($_POST['content'] ?? '');
+        $type           = $_POST['type'] ?? 'general';
+        $priority       = $_POST['priority'] ?? 'normal';
+        $batch_id       = !empty($_POST['batch_id']) ? (int)$_POST['batch_id'] : null;
+        $coordinator_id = !empty($_POST['coordinator_id']) ? (int)$_POST['coordinator_id'] : null;
+        $target_all     = isset($_POST['target_all']) ? 1 : 0;
+        $is_active      = isset($_POST['is_active']) ? 1 : 0;
+        $edit_id        = (int)($_POST['announcement_id'] ?? 0);
+
+        $errors = [];
+        if (empty($title))   $errors[] = 'Title is required';
+        if (empty($content)) $errors[] = 'Content is required';
+        if (!in_array($type,     ['general','task_deadline','certificate','attendance'])) $errors[] = 'Invalid type';
+        if (!in_array($priority, ['urgent','important','normal']))                        $errors[] = 'Invalid priority';
+
+        if (empty($errors)) {
+            if ($edit_id > 0) {
+                $stmt = $db->prepare("UPDATE announcements SET title=?,content=?,type=?,priority=?,batch_id=?,coordinator_id=?,target_all=?,is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?");
+                $stmt->bind_param("ssssiiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active, $edit_id);
+                $_SESSION[$stmt->execute() ? 'admin_success' : 'admin_error'] = $stmt->execute() ? 'Announcement updated successfully' : 'Failed to update announcement';
+            } else {
+                $stmt = $db->prepare("INSERT INTO announcements (title,content,type,priority,batch_id,coordinator_id,target_all,is_active) VALUES (?,?,?,?,?,?,?,?)");
+                $stmt->bind_param("ssssiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active);
+                $_SESSION[$stmt->execute() ? 'admin_success' : 'admin_error'] = $stmt->execute() ? 'Announcement created successfully' : 'Failed to create announcement';
+            }
+        } else {
+            $_SESSION['admin_error'] = implode(', ', $errors);
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=announcements');
+        exit;
+    }
+
+    // --- Delete Announcement ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_announcement'])) {
+        $ann_id = (int)($_POST['announcement_id'] ?? 0);
+        if ($ann_id > 0) {
+            $stmt = $db->prepare("DELETE FROM announcements WHERE id=?");
+            $stmt->bind_param("i", $ann_id);
+            if ($stmt->execute()) {
+                $db->query("DELETE FROM announcement_reads WHERE announcement_id=$ann_id");
+                $_SESSION['admin_success'] = 'Announcement deleted successfully';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to delete announcement';
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=announcements');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 
