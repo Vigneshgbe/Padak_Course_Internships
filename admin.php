@@ -239,6 +239,44 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    // --- Mark Attendance ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
+        $domainInterest = $_POST['domain_interest'] ?? '';
+        $attendanceDate = $_POST['attendance_date'] ?? '';
+        $attendanceData = $_POST['attendance'] ?? [];
+
+        if (!$domainInterest || !$attendanceDate || empty($attendanceData)) {
+            $_SESSION['admin_error'] = 'Please select domain, date, and mark at least one student';
+        } else {
+            // Ensure date column exists
+            $columnCheck = $db->query("SHOW COLUMNS FROM student_attendance LIKE 'date'");
+            if ($columnCheck->num_rows == 0) {
+                $db->query("ALTER TABLE student_attendance ADD COLUMN date DATE NULL AFTER batch_id");
+                $db->query("ALTER TABLE student_attendance ADD COLUMN marked_by VARCHAR(100) NULL");
+                $db->query("ALTER TABLE student_attendance MODIFY status ENUM('active','inactive','completed','dropped','present','absent','late') DEFAULT 'active'");
+            }
+
+            $dateEsc = $db->real_escape_string($attendanceDate);
+            $count   = 0;
+            foreach ($attendanceData as $studentId => $status) {
+                $studentId = (int)$studentId;
+                if (empty($status)) continue;
+                $statusEsc = $db->real_escape_string($status);
+                $exists    = $db->query("SELECT id FROM student_attendance WHERE student_id=$studentId AND date='$dateEsc'")->fetch_assoc();
+                if ($exists) {
+                    $db->query("UPDATE student_attendance SET status='$statusEsc', enrolled_date=NOW() WHERE id={$exists['id']}");
+                } else {
+                    $db->query("INSERT INTO student_attendance (student_id, batch_id, date, status, enrolled_date) VALUES ($studentId, NULL, '$dateEsc', '$statusEsc', NOW())");
+                }
+                $count++;
+            }
+            $_SESSION['admin_success'] = "Attendance marked for $count students on " . date('M d, Y', strtotime($attendanceDate));
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=attendance&domain=' . urlencode($domainInterest));
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 

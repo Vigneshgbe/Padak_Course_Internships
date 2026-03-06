@@ -1,66 +1,11 @@
 <?php
-// admin_attendance_manage.php - Attendance Management Module
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: admin.php');
-    exit;
-}
-
-$success = '';
-$error = '';
-
-// Handle Attendance Marking (Domain-based)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
-    $domainInterest = $_POST['domain_interest'] ?? '';
-    $attendanceDate = $_POST['attendance_date'] ?? '';
-    $attendanceData = $_POST['attendance'] ?? [];
-    
-    if (!$domainInterest || !$attendanceDate || empty($attendanceData)) {
-        $error = 'Please select domain, date, and mark at least one student';
-    } else {
-        // Check if student_attendance table has date column, if not add it
-        $columnCheck = $db->query("SHOW COLUMNS FROM student_attendance LIKE 'date'");
-        if ($columnCheck->num_rows == 0) {
-            // Add date column to student_attendance
-            $db->query("ALTER TABLE student_attendance ADD COLUMN date DATE NULL AFTER batch_id");
-            $db->query("ALTER TABLE student_attendance ADD COLUMN marked_by VARCHAR(100) NULL");
-            // Modify status enum to include attendance statuses
-            $db->query("ALTER TABLE student_attendance MODIFY status ENUM('active','inactive','completed','dropped','present','absent','late') DEFAULT 'active'");
-        }
-        
-        $dateEsc = $db->real_escape_string($attendanceDate);
-        $successCount = 0;
-        
-        foreach ($attendanceData as $studentId => $status) {
-            $studentId = (int)$studentId;
-            $statusEsc = $db->real_escape_string($status);
-            
-            // Check if attendance record exists for this student on this date
-            $exists = $db->query("SELECT id FROM student_attendance WHERE student_id=$studentId AND date='$dateEsc'")->fetch_assoc();
-            
-            if ($exists) {
-                // Update existing record
-                $db->query("UPDATE student_attendance SET status='$statusEsc', enrolled_date=NOW() WHERE id={$exists['id']}");
-            } else {
-                // Insert new attendance record (batch_id can be NULL for daily attendance)
-                $db->query("INSERT INTO student_attendance (student_id, batch_id, date, status, enrolled_date) 
-                           VALUES ($studentId, NULL, '$dateEsc', '$statusEsc', NOW())");
-            }
-            $successCount++;
-        }
-        
-        $_SESSION['admin_success'] = "Attendance marked for $successCount students on " . date('M d, Y', strtotime($attendanceDate));
-        echo '<script>window.location.href="admin.php#tab-attendance";</script>';
-        exit;
-    }
-}
+// admin_attendance_manage.php - Display only. POST handling is in admin.php top (before HTML output).
 
 // Get Unique Domain Interests
 $domainsRes = $db->query("SELECT DISTINCT domain_interest FROM internship_students WHERE is_active=1 AND domain_interest IS NOT NULL AND domain_interest != '' ORDER BY domain_interest");
 $domains = [];
 while ($row = $domainsRes->fetch_assoc()) {
-    if (!empty($row['domain_interest'])) {
-        $domains[] = $row['domain_interest'];
-    }
+    if (!empty($row['domain_interest'])) $domains[] = $row['domain_interest'];
 }
 
 // Get Students by Selected Domain
@@ -68,11 +13,11 @@ $selectedDomain = $_GET['domain'] ?? '';
 $domainStudents = [];
 if ($selectedDomain) {
     $domainEsc = $db->real_escape_string($selectedDomain);
-    $domainStudentsRes = $db->query("SELECT s.id, s.full_name, s.email, s.domain_interest
+    $res = $db->query("SELECT s.id, s.full_name, s.email, s.domain_interest
         FROM internship_students s
         WHERE s.is_active=1 AND s.domain_interest='$domainEsc'
         ORDER BY s.full_name");
-    while ($row = $domainStudentsRes->fetch_assoc()) $domainStudents[] = $row;
+    while ($row = $res->fetch_assoc()) $domainStudents[] = $row;
 }
 
 $todayDate = date('Y-m-d');
@@ -113,15 +58,10 @@ $todayDate = date('Y-m-d');
         <div class="sh-title"><i class="fas fa-calendar-check"></i>Mark Attendance</div>
     </div>
     <div class="section-body">
-        <?php if ($error): ?>
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:20px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
-            <i class="fas fa-circle-exclamation"></i><?php echo htmlspecialchars($error); ?>
-        </div>
-        <?php endif; ?>
-        
+
         <div class="domain-selector">
             <label><i class="fas fa-lightbulb"></i> Select Domain:</label>
-            <select class="form-select" onchange="window.location.href='?domain='+encodeURIComponent(this.value)+'#tab-attendance'">
+            <select class="form-select" onchange="window.location.href='admin.php?tab=attendance&domain='+encodeURIComponent(this.value)">
                 <option value="">Choose a domain...</option>
                 <?php foreach ($domains as $domain): ?>
                 <option value="<?php echo htmlspecialchars($domain); ?>" <?php echo $selectedDomain === $domain ? 'selected' : ''; ?>>
@@ -130,17 +70,17 @@ $todayDate = date('Y-m-d');
                 <?php endforeach; ?>
             </select>
         </div>
-        
+
         <?php if ($selectedDomain && !empty($domainStudents)): ?>
-        <form method="POST">
-            <input type="hidden" name="mark_attendance" value="1">
-            <input type="hidden" name="domain_interest" value="<?php echo htmlspecialchars($selectedDomain); ?>">
-            
+        <form method="POST" action="admin.php">
+            <input type="hidden" name="mark_attendance"  value="1">
+            <input type="hidden" name="domain_interest"  value="<?php echo htmlspecialchars($selectedDomain); ?>">
+
             <div class="form-group">
                 <label class="form-label"><i class="fas fa-calendar"></i> Attendance Date <span class="required">*</span></label>
                 <input type="date" name="attendance_date" class="form-input" value="<?php echo $todayDate; ?>" required style="max-width:250px;">
             </div>
-            
+
             <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
                 <button type="button" class="btn btn-sm" style="background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.25);color:#22c55e;" onclick="markAllStatus('present')">
                     <i class="fas fa-check-circle"></i> Mark All Present
@@ -152,11 +92,11 @@ $todayDate = date('Y-m-d');
                     <i class="fas fa-eraser"></i> Clear All
                 </button>
             </div>
-            
+
             <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
                 <i class="fas fa-users"></i> Students in <?php echo htmlspecialchars($selectedDomain); ?> (<?php echo count($domainStudents); ?>)
             </h3>
-            
+
             <?php foreach ($domainStudents as $student): ?>
             <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;background:var(--bg);gap:12px;">
                 <div>
@@ -174,10 +114,10 @@ $todayDate = date('Y-m-d');
                         <i class="fas fa-clock"></i> Late
                     </button>
                 </div>
-                <input type="hidden" name="attendance[<?php echo $student['id']; ?>]" id="status-<?php echo $student['id']; ?>" value="">
+                <input type="hidden" name="attendance[<?php echo $student['id']; ?>]" id="att-status-<?php echo $student['id']; ?>" value="">
             </div>
             <?php endforeach; ?>
-            
+
             <div style="margin-top:24px;display:flex;gap:12px;">
                 <button type="submit" class="btn btn-primary" onclick="return validateAttendance()">
                     <i class="fas fa-save"></i> Save Attendance
@@ -187,6 +127,7 @@ $todayDate = date('Y-m-d');
                 </button>
             </div>
         </form>
+
         <?php elseif ($selectedDomain): ?>
         <div class="empty-state">
             <i class="fas fa-users-slash"></i>
@@ -204,61 +145,43 @@ $todayDate = date('Y-m-d');
 </div>
 
 <script>
-    function selectStatus(btn){
-        const studentId=btn.dataset.student;
-        const status=btn.dataset.status;
-        const inputField=document.getElementById('status-'+studentId);
-        const allBtns=document.querySelectorAll(`[data-student="${studentId}"]`);
-        
-        allBtns.forEach(b=>{
+function selectStatus(btn) {
+    var studentId = btn.dataset.student;
+    var status    = btn.dataset.status;
+    var input     = document.getElementById('att-status-' + studentId);
+    document.querySelectorAll('[data-student="' + studentId + '"]').forEach(function(b) {
+        b.classList.remove('selected-present','selected-absent','selected-late');
+    });
+    if (input.value === status) {
+        input.value = '';
+    } else {
+        input.value = status;
+        btn.classList.add('selected-' + status);
+    }
+}
+
+function markAllStatus(status) {
+    document.querySelectorAll('[name^="attendance["]').forEach(function(input) {
+        var studentId = input.id.replace('att-status-', '');
+        input.value = status;
+        document.querySelectorAll('[data-student="' + studentId + '"]').forEach(function(b) {
             b.classList.remove('selected-present','selected-absent','selected-late');
+            if (b.dataset.status === status) b.classList.add('selected-' + status);
         });
-        
-        if(inputField.value===status){
-            inputField.value='';
-        }else{
-            inputField.value=status;
-            btn.classList.add('selected-'+status);
-        }
-    }
-    
-    function markAllStatus(status){
-        const allInputs=document.querySelectorAll('[name^="attendance["]');
-        allInputs.forEach(input=>{
-            const studentId=input.id.replace('status-','');
-            input.value=status;
-            const allBtns=document.querySelectorAll(`[data-student="${studentId}"]`);
-            allBtns.forEach(btn=>{
-                btn.classList.remove('selected-present','selected-absent','selected-late');
-                if(btn.dataset.status===status){
-                    btn.classList.add('selected-'+status);
-                }
-            });
-        });
-    }
-    
-    function clearAllStatus(){
-        const allInputs=document.querySelectorAll('[name^="attendance["]');
-        allInputs.forEach(input=>{
-            input.value='';
-        });
-        document.querySelectorAll('.ar-btn').forEach(btn=>{
-            btn.classList.remove('selected-present','selected-absent','selected-late');
-        });
-    }
-    
-    function validateAttendance(){
-        const allInputs=document.querySelectorAll('[name^="attendance["]');
-        let hasSelection=false;
-        allInputs.forEach(input=>{
-            if(input.value!==''){
-                hasSelection=true;
-            }
-        });
-        if(!hasSelection){
-            alert('Please mark attendance for at least one student before saving.');
-            return false;
-        }
-        return confirm('Save attendance for the selected date?');
-    }
+    });
+}
+
+function clearAllStatus() {
+    document.querySelectorAll('[name^="attendance["]').forEach(function(i){ i.value=''; });
+    document.querySelectorAll('.ar-btn').forEach(function(b){
+        b.classList.remove('selected-present','selected-absent','selected-late');
+    });
+}
+
+function validateAttendance() {
+    var hasSelection = false;
+    document.querySelectorAll('[name^="attendance["]').forEach(function(i){ if(i.value!=='') hasSelection=true; });
+    if (!hasSelection) { alert('Please mark attendance for at least one student before saving.'); return false; }
+    return confirm('Save attendance for the selected date?');
+}
 </script>
