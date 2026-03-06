@@ -303,31 +303,24 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <?php include 'admin_modules/admin_all_messages.php'; ?>
         </div>
     </div>
-    
+
     <script>
         function showTab(tabName) {
-            // Deactivate all tabs and panels
             document.querySelectorAll('.tab').forEach(function(t) {
                 t.classList.remove('active');
             });
             document.querySelectorAll('.tab-content').forEach(function(c) {
                 c.classList.remove('active');
             });
-
-            // Activate the matching tab button
             var btn = document.querySelector('.tab[data-tab="' + tabName + '"]');
             if (btn) btn.classList.add('active');
-
-            // Activate the matching panel
             var panel = document.getElementById('tab-' + tabName);
             if (panel) panel.classList.add('active');
-
-            // Update URL hash without scrolling
-            history.replaceState(null, '', '#tab-' + tabName);
+            // Store in sessionStorage - no URL hash
+            try { sessionStorage.setItem('adminActiveTab', tabName); } catch(e) {}
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Wire up all tab buttons
             document.querySelectorAll('.tab[data-tab]').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     showTab(this.getAttribute('data-tab'));
@@ -343,15 +336,15 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 });
             }, 5000);
 
-            // Restore tab from URL hash, default to 'tasks'
-            var defaultTab = 'tasks';
-            if (window.location.hash) {
-                var hash = window.location.hash.replace('#', '');
-                if (hash.startsWith('tab-')) {
-                    defaultTab = hash.replace('tab-', '');
-                }
-            }
-            showTab(defaultTab);
+            // Determine which tab to show:
+            // 1. PHP session-set tab (after form submit redirect) takes priority
+            var phpTab = <?php echo isset($_SESSION['admin_active_tab']) ? json_encode($_SESSION['admin_active_tab']) : 'null'; ?>;
+            <?php unset($_SESSION['admin_active_tab']); ?>
+            var storedTab = null;
+            try { storedTab = sessionStorage.getItem('adminActiveTab'); } catch(e) {}
+
+            var activeTab = phpTab || storedTab || 'tasks';
+            showTab(activeTab);
         });
     </script>
 </body>

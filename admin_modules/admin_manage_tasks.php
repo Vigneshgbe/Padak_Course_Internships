@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
         
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task created successfully!';
-            echo '<script>window.location.href="admin.php#tab-tasks";</script>';
+            $_SESSION['admin_active_tab'] = 'tasks';
+            header('Location: admin.php');
             exit;
         } else {
             $error = 'Failed to create task: ' . $db->error;
@@ -79,7 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
         
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task updated successfully!';
-            echo '<script>window.location.href="admin.php#tab-tasks";</script>';
+            $_SESSION['admin_active_tab'] = 'tasks';
+            header('Location: admin.php');
             exit;
         } else {
             $error = 'Failed to update task: ' . $db->error;
@@ -88,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
 }
 
 // Get Filter Status
-$filterStatus = $_GET['filter'] ?? 'active';
+$filterStatus = $_GET['filter_tasks'] ?? 'active';
 $filterStatusEsc = $db->real_escape_string($filterStatus);
 $whereClause = $filterStatus === 'all' ? "1=1" : "t.status='$filterStatusEsc'";
 
@@ -154,15 +156,15 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
     .badge-low{background:rgba(34,197,94,0.12);color:#16a34a;}
     .badge-individual{background:rgba(59,130,246,0.12);color:#1d4ed8;}
     .badge-team{background:rgba(139,92,246,0.12);color:#6d28d9;}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-    .modal.active{display:flex;}
-    .modal-content{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
-    .modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-    .mh-title{font-size:1.2rem;font-weight:700;color:var(--text);}
-    .modal-close{background:none;border:none;font-size:1.5rem;color:var(--text3);cursor:pointer;padding:4px;transition:color .2s;}
-    .modal-close:hover{color:var(--red);}
-    .modal-body{padding:24px;}
-    .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+    .tasks-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+    .tasks-modal.active{display:flex;}
+    .tasks-modal-content{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;}
+    .tasks-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .tmh-title{font-size:1.2rem;font-weight:700;color:var(--text);}
+    .tasks-modal-close{background:none;border:none;font-size:1.5rem;color:var(--text3);cursor:pointer;padding:4px 8px;transition:color .2s;line-height:1;}
+    .tasks-modal-close:hover{color:var(--red);}
+    .tasks-modal-body{padding:24px;}
+    .tasks-modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
     .empty-state{text-align:center;padding:60px 20px;color:var(--text3);}
     .empty-state i{font-size:3rem;margin-bottom:16px;display:block;opacity:.3;}
     .empty-state h3{font-size:1.1rem;color:var(--text2);margin-bottom:8px;}
@@ -176,7 +178,7 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
 <div class="section">
     <div class="section-header">
         <div class="sh-title"><i class="fas fa-clipboard-list"></i>All Tasks</div>
-        <button class="btn btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> Create New Task</button>
+        <button class="btn btn-primary" onclick="tasksOpenCreateModal()"><i class="fas fa-plus"></i> Create New Task</button>
     </div>
     <div class="section-body">
         <?php if ($error): ?>
@@ -186,10 +188,10 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
         <?php endif; ?>
         
         <div class="filter-bar">
-            <a href="?filter=active#tab-tasks" class="filter-btn <?php echo $filterStatus==='active'?'active':''; ?>">Active (<?php echo $activeCount; ?>)</a>
-            <a href="?filter=draft#tab-tasks" class="filter-btn <?php echo $filterStatus==='draft'?'active':''; ?>">Draft (<?php echo $draftCount; ?>)</a>
-            <a href="?filter=closed#tab-tasks" class="filter-btn <?php echo $filterStatus==='closed'?'active':''; ?>">Closed (<?php echo $closedCount; ?>)</a>
-            <a href="?filter=all#tab-tasks" class="filter-btn <?php echo $filterStatus==='all'?'active':''; ?>">All Tasks (<?php echo $allCount; ?>)</a>
+            <button class="filter-btn <?php echo $filterStatus==='active'?'active':''; ?>" onclick="tasksSetFilter('active')">Active (<?php echo $activeCount; ?>)</button>
+            <button class="filter-btn <?php echo $filterStatus==='draft'?'active':''; ?>" onclick="tasksSetFilter('draft')">Draft (<?php echo $draftCount; ?>)</button>
+            <button class="filter-btn <?php echo $filterStatus==='closed'?'active':''; ?>" onclick="tasksSetFilter('closed')">Closed (<?php echo $closedCount; ?>)</button>
+            <button class="filter-btn <?php echo $filterStatus==='all'?'active':''; ?>" onclick="tasksSetFilter('all')">All Tasks (<?php echo $allCount; ?>)</button>
         </div>
         
         <?php if (empty($tasks)): ?>
@@ -254,7 +256,7 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
                             <?php endif; ?>
                         </td>
                         <td>
-                            <button class="btn btn-secondary btn-sm" onclick='editTask(<?php echo json_encode($task); ?>)'>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="tasksEditTask(<?php echo $task['id']; ?>)">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
                         </td>
@@ -267,35 +269,53 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
     </div>
 </div>
 
+<!-- Hidden task data store - safe JSON -->
+<script type="application/json" id="tasksDataStore">
+<?php echo json_encode(array_map(function($t) {
+    return [
+        'id' => (int)$t['id'],
+        'title' => $t['title'],
+        'description' => $t['description'] ?? '',
+        'task_type' => $t['task_type'],
+        'priority' => $t['priority'],
+        'max_points' => (int)$t['max_points'],
+        'due_date' => $t['due_date'] ? substr($t['due_date'], 0, 10) : '',
+        'resources_url' => $t['resources_url'] ?? '',
+        'assigned_to_student' => $t['assigned_to_student'] ?? '',
+        'status' => $t['status'],
+    ];
+}, $tasks), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?>
+</script>
+
 <!-- Task Modal -->
-<div id="taskModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="mh-title" id="modalTitle">Create New Task</div>
-            <button class="modal-close" onclick="closeModal('taskModal')">&times;</button>
+<div id="tasksModal" class="tasks-modal" role="dialog" aria-modal="true">
+    <div class="tasks-modal-content" id="tasksModalContent">
+        <div class="tasks-modal-header">
+            <div class="tmh-title" id="tasksModalTitle">Create New Task</div>
+            <button type="button" class="tasks-modal-close" id="tasksModalCloseBtn" aria-label="Close">&times;</button>
         </div>
-        <form method="POST" id="taskForm">
-            <div class="modal-body">
-                <input type="hidden" name="task_id" id="task_id">
+        <form method="POST" action="admin.php" id="tasksForm">
+            <div class="tasks-modal-body">
+                <input type="hidden" name="task_id" id="tasks_task_id">
                 <div class="form-group">
                     <label class="form-label">Task Title <span class="required">*</span></label>
-                    <input type="text" name="title" id="task_title" class="form-input" placeholder="e.g., Build a React Calculator App" required>
+                    <input type="text" name="title" id="tasks_title" class="form-input" placeholder="e.g., Build a React Calculator App" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea name="description" id="task_description" class="form-textarea" placeholder="Detailed task requirements, deliverables, and instructions..."></textarea>
+                    <textarea name="description" id="tasks_description" class="form-textarea" placeholder="Detailed task requirements, deliverables, and instructions..."></textarea>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Task Type</label>
-                        <select name="task_type" id="task_type" class="form-select">
+                        <select name="task_type" id="tasks_type" class="form-select">
                             <option value="individual">Individual</option>
                             <option value="team">Team</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Priority</label>
-                        <select name="priority" id="task_priority" class="form-select">
+                        <select name="priority" id="tasks_priority" class="form-select">
                             <option value="low">Low</option>
                             <option value="medium" selected>Medium</option>
                             <option value="high">High</option>
@@ -304,38 +324,39 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
                     </div>
                     <div class="form-group">
                         <label class="form-label">Max Points</label>
-                        <input type="number" name="max_points" id="task_points" class="form-input" value="100" min="0" step="10">
+                        <input type="number" name="max_points" id="tasks_points" class="form-input" value="100" min="0" step="10">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Due Date</label>
-                        <input type="date" name="due_date" id="task_due_date" class="form-input">
+                        <input type="date" name="due_date" id="tasks_due_date" class="form-input">
                     </div>
                     <div class="form-group full">
                         <label class="form-label">Resources URL <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
-                        <input type="url" name="resources_url" id="task_resources" class="form-input" placeholder="https://docs.example.com/task-guide">
+                        <input type="url" name="resources_url" id="tasks_resources" class="form-input" placeholder="https://docs.example.com/task-guide">
                         <div class="form-hint">Link to documentation, tutorials, or reference materials</div>
                     </div>
                     <div class="form-group full">
                         <label class="form-label">Assign to Student <span style="font-weight:400;color:var(--text3);">(optional - leave blank for all students)</span></label>
-                        <select name="assigned_to_student" id="task_assigned" class="form-select">
+                        <select name="assigned_to_student" id="tasks_assigned" class="form-select">
                             <option value="">All Students</option>
                             <?php foreach ($students as $student): ?>
                             <option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['full_name']); ?> (<?php echo htmlspecialchars($student['email']); ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group full" id="statusGroup" style="display:none;">
+                    <div class="form-group full" id="tasksStatusGroup" style="display:none;">
                         <label class="form-label">Status</label>
-                        <select name="status" id="task_status" class="form-select">
+                        <select name="status" id="tasks_status" class="form-select">
                             <option value="active">Active</option>
-                            <option value="archived">Archived</option>
+                            <option value="draft">Draft</option>
+                            <option value="closed">Closed</option>
                         </select>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('taskModal')">Cancel</button>
-                <button type="submit" name="create_task" id="submitBtn" class="btn btn-primary">
+            <div class="tasks-modal-footer">
+                <button type="button" class="btn btn-secondary" id="tasksModalCancelBtn">Cancel</button>
+                <button type="submit" name="create_task" id="tasksSubmitBtn" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Create Task
                 </button>
             </div>
@@ -344,43 +365,77 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
 </div>
 
 <script>
-    function closeModal(id){
-        document.getElementById(id).classList.remove('active');
+(function() {
+    // Load task data from safe JSON store
+    var tasksData = {};
+    try {
+        var raw = document.getElementById('tasksDataStore');
+        if (raw) {
+            var arr = JSON.parse(raw.textContent);
+            arr.forEach(function(t) { tasksData[t.id] = t; });
+        }
+    } catch(e) {}
+
+    function tasksCloseModal() {
+        document.getElementById('tasksModal').classList.remove('active');
     }
-    
-    function openCreateModal(){
-        document.getElementById('modalTitle').textContent='Create New Task';
-        document.getElementById('taskForm').reset();
-        document.getElementById('task_id').value='';
-        document.getElementById('submitBtn').innerHTML='<i class="fas fa-plus"></i> Create Task';
-        document.getElementById('submitBtn').name='create_task';
-        document.getElementById('statusGroup').style.display='none';
-        document.getElementById('taskModal').classList.add('active');
-    }
-    
-    function editTask(task){
-        document.getElementById('modalTitle').textContent='Edit Task';
-        document.getElementById('task_id').value=task.id;
-        document.getElementById('task_title').value=task.title;
-        document.getElementById('task_description').value=task.description||'';
-        document.getElementById('task_type').value=task.task_type;
-        document.getElementById('task_priority').value=task.priority;
-        document.getElementById('task_points').value=task.max_points;
-        document.getElementById('task_due_date').value=task.due_date?task.due_date.split(' ')[0]:'';
-        document.getElementById('task_resources').value=task.resources_url||'';
-        document.getElementById('task_assigned').value=task.assigned_to_student||'';
-        document.getElementById('task_status').value=task.status;
-        document.getElementById('submitBtn').innerHTML='<i class="fas fa-save"></i> Update Task';
-        document.getElementById('submitBtn').name='update_task';
-        document.getElementById('statusGroup').style.display='block';
-        document.getElementById('taskModal').classList.add('active');
-    }
-    
-    document.querySelectorAll('.modal').forEach(modal=>{
-        modal.addEventListener('click',function(e){
-            if(e.target===this){
-                this.classList.remove('active');
-            }
-        });
+
+    window.tasksOpenCreateModal = function() {
+        document.getElementById('tasksModalTitle').textContent = 'Create New Task';
+        document.getElementById('tasksForm').reset();
+        document.getElementById('tasks_task_id').value = '';
+        document.getElementById('tasksSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Create Task';
+        document.getElementById('tasksSubmitBtn').name = 'create_task';
+        document.getElementById('tasksStatusGroup').style.display = 'none';
+        document.getElementById('tasksModal').classList.add('active');
+    };
+
+    window.tasksEditTask = function(taskId) {
+        var task = tasksData[taskId];
+        if (!task) return;
+        document.getElementById('tasksModalTitle').textContent = 'Edit Task';
+        document.getElementById('tasks_task_id').value = task.id;
+        document.getElementById('tasks_title').value = task.title;
+        document.getElementById('tasks_description').value = task.description;
+        document.getElementById('tasks_type').value = task.task_type;
+        document.getElementById('tasks_priority').value = task.priority;
+        document.getElementById('tasks_points').value = task.max_points;
+        document.getElementById('tasks_due_date').value = task.due_date;
+        document.getElementById('tasks_resources').value = task.resources_url;
+        document.getElementById('tasks_assigned').value = task.assigned_to_student || '';
+        document.getElementById('tasks_status').value = task.status;
+        document.getElementById('tasksSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Task';
+        document.getElementById('tasksSubmitBtn').name = 'update_task';
+        document.getElementById('tasksStatusGroup').style.display = 'block';
+        document.getElementById('tasksModal').classList.add('active');
+    };
+
+    window.tasksSetFilter = function(val) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('filter_tasks', val);
+        url.hash = '';
+        window.location.href = url.pathname + (url.search || '') ;
+    };
+
+    // Close button (X)
+    document.getElementById('tasksModalCloseBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        tasksCloseModal();
     });
+
+    // Cancel button
+    document.getElementById('tasksModalCancelBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        tasksCloseModal();
+    });
+
+    // Click outside modal content to close
+    document.getElementById('tasksModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            tasksCloseModal();
+        }
+    });
+})();
 </script>
