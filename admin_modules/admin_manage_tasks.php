@@ -24,11 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
         $resEsc = $db->real_escape_string($resourcesUrl);
         $dueDateValue = $dueDate ? "'" . $db->real_escape_string($dueDate) . "'" : 'NULL';
         $assignedValue = $assignedTo ? $assignedTo : 'NULL';
-
         $sql = "INSERT INTO internship_tasks 
                 (title, description, task_type, priority, max_points, due_date, resources_url, assigned_to_student, status, created_by, created_at)
                 VALUES ('$titleEsc', '$descEsc', '$taskType', '$priority', $maxPoints, $dueDateValue, '$resEsc', $assignedValue, 'active', 'Admin', NOW())";
-
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task created successfully!';
         } else {
@@ -60,20 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
         $resEsc = $db->real_escape_string($resourcesUrl);
         $dueDateValue = $dueDate ? "'" . $db->real_escape_string($dueDate) . "'" : 'NULL';
         $assignedValue = $assignedTo ? $assignedTo : 'NULL';
-
         $sql = "UPDATE internship_tasks SET
-                title='$titleEsc',
-                description='$descEsc',
-                task_type='$taskType',
-                priority='$priority',
-                max_points=$maxPoints,
-                due_date=$dueDateValue,
-                resources_url='$resEsc',
-                status='$status',
-                assigned_to_student=$assignedValue,
-                updated_at=NOW()
-                WHERE id=$taskId";
-
+                title='$titleEsc', description='$descEsc', task_type='$taskType',
+                priority='$priority', max_points=$maxPoints, due_date=$dueDateValue,
+                resources_url='$resEsc', status='$status', assigned_to_student=$assignedValue,
+                updated_at=NOW() WHERE id=$taskId";
         if ($db->query($sql)) {
             $_SESSION['admin_success'] = 'Task updated successfully!';
         } else {
@@ -267,9 +256,10 @@ while ($row = $studentsRes->fetch_assoc()) $students[] = $row;
             <div class="tmh-title" id="tasksModalTitle">Create New Task</div>
             <button type="button" class="tasks-modal-close" id="tasksModalCloseBtn">&times;</button>
         </div>
-        <form method="POST" action="admin.php?tab=tasks" id="tasksForm">
+        <form method="POST" action="admin.php" id="tasksForm">
             <div class="tasks-modal-body">
                 <input type="hidden" name="task_id" id="tasks_task_id">
+                <input type="hidden" name="filter_tasks" id="tasks_filter_hidden" value="<?php echo htmlspecialchars($filterStatus); ?>">
                 <div class="form-group">
                     <label class="form-label">Task Title <span class="required">*</span></label>
                     <input type="text" name="title" id="tasks_title" class="form-input" placeholder="e.g., Build a React Calculator App" required>
