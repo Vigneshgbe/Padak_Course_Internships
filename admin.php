@@ -2,76 +2,129 @@
 ob_start();
 session_start();
 require_once 'config.php';
+
 $db = getPadakDB();
 
-    // EARLY POST HANDLER - must run before any HTML output
-    if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+// ── EARLY POST HANDLERS (must run before any HTML output) ────────────────
+if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
-            $title      = trim($_POST['title'] ?? '');
-            $desc       = trim($_POST['description'] ?? '');
-            $taskType   = $_POST['task_type'] ?? 'individual';
-            $priority   = $_POST['priority'] ?? 'medium';
-            $maxPoints  = (int)($_POST['max_points'] ?? 100);
-            $dueDate    = $_POST['due_date'] ?? '';
-            $resUrl     = trim($_POST['resources_url'] ?? '');
-            $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
-            if (empty($title)) {
-                $_SESSION['admin_error'] = 'Task title is required';
+    // --- Create Task ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
+        $title      = trim($_POST['title'] ?? '');
+        $desc       = trim($_POST['description'] ?? '');
+        $taskType   = $_POST['task_type'] ?? 'individual';
+        $priority   = $_POST['priority'] ?? 'medium';
+        $maxPoints  = (int)($_POST['max_points'] ?? 100);
+        $dueDate    = $_POST['due_date'] ?? '';
+        $resUrl     = trim($_POST['resources_url'] ?? '');
+        $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
+        if (empty($title)) {
+            $_SESSION['admin_error'] = 'Task title is required';
+        } else {
+            $tE = $db->real_escape_string($title);
+            $dE = $db->real_escape_string($desc);
+            $rE = $db->real_escape_string($resUrl);
+            $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
+            $av = $assignedTo ?: 'NULL';
+            $sql = "INSERT INTO internship_tasks (title,description,task_type,priority,max_points,due_date,resources_url,assigned_to_student,status,created_by,created_at)
+                    VALUES ('$tE','$dE','$taskType','$priority',$maxPoints,$dv,'$rE',$av,'active','Admin',NOW())";
+            if ($db->query($sql)) {
+                $_SESSION['admin_success'] = 'Task created successfully!';
             } else {
-                $tE = $db->real_escape_string($title);
-                $dE = $db->real_escape_string($desc);
-                $rE = $db->real_escape_string($resUrl);
-                $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
-                $av = $assignedTo ?: 'NULL';
-                $sql = "INSERT INTO internship_tasks (title,description,task_type,priority,max_points,due_date,resources_url,assigned_to_student,status,created_by,created_at)
-                        VALUES ('$tE','$dE','$taskType','$priority',$maxPoints,$dv,'$rE',$av,'active','Admin',NOW())";
-                if ($db->query($sql)) {
-                    $_SESSION['admin_success'] = 'Task created successfully!';
-                } else {
-                    $_SESSION['admin_error'] = 'Failed to create task: ' . $db->error;
-                }
+                $_SESSION['admin_error'] = 'Failed to create task: ' . $db->error;
             }
-            ob_end_clean();
-            header('Location: admin.php?tab=tasks');
-            exit;
         }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
-            $taskId     = (int)$_POST['task_id'];
-            $title      = trim($_POST['title'] ?? '');
-            $desc       = trim($_POST['description'] ?? '');
-            $taskType   = $_POST['task_type'] ?? 'individual';
-            $priority   = $_POST['priority'] ?? 'medium';
-            $maxPoints  = (int)($_POST['max_points'] ?? 100);
-            $dueDate    = $_POST['due_date'] ?? '';
-            $resUrl     = trim($_POST['resources_url'] ?? '');
-            $status     = $_POST['status'] ?? 'active';
-            $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
-            if (empty($title)) {
-                $_SESSION['admin_error'] = 'Task title is required';
-            } else {
-                $tE = $db->real_escape_string($title);
-                $dE = $db->real_escape_string($desc);
-                $rE = $db->real_escape_string($resUrl);
-                $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
-                $av = $assignedTo ?: 'NULL';
-                $sql = "UPDATE internship_tasks SET
-                        title='$tE', description='$dE', task_type='$taskType',
-                        priority='$priority', max_points=$maxPoints, due_date=$dv,
-                        resources_url='$rE', status='$status', assigned_to_student=$av,
-                        updated_at=NOW() WHERE id=$taskId";
-                if ($db->query($sql)) {
-                    $_SESSION['admin_success'] = 'Task updated successfully!';
-                } else {
-                    $_SESSION['admin_error'] = 'Failed to update task: ' . $db->error;
-                }
-            }
-            ob_end_clean();
-            header('Location: admin.php?tab=tasks');
-            exit;
-        }
+        ob_end_clean();
+        header('Location: admin.php?tab=tasks');
+        exit;
     }
+
+    // --- Update Task ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
+        $taskId     = (int)$_POST['task_id'];
+        $title      = trim($_POST['title'] ?? '');
+        $desc       = trim($_POST['description'] ?? '');
+        $taskType   = $_POST['task_type'] ?? 'individual';
+        $priority   = $_POST['priority'] ?? 'medium';
+        $maxPoints  = (int)($_POST['max_points'] ?? 100);
+        $dueDate    = $_POST['due_date'] ?? '';
+        $resUrl     = trim($_POST['resources_url'] ?? '');
+        $status     = $_POST['status'] ?? 'active';
+        $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
+        if (empty($title)) {
+            $_SESSION['admin_error'] = 'Task title is required';
+        } else {
+            $tE = $db->real_escape_string($title);
+            $dE = $db->real_escape_string($desc);
+            $rE = $db->real_escape_string($resUrl);
+            $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
+            $av = $assignedTo ?: 'NULL';
+            $sql = "UPDATE internship_tasks SET
+                    title='$tE', description='$dE', task_type='$taskType',
+                    priority='$priority', max_points=$maxPoints, due_date=$dv,
+                    resources_url='$rE', status='$status', assigned_to_student=$av,
+                    updated_at=NOW() WHERE id=$taskId";
+            if ($db->query($sql)) {
+                $_SESSION['admin_success'] = 'Task updated successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to update task: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=tasks');
+        exit;
+    }
+
+    // --- Review Submission ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission'])) {
+        $subId        = (int)$_POST['submission_id'];
+        $reviewStatus = $db->real_escape_string($_POST['review_status'] ?? 'under_review');
+        $pointsEarned = isset($_POST['points_earned']) && $_POST['points_earned'] !== '' ? (int)$_POST['points_earned'] : null;
+        $feedback     = $db->real_escape_string(trim($_POST['feedback'] ?? ''));
+        $pointsValue  = $pointsEarned !== null ? $pointsEarned : 'NULL';
+
+        $sql = "UPDATE task_submissions SET
+                status='$reviewStatus', points_earned=$pointsValue,
+                feedback='$feedback', reviewed_at=NOW(), reviewed_by='Admin'
+                WHERE id=$subId";
+
+        if ($db->query($sql)) {
+            $subData = $db->query("SELECT student_id, task_id FROM task_submissions WHERE id=$subId")->fetch_assoc();
+            if ($subData) {
+                $studentId = (int)$subData['student_id'];
+                $taskId    = (int)$subData['task_id'];
+                $taskData  = $db->query("SELECT title FROM internship_tasks WHERE id=$taskId")->fetch_assoc();
+                $taskTitle = $db->real_escape_string($taskData['title'] ?? 'Your task');
+
+                if ($reviewStatus === 'approved' && $pointsEarned !== null && $pointsEarned > 0) {
+                    $reasonEsc = $db->real_escape_string("Earned from task: " . ($taskData['title'] ?? ''));
+                    $db->query("INSERT INTO student_points_log (student_id, points, reason, task_id, awarded_at)
+                               VALUES ($studentId, $pointsEarned, '$reasonEsc', $taskId, NOW())");
+                    $totalRes = $db->query("SELECT SUM(points) as total FROM student_points_log WHERE student_id=$studentId");
+                    $total    = $totalRes ? (int)$totalRes->fetch_assoc()['total'] : 0;
+                    $db->query("UPDATE internship_students SET total_points=$total WHERE id=$studentId");
+                    $_SESSION['admin_success'] = "Submission approved! $pointsEarned points awarded.";
+                } else {
+                    $_SESSION['admin_success'] = 'Submission reviewed successfully!';
+                }
+
+                $notifMsg = $reviewStatus === 'approved'
+                    ? "Your submission for \"$taskTitle\" has been approved! You earned $pointsEarned points."
+                    : "Your submission for \"$taskTitle\" requires revision. Check feedback.";
+                $notifMsgEsc = $db->real_escape_string($notifMsg);
+                $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
+                           VALUES ($studentId, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
+            }
+        } else {
+            $_SESSION['admin_error'] = 'Failed to review submission: ' . $db->error;
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=reviews');
+        exit;
+    }
+}
+// ── END EARLY POST HANDLERS ──────────────────────────────────────────────
+
 
 define('ADMIN_USERNAME', 'admin');
 define('ADMIN_PASSWORD', 'vigneshg091002');

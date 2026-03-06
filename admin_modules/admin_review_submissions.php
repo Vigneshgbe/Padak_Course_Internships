@@ -1,70 +1,5 @@
 <?php
-// admin_review_submissions.php - Review Submissions Module
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: admin.php');
-    exit;
-}
-
-$success = '';
-$error = '';
-
-// Handle Submission Review
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submission'])) {
-    $subId = (int)$_POST['submission_id'];
-    $reviewStatus = $_POST['review_status'];
-    $pointsEarned = isset($_POST['points_earned']) ? (int)$_POST['points_earned'] : null;
-    $feedback = trim($_POST['feedback'] ?? '');
-    
-    $feedbackEsc = $db->real_escape_string($feedback);
-    $pointsValue = $pointsEarned !== null ? $pointsEarned : 'NULL';
-    
-    $sql = "UPDATE task_submissions SET
-            status='$reviewStatus',
-            points_earned=$pointsValue,
-            feedback='$feedbackEsc',
-            reviewed_at=NOW(),
-            reviewed_by='Admin'
-            WHERE id=$subId";
-    
-    if ($db->query($sql)) {
-        $subData = $db->query("SELECT student_id, task_id FROM task_submissions WHERE id=$subId")->fetch_assoc();
-        
-        if ($subData) {
-            $studentId = $subData['student_id'];
-            $taskId = $subData['task_id'];
-            $taskData = $db->query("SELECT title FROM internship_tasks WHERE id=$taskId")->fetch_assoc();
-            $taskTitle = $db->real_escape_string($taskData['title'] ?? 'Your task');
-            
-            if ($reviewStatus === 'approved' && $pointsEarned !== null && $pointsEarned > 0) {
-                $reasonEsc = $db->real_escape_string("Earned from task: $taskTitle");
-                
-                $db->query("INSERT INTO student_points_log (student_id, points, reason, task_id, awarded_at)
-                           VALUES ($studentId, $pointsEarned, '$reasonEsc', $taskId, NOW())");
-                
-                $totalPointsResult = $db->query("SELECT SUM(points) as total FROM student_points_log WHERE student_id=$studentId");
-                $totalPoints = $totalPointsResult ? (int)$totalPointsResult->fetch_assoc()['total'] : 0;
-                
-                $db->query("UPDATE internship_students SET total_points=$totalPoints WHERE id=$studentId");
-                
-                $_SESSION['admin_success'] = "Submission approved! $pointsEarned points awarded to student.";
-            } else {
-                $_SESSION['admin_success'] = 'Submission reviewed successfully!';
-            }
-            
-            $notifMsg = $reviewStatus === 'approved' ? 
-                "Your submission for \"$taskTitle\" has been approved! You earned $pointsEarned points." :
-                "Your submission for \"$taskTitle\" requires revision. Check feedback.";
-            $notifMsgEsc = $db->real_escape_string($notifMsg);
-            
-            $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
-                       VALUES ($studentId, 'Submission Reviewed', '$notifMsgEsc', 'task', NOW())");
-        }
-        echo '<script>window.location.href="admin.php#tab-reviews";</script>';
-        exit;
-    } else {
-        $error = 'Failed to review submission';
-    }
-}
+// admin_review_submissions.php 
 
 // Get Pending Submissions
 $pendingSubsRes = $db->query("SELECT ts.*, t.title as task_title, t.max_points, s.full_name as student_name, s.email as student_email
@@ -99,17 +34,17 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
     .form-hint{font-size:.73rem;color:var(--text3);margin-top:5px;}
     .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;white-space:nowrap;}
     .badge-submitted{background:rgba(59,130,246,0.12);color:#1d4ed8;}
-    .badge-review{background:rgba(139,92,246,0.12);color:#6d28d9;}
+    .badge-under_review{background:rgba(139,92,246,0.12);color:#6d28d9;}
     .badge-approved{background:rgba(34,197,94,0.12);color:#16a34a;}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-    .modal.active{display:flex;}
-    .modal-content{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
-    .modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-    .mh-title{font-size:1.2rem;font-weight:700;color:var(--text);}
-    .modal-close{background:none;border:none;font-size:1.5rem;color:var(--text3);cursor:pointer;padding:4px;transition:color .2s;}
-    .modal-close:hover{color:var(--red);}
-    .modal-body{padding:24px;}
-    .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+    .rev-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+    .rev-modal.active{display:flex;}
+    .rev-modal-content{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+    .rev-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .rev-mh-title{font-size:1.2rem;font-weight:700;color:var(--text);}
+    .rev-modal-close{background:none;border:none;font-size:1.5rem;color:var(--text3);cursor:pointer;padding:4px 8px;transition:color .2s;line-height:1;}
+    .rev-modal-close:hover{color:var(--red);}
+    .rev-modal-body{padding:24px;}
+    .rev-modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
     .empty-state{text-align:center;padding:60px 20px;color:var(--text3);}
     .empty-state i{font-size:3rem;margin-bottom:16px;display:block;opacity:.3;}
     .empty-state h3{font-size:1.1rem;color:var(--text2);margin-bottom:8px;}
@@ -128,12 +63,6 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
         <div class="sh-title"><i class="fas fa-clipboard-check"></i>Pending Submissions</div>
     </div>
     <div class="section-body">
-        <?php if ($error): ?>
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:.875rem;font-weight:500;margin-bottom:20px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
-            <i class="fas fa-circle-exclamation"></i><?php echo htmlspecialchars($error); ?>
-        </div>
-        <?php endif; ?>
-        
         <?php if (empty($pendingSubs)): ?>
         <div class="empty-state">
             <i class="fas fa-clipboard-check"></i>
@@ -147,25 +76,17 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
                     <div>
                         <div class="sub-title"><?php echo htmlspecialchars($sub['task_title']); ?></div>
                         <div class="sub-meta">
-                            <span class="sub-meta-item">
-                                <i class="fas fa-user"></i><?php echo htmlspecialchars($sub['student_name']); ?>
-                            </span>
-                            <span class="sub-meta-item">
-                                <i class="fas fa-envelope"></i><?php echo htmlspecialchars($sub['student_email']); ?>
-                            </span>
-                            <span class="sub-meta-item">
-                                <i class="fas fa-clock"></i><?php echo date('M d, Y g:i A', strtotime($sub['submitted_at'])); ?>
-                            </span>
-                            <span class="sub-meta-item">
-                                <i class="fas fa-star"></i>Max: <?php echo $sub['max_points']; ?> pts
-                            </span>
+                            <span class="sub-meta-item"><i class="fas fa-user"></i><?php echo htmlspecialchars($sub['student_name']); ?></span>
+                            <span class="sub-meta-item"><i class="fas fa-envelope"></i><?php echo htmlspecialchars($sub['student_email']); ?></span>
+                            <span class="sub-meta-item"><i class="fas fa-clock"></i><?php echo date('M d, Y g:i A', strtotime($sub['submitted_at'])); ?></span>
+                            <span class="sub-meta-item"><i class="fas fa-star"></i>Max: <?php echo $sub['max_points']; ?> pts</span>
                         </div>
                     </div>
                     <span class="badge badge-<?php echo $sub['status']; ?>">
                         <?php echo $sub['status']==='under_review'?'In Review':'Submitted'; ?>
                     </span>
                 </div>
-                
+
                 <?php if ($sub['submission_text']): ?>
                 <div class="sub-content">
                     <strong>Description:</strong><br>
@@ -173,39 +94,52 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
                     <?php if (strlen($sub['submission_text']) > 300) echo '...'; ?>
                 </div>
                 <?php endif; ?>
-                
+
                 <?php if ($sub['github_link']): ?>
                 <div style="margin-bottom:10px;">
-                    <strong style="font-size:.82rem;">GitHub:</strong> 
+                    <strong style="font-size:.82rem;">GitHub:</strong>
                     <a href="<?php echo htmlspecialchars($sub['github_link']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
                         <i class="fab fa-github"></i> <?php echo htmlspecialchars($sub['github_link']); ?>
                     </a>
                 </div>
                 <?php endif; ?>
-                
+
                 <?php if ($sub['submission_url']): ?>
                 <div style="margin-bottom:10px;">
-                    <strong style="font-size:.82rem;">Live URL:</strong> 
+                    <strong style="font-size:.82rem;">Live URL:</strong>
                     <a href="<?php echo htmlspecialchars($sub['submission_url']); ?>" target="_blank" style="color:var(--blue);font-size:.82rem;word-break:break-all;">
                         <i class="fas fa-globe"></i> <?php echo htmlspecialchars($sub['submission_url']); ?>
                     </a>
                 </div>
                 <?php endif; ?>
-                
+
                 <?php if ($sub['file_name']): ?>
                 <div style="margin-bottom:10px;">
-                    <strong style="font-size:.82rem;">File:</strong> 
+                    <strong style="font-size:.82rem;">File:</strong>
                     <a href="<?php echo htmlspecialchars($sub['file_path']); ?>" download style="color:var(--blue);font-size:.82rem;">
                         <i class="fas fa-download"></i> <?php echo htmlspecialchars($sub['file_name']); ?>
                     </a>
                 </div>
                 <?php endif; ?>
-                
+
                 <div class="sub-actions">
-                    <button class="btn btn-primary btn-sm" onclick='reviewSubmission(<?php echo json_encode($sub); ?>)'>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="revOpenReview(<?php echo (int)$sub['id']; ?>, <?php echo (int)$sub['max_points']; ?>, '<?php echo htmlspecialchars(addslashes($sub['task_title'])); ?>', '<?php echo htmlspecialchars(addslashes($sub['student_name'])); ?>')">
                         <i class="fas fa-clipboard-check"></i> Review
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick='viewFullSubmission(<?php echo json_encode($sub); ?>)'>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick='revViewDetails(<?php echo json_encode([
+                        'id'              => (int)$sub['id'],
+                        'task_title'      => $sub['task_title'],
+                        'student_name'    => $sub['student_name'],
+                        'student_email'   => $sub['student_email'],
+                        'submitted_at'    => $sub['submitted_at'],
+                        'max_points'      => (int)$sub['max_points'],
+                        'status'          => $sub['status'],
+                        'submission_text' => $sub['submission_text'] ?? '',
+                        'github_link'     => $sub['github_link'] ?? '',
+                        'submission_url'  => $sub['submission_url'] ?? '',
+                        'file_name'       => $sub['file_name'] ?? '',
+                        'file_path'       => $sub['file_path'] ?? '',
+                    ], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP); ?>)'>
                         <i class="fas fa-eye"></i> View Details
                     </button>
                 </div>
@@ -216,41 +150,42 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 </div>
 
 <!-- Review Modal -->
-<div id="reviewModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="mh-title">Review Submission</div>
-            <button class="modal-close" onclick="closeModal('reviewModal')">&times;</button>
+<div id="revReviewModal" class="rev-modal" role="dialog" aria-modal="true">
+    <div class="rev-modal-content">
+        <div class="rev-modal-header">
+            <div class="rev-mh-title">Review Submission</div>
+            <button type="button" class="rev-modal-close" id="revReviewCloseBtn">&times;</button>
         </div>
-        <form method="POST">
-            <div class="modal-body">
-                <input type="hidden" name="submission_id" id="review_sub_id">
-                <div id="reviewTaskInfo" style="padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px;"></div>
-                
+        <form method="POST" action="admin.php" id="revReviewForm">
+            <div class="rev-modal-body">
+                <input type="hidden" name="review_submission" value="1">
+                <input type="hidden" name="submission_id" id="rev_sub_id">
+                <div id="revTaskInfo" style="padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px;"></div>
+
                 <div class="form-group">
                     <label class="form-label">Review Status <span class="required">*</span></label>
-                    <select name="review_status" id="review_status" class="form-select" required>
+                    <select name="review_status" id="rev_status" class="form-select" required>
                         <option value="under_review">Under Review</option>
                         <option value="approved">Approve</option>
                         <option value="revision_requested">Request Revision</option>
                         <option value="rejected">Reject</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Points Earned</label>
-                    <input type="number" name="points_earned" id="review_points" class="form-input" min="0" placeholder="Leave blank if not approving">
+                    <input type="number" name="points_earned" id="rev_points" class="form-input" min="0" placeholder="Leave blank if not approving">
                     <div class="form-hint">Required when approving the submission</div>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Feedback</label>
-                    <textarea name="feedback" id="review_feedback" class="form-textarea" placeholder="Provide constructive feedback to the student..." style="min-height:120px;"></textarea>
+                    <textarea name="feedback" id="rev_feedback" class="form-textarea" placeholder="Provide constructive feedback..." style="min-height:120px;"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('reviewModal')">Cancel</button>
-                <button type="submit" name="review_submission" class="btn btn-primary">
+            <div class="rev-modal-footer">
+                <button type="button" class="btn btn-secondary" id="revReviewCancelBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-check"></i> Submit Review
                 </button>
             </div>
@@ -259,76 +194,76 @@ while ($row = $pendingSubsRes->fetch_assoc()) $pendingSubs[] = $row;
 </div>
 
 <!-- View Details Modal -->
-<div id="viewDetailsModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="mh-title">Submission Details</div>
-            <button class="modal-close" onclick="closeModal('viewDetailsModal')">&times;</button>
+<div id="revDetailsModal" class="rev-modal" role="dialog" aria-modal="true">
+    <div class="rev-modal-content">
+        <div class="rev-modal-header">
+            <div class="rev-mh-title">Submission Details</div>
+            <button type="button" class="rev-modal-close" id="revDetailsCloseBtn">&times;</button>
         </div>
-        <div class="modal-body">
-            <div id="fullSubmissionContent"></div>
+        <div class="rev-modal-body">
+            <div id="revDetailsContent"></div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('viewDetailsModal')">Close</button>
+        <div class="rev-modal-footer">
+            <button type="button" class="btn btn-secondary" id="revDetailsCancelBtn">Close</button>
         </div>
     </div>
 </div>
 
 <script>
-    function closeModal(id){
-        document.getElementById(id).classList.remove('active');
+(function() {
+    function revClose(modalId) {
+        document.getElementById(modalId).classList.remove('active');
     }
-    
-    function reviewSubmission(sub){
-        document.getElementById('review_sub_id').value=sub.id;
-        document.getElementById('review_points').max=sub.max_points;
-        document.getElementById('review_points').placeholder='Max: '+sub.max_points+' points';
-        
-        const info=`<strong style="font-size:.95rem;">${sub.task_title}</strong><br><div style="margin-top:8px;font-size:.8rem;color:var(--text3);"><i class="fas fa-user"></i> ${sub.student_name} &nbsp;•&nbsp;<i class="fas fa-star"></i> Max Points: ${sub.max_points}</div>`;
-        document.getElementById('reviewTaskInfo').innerHTML=info;
-        document.getElementById('reviewModal').classList.add('active');
-    }
-    
-    function viewFullSubmission(sub){
-        let content='<div style="line-height:1.8;"><h3 style="color:var(--o5);margin-bottom:16px;font-size:1.2rem;"><i class="fas fa-clipboard-list"></i> '+sub.task_title+'</h3>';
-        
-        content+='<div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;">';
-        content+='<strong style="color:var(--text);"><i class="fas fa-user"></i> Student:</strong> '+sub.student_name+' <span style="color:var(--text3);">('+sub.student_email+')</span><br>';
-        content+='<strong style="color:var(--text);"><i class="fas fa-clock"></i> Submitted:</strong> '+sub.submitted_at+'<br>';
-        content+='<strong style="color:var(--text);"><i class="fas fa-star"></i> Max Points:</strong> '+sub.max_points+' pts<br>';
-        content+='<strong style="color:var(--text);"><i class="fas fa-info-circle"></i> Status:</strong> <span class="badge badge-'+sub.status+'">'+(sub.status==='under_review'?'In Review':'Submitted')+'</span>';
-        content+='</div>';
-        
-        if(sub.submission_text){
-            content+='<div style="margin-bottom:16px;"><strong style="color:var(--text);display:block;margin-bottom:8px;"><i class="fas fa-align-left"></i> Description:</strong>';
-            content+='<div style="background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;color:var(--text2);font-size:.9rem;line-height:1.6;">'+sub.submission_text+'</div></div>';
+
+    window.revOpenReview = function(subId, maxPoints, taskTitle, studentName) {
+        document.getElementById('rev_sub_id').value = subId;
+        document.getElementById('rev_points').max = maxPoints;
+        document.getElementById('rev_points').placeholder = 'Max: ' + maxPoints + ' points';
+        document.getElementById('rev_feedback').value = '';
+        document.getElementById('rev_status').value = 'under_review';
+        document.getElementById('revTaskInfo').innerHTML =
+            '<strong style="font-size:.95rem;">' + taskTitle + '</strong>' +
+            '<div style="margin-top:8px;font-size:.8rem;color:var(--text3);"><i class="fas fa-user"></i> ' + studentName +
+            ' &nbsp;&bull;&nbsp; <i class="fas fa-star"></i> Max Points: ' + maxPoints + '</div>';
+        document.getElementById('revReviewModal').classList.add('active');
+    };
+
+    window.revViewDetails = function(sub) {
+        var c = '<div style="line-height:1.8;">';
+        c += '<h3 style="color:var(--o5);margin-bottom:16px;font-size:1.2rem;"><i class="fas fa-clipboard-list"></i> ' + sub.task_title + '</h3>';
+        c += '<div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;">';
+        c += '<strong><i class="fas fa-user"></i> Student:</strong> ' + sub.student_name + ' <span style="color:var(--text3);">(' + sub.student_email + ')</span><br>';
+        c += '<strong><i class="fas fa-clock"></i> Submitted:</strong> ' + sub.submitted_at + '<br>';
+        c += '<strong><i class="fas fa-star"></i> Max Points:</strong> ' + sub.max_points + ' pts<br>';
+        c += '<strong><i class="fas fa-info-circle"></i> Status:</strong> ' + sub.status;
+        c += '</div>';
+        if (sub.submission_text) {
+            c += '<div style="margin-bottom:16px;"><strong style="display:block;margin-bottom:8px;"><i class="fas fa-align-left"></i> Description:</strong>';
+            c += '<div style="background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;color:var(--text2);font-size:.9rem;line-height:1.6;">' + sub.submission_text + '</div></div>';
         }
-        
-        if(sub.github_link){
-            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fab fa-github"></i> GitHub:</strong><br>';
-            content+='<a href="'+sub.github_link+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.github_link+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';
+        if (sub.github_link) {
+            c += '<div style="margin-bottom:12px;"><strong><i class="fab fa-github"></i> GitHub:</strong><br>';
+            c += '<a href="' + sub.github_link + '" target="_blank" style="color:var(--blue);word-break:break-all;">' + sub.github_link + '</a></div>';
         }
-        
-        if(sub.submission_url){
-            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-globe"></i> Live URL:</strong><br>';
-            content+='<a href="'+sub.submission_url+'" target="_blank" style="color:var(--blue);word-break:break-all;">'+sub.submission_url+' <i class="fas fa-external-link-alt fa-xs"></i></a></div>';
+        if (sub.submission_url) {
+            c += '<div style="margin-bottom:12px;"><strong><i class="fas fa-globe"></i> Live URL:</strong><br>';
+            c += '<a href="' + sub.submission_url + '" target="_blank" style="color:var(--blue);word-break:break-all;">' + sub.submission_url + '</a></div>';
         }
-        
-        if(sub.file_name){
-            content+='<div style="margin-bottom:12px;"><strong style="color:var(--text);"><i class="fas fa-file"></i> Attached File:</strong><br>';
-            content+='<a href="'+sub.file_path+'" download style="color:var(--blue);"><i class="fas fa-download"></i> '+sub.file_name+'</a></div>';
+        if (sub.file_name) {
+            c += '<div style="margin-bottom:12px;"><strong><i class="fas fa-file"></i> File:</strong><br>';
+            c += '<a href="' + sub.file_path + '" download style="color:var(--blue);"><i class="fas fa-download"></i> ' + sub.file_name + '</a></div>';
         }
-        
-        content+='</div>';
-        document.getElementById('fullSubmissionContent').innerHTML=content;
-        document.getElementById('viewDetailsModal').classList.add('active');
-    }
-    
-    document.querySelectorAll('.modal').forEach(modal=>{
-        modal.addEventListener('click',function(e){
-            if(e.target===this){
-                this.classList.remove('active');
-            }
-        });
-    });
+        c += '</div>';
+        document.getElementById('revDetailsContent').innerHTML = c;
+        document.getElementById('revDetailsModal').classList.add('active');
+    };
+
+    document.getElementById('revReviewCloseBtn').addEventListener('click', function() { revClose('revReviewModal'); });
+    document.getElementById('revReviewCancelBtn').addEventListener('click', function() { revClose('revReviewModal'); });
+    document.getElementById('revDetailsCloseBtn').addEventListener('click', function() { revClose('revDetailsModal'); });
+    document.getElementById('revDetailsCancelBtn').addEventListener('click', function() { revClose('revDetailsModal'); });
+
+    document.getElementById('revReviewModal').addEventListener('click', function(e) { if (e.target === this) revClose('revReviewModal'); });
+    document.getElementById('revDetailsModal').addEventListener('click', function(e) { if (e.target === this) revClose('revDetailsModal'); });
+})();
 </script>
