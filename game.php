@@ -601,18 +601,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overf
             <div class="game-container">
                 <div class="game-main">
                     <div class="game-canvas-wrap">
-                        <div class="racing-info">
-                            <h3><i class="fas fa-info-circle"></i> Game Controls</h3>
-                            <p><strong>Arrow Keys or WASD:</strong> Steer your ship</p>
-                            <p><strong>Shift:</strong> Boost (limited use)</p>
-                            <p><strong>Enter:</strong> Start race / Pause</p>
-                            <ul>
-                                <li>Navigate through checkpoints to complete laps</li>
-                                <li>Avoid hitting walls to maintain speed</li>
-                                <li>Use boost strategically on straights</li>
-                                <li>Complete 3 laps as fast as possible!</li>
-                            </ul>
-                        </div>
                         <div class="racing-frame">
                             <iframe id="racingIframe" src="https://hexgl.bkcore.com/play/" allow="accelerometer; gyroscope"></iframe>
                         </div>
