@@ -277,6 +277,82 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    // --- Reset Student Password ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
+        $studentId   = (int)$_POST['student_id'];
+        $newPassword = trim($_POST['new_password'] ?? '');
+        if (empty($newPassword)) {
+            $_SESSION['admin_error'] = 'New password is required';
+        } elseif (strlen($newPassword) < 6) {
+            $_SESSION['admin_error'] = 'Password must be at least 6 characters';
+        } else {
+            $hashed     = password_hash($newPassword, PASSWORD_DEFAULT);
+            $hashedEsc  = $db->real_escape_string($hashed);
+            if ($db->query("UPDATE internship_students SET password='$hashedEsc', updated_at=NOW() WHERE id=$studentId")) {
+                $notifMsg = $db->real_escape_string('Your password has been reset by an administrator. Please log in with your new credentials.');
+                $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
+                            VALUES ($studentId, 'Password Reset', '$notifMsg', 'system', NOW())");
+                $_SESSION['admin_success'] = 'Password reset successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to reset password: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=users');
+        exit;
+    }
+
+    // --- Update User Status (activate/deactivate) ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user_status'])) {
+        $studentId = (int)$_POST['student_id'];
+        $isActive  = (int)$_POST['is_active'];
+        if ($db->query("UPDATE internship_students SET is_active=$isActive, updated_at=NOW() WHERE id=$studentId")) {
+            $_SESSION['admin_success'] = 'User ' . ($isActive ? 'activated' : 'deactivated') . ' successfully!';
+        } else {
+            $_SESSION['admin_error'] = 'Failed to update user status: ' . $db->error;
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=users');
+        exit;
+    }
+
+    // --- Update User Details ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
+        $studentId        = (int)$_POST['student_id'];
+        $fullName         = trim($_POST['full_name'] ?? '');
+        $email            = trim($_POST['email'] ?? '');
+        $phone            = $db->real_escape_string(trim($_POST['phone'] ?? ''));
+        $collegeName      = $db->real_escape_string(trim($_POST['college_name'] ?? ''));
+        $degree           = $db->real_escape_string(trim($_POST['degree'] ?? ''));
+        $yearOfStudy      = $db->real_escape_string(trim($_POST['year_of_study'] ?? ''));
+        $domainInterest   = $db->real_escape_string(trim($_POST['domain_interest'] ?? ''));
+        $internshipStatus = $db->real_escape_string(trim($_POST['internship_status'] ?? 'active'));
+
+        if (empty($fullName) || empty($email)) {
+            $_SESSION['admin_error'] = 'Name and email are required';
+        } else {
+            $fnEsc    = $db->real_escape_string($fullName);
+            $emEsc    = $db->real_escape_string($email);
+            $dupCheck = $db->query("SELECT id FROM internship_students WHERE email='$emEsc' AND id != $studentId");
+            if ($dupCheck->num_rows > 0) {
+                $_SESSION['admin_error'] = 'Email already exists for another user';
+            } else {
+                $sql = "UPDATE internship_students SET full_name='$fnEsc', email='$emEsc', phone='$phone',
+                        college_name='$collegeName', degree='$degree', year_of_study='$yearOfStudy',
+                        domain_interest='$domainInterest', internship_status='$internshipStatus',
+                        updated_at=NOW() WHERE id=$studentId";
+                if ($db->query($sql)) {
+                    $_SESSION['admin_success'] = 'User updated successfully!';
+                } else {
+                    $_SESSION['admin_error'] = 'Failed to update user: ' . $db->error;
+                }
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=users');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 
