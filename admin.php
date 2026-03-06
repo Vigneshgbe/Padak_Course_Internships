@@ -1,8 +1,77 @@
 <?php
+ob_start();
 session_start();
 require_once 'config.php';
-
 $db = getPadakDB();
+
+    // EARLY POST HANDLER - must run before any HTML output
+    if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_task'])) {
+            $title      = trim($_POST['title'] ?? '');
+            $desc       = trim($_POST['description'] ?? '');
+            $taskType   = $_POST['task_type'] ?? 'individual';
+            $priority   = $_POST['priority'] ?? 'medium';
+            $maxPoints  = (int)($_POST['max_points'] ?? 100);
+            $dueDate    = $_POST['due_date'] ?? '';
+            $resUrl     = trim($_POST['resources_url'] ?? '');
+            $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
+            if (empty($title)) {
+                $_SESSION['admin_error'] = 'Task title is required';
+            } else {
+                $tE = $db->real_escape_string($title);
+                $dE = $db->real_escape_string($desc);
+                $rE = $db->real_escape_string($resUrl);
+                $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
+                $av = $assignedTo ?: 'NULL';
+                $sql = "INSERT INTO internship_tasks (title,description,task_type,priority,max_points,due_date,resources_url,assigned_to_student,status,created_by,created_at)
+                        VALUES ('$tE','$dE','$taskType','$priority',$maxPoints,$dv,'$rE',$av,'active','Admin',NOW())";
+                if ($db->query($sql)) {
+                    $_SESSION['admin_success'] = 'Task created successfully!';
+                } else {
+                    $_SESSION['admin_error'] = 'Failed to create task: ' . $db->error;
+                }
+            }
+            ob_end_clean();
+            header('Location: admin.php?tab=tasks');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
+            $taskId     = (int)$_POST['task_id'];
+            $title      = trim($_POST['title'] ?? '');
+            $desc       = trim($_POST['description'] ?? '');
+            $taskType   = $_POST['task_type'] ?? 'individual';
+            $priority   = $_POST['priority'] ?? 'medium';
+            $maxPoints  = (int)($_POST['max_points'] ?? 100);
+            $dueDate    = $_POST['due_date'] ?? '';
+            $resUrl     = trim($_POST['resources_url'] ?? '');
+            $status     = $_POST['status'] ?? 'active';
+            $assignedTo = !empty($_POST['assigned_to_student']) ? (int)$_POST['assigned_to_student'] : null;
+            if (empty($title)) {
+                $_SESSION['admin_error'] = 'Task title is required';
+            } else {
+                $tE = $db->real_escape_string($title);
+                $dE = $db->real_escape_string($desc);
+                $rE = $db->real_escape_string($resUrl);
+                $dv = $dueDate ? "'".$db->real_escape_string($dueDate)."'" : 'NULL';
+                $av = $assignedTo ?: 'NULL';
+                $sql = "UPDATE internship_tasks SET
+                        title='$tE', description='$dE', task_type='$taskType',
+                        priority='$priority', max_points=$maxPoints, due_date=$dv,
+                        resources_url='$rE', status='$status', assigned_to_student=$av,
+                        updated_at=NOW() WHERE id=$taskId";
+                if ($db->query($sql)) {
+                    $_SESSION['admin_success'] = 'Task updated successfully!';
+                } else {
+                    $_SESSION['admin_error'] = 'Failed to update task: ' . $db->error;
+                }
+            }
+            ob_end_clean();
+            header('Location: admin.php?tab=tasks');
+            exit;
+        }
+    }
 
 define('ADMIN_USERNAME', 'admin');
 define('ADMIN_PASSWORD', 'vigneshg091002');
