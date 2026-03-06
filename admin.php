@@ -316,8 +316,6 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             if (btn) btn.classList.add('active');
             var panel = document.getElementById('tab-' + tabName);
             if (panel) panel.classList.add('active');
-            // Store in sessionStorage - no URL hash
-            try { sessionStorage.setItem('adminActiveTab', tabName); } catch(e) {}
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -336,14 +334,9 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 });
             }, 5000);
 
-            // Determine which tab to show:
-            // 1. PHP session-set tab (after form submit redirect) takes priority
-            var phpTab = <?php echo isset($_SESSION['admin_active_tab']) ? json_encode($_SESSION['admin_active_tab']) : 'null'; ?>;
-            <?php unset($_SESSION['admin_active_tab']); ?>
-            var storedTab = null;
-            try { storedTab = sessionStorage.getItem('adminActiveTab'); } catch(e) {}
-
-            var activeTab = phpTab || storedTab || 'tasks';
+            // Read active tab from ?tab= query param — no hash ever
+            var params = new URLSearchParams(window.location.search);
+            var activeTab = params.get('tab') || 'tasks';
             showTab(activeTab);
         });
     </script>
