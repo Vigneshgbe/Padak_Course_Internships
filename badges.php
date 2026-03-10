@@ -265,9 +265,6 @@ $activePage = 'badges';
                 <span class="current">My Badges</span>
             </div>
         </div>
-        <div class="topbar-right">
-            <span class="topbar-title">🏆 My Badges</span>
-        </div>
     </div>
 
         <!-- PAGE CONTENT -->
