@@ -255,6 +255,21 @@ $activePage = 'badges';
 
     <div class="main-wrap">
 
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            <div class="topbar-breadcrumb">
+                <a href="dashboard.php">Dashboard</a>
+                <span class="sep">/</span>
+                <span class="current">My Badges</span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-title">🏆 My Badges</span>
+        </div>
+    </div>
+
         <!-- PAGE CONTENT -->
         <div class="page-content">
 
@@ -398,6 +413,11 @@ $activePage = 'badges';
 </div><!-- /layout -->
 
 <script>
+function toggleSidebar() {
+    document.getElementById('studentSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
 // Category filter
 var catBar = document.getElementById('catBar');
 if (catBar) {
