@@ -255,26 +255,6 @@ $activePage = 'badges';
 
     <div class="main-wrap">
 
-        <!-- TOP BAR -->
-        <div class="topbar">
-            <div class="topbar-left">
-                <button class="topbar-hamburger" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="topbar-breadcrumb">
-                    <a href="dashboard.php">Padak</a>
-                    <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem;"></i></span>
-                    <span class="current">Badges</span>
-                </div>
-            </div>
-            <div class="topbar-title">Badges</div>
-            <div class="topbar-right">
-                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--o5),var(--o4));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85rem;">
-                    <?php echo strtoupper(substr($student['full_name'],0,1)); ?>
-                </div>
-            </div>
-        </div>
-
         <!-- PAGE CONTENT -->
         <div class="page-content">
 
