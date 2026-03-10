@@ -2030,7 +2030,7 @@ html{
         </button>
         <div class="topbar-title">
             <i class="fas fa-rss"></i>
-            <span>Social Feed</span>
+            <span>Social Feed</span> 
         </div>
     </div>
 
@@ -2859,8 +2859,8 @@ function formatTime(dateStr) {
 }
 
 function toggleSidebar() {
-    // Add your sidebar toggle logic here
-    // This function should be connected to your sidebar.php
+    document.getElementById('studentSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
 // Prevent modal close propagation
