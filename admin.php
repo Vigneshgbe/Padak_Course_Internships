@@ -353,6 +353,161 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    
+    // ── BADGE POST HANDLERS ─────────────────────────────────────────────────
+
+    // --- Create Badge ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_badge'])) {
+        $name   = $db->real_escape_string(trim($_POST['name'] ?? ''));
+        $desc   = $db->real_escape_string(trim($_POST['description'] ?? ''));
+        $icon   = $db->real_escape_string(trim($_POST['icon'] ?? '🏅'));
+        $tier   = $db->real_escape_string($_POST['tier'] ?? 'bronze');
+        $cat    = $db->real_escape_string(trim($_POST['category'] ?? 'general'));
+        $pts    = (int)($_POST['points_bonus'] ?? 0);
+        $awdFor = $db->real_escape_string(trim($_POST['awarded_for'] ?? ''));
+        $active = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+
+        $allowedTiers = ['bronze','silver','gold','platinum','diamond'];
+        if (empty($name)) {
+            $_SESSION['admin_error'] = 'Badge name is required';
+        } elseif (!in_array($tier, $allowedTiers)) {
+            $_SESSION['admin_error'] = 'Invalid tier selected';
+        } else {
+            $sql = "INSERT INTO badges (name, description, icon, tier, category, points_bonus, awarded_for, is_active, created_at)
+                    VALUES ('$name','$desc','$icon','$tier','$cat',$pts,'$awdFor',$active,NOW())";
+            if ($db->query($sql)) {
+                $_SESSION['admin_success'] = 'Badge "' . $name . '" created successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to create badge: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=badges');
+        exit;
+    }
+
+    // --- Update Badge ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_badge'])) {
+        $bid    = (int)$_POST['badge_id'];
+        $name   = $db->real_escape_string(trim($_POST['name'] ?? ''));
+        $desc   = $db->real_escape_string(trim($_POST['description'] ?? ''));
+        $icon   = $db->real_escape_string(trim($_POST['icon'] ?? '🏅'));
+        $tier   = $db->real_escape_string($_POST['tier'] ?? 'bronze');
+        $cat    = $db->real_escape_string(trim($_POST['category'] ?? 'general'));
+        $pts    = (int)($_POST['points_bonus'] ?? 0);
+        $awdFor = $db->real_escape_string(trim($_POST['awarded_for'] ?? ''));
+        $active = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+
+        $allowedTiers = ['bronze','silver','gold','platinum','diamond'];
+        if (empty($name)) {
+            $_SESSION['admin_error'] = 'Badge name is required';
+        } elseif ($bid <= 0) {
+            $_SESSION['admin_error'] = 'Invalid badge ID';
+        } elseif (!in_array($tier, $allowedTiers)) {
+            $_SESSION['admin_error'] = 'Invalid tier selected';
+        } else {
+            $sql = "UPDATE badges SET
+                    name='$name', description='$desc', icon='$icon', tier='$tier',
+                    category='$cat', points_bonus=$pts, awarded_for='$awdFor',
+                    is_active=$active, updated_at=NOW()
+                    WHERE id=$bid";
+            if ($db->query($sql)) {
+                $_SESSION['admin_success'] = 'Badge updated successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to update badge: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=badges');
+        exit;
+    }
+
+    // --- Delete Badge ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_badge'])) {
+        $bid = (int)$_POST['badge_id'];
+        if ($bid <= 0) {
+            $_SESSION['admin_error'] = 'Invalid badge ID';
+        } else {
+            $db->query("DELETE FROM student_badges WHERE badge_id=$bid");
+            if ($db->query("DELETE FROM badges WHERE id=$bid")) {
+                $_SESSION['admin_success'] = 'Badge deleted successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to delete badge: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=badges');
+        exit;
+    }
+
+    // --- Award Badge to Student ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['award_badge'])) {
+        $sid  = (int)$_POST['student_id'];
+        $bid  = (int)$_POST['badge_id'];
+        $note = $db->real_escape_string(trim($_POST['award_note'] ?? ''));
+
+        if ($sid <= 0 || $bid <= 0) {
+            $_SESSION['admin_error'] = 'Please select both a student and a badge';
+        } else {
+            $existsRes = $db->query("SELECT id FROM student_badges WHERE student_id=$sid AND badge_id=$bid");
+            if ($existsRes && $existsRes->num_rows > 0) {
+                $_SESSION['admin_error'] = 'This student already has this badge!';
+            } else {
+                $awardedBy = $db->real_escape_string($_SESSION['admin_username'] ?? 'Admin');
+                $insertOk  = $db->query("INSERT INTO student_badges (student_id, badge_id, award_note, awarded_by, awarded_at)
+                                         VALUES ($sid, $bid, '$note', '$awardedBy', NOW())");
+                if ($insertOk) {
+                    $badgeRow    = $db->query("SELECT name, points_bonus FROM badges WHERE id=$bid")->fetch_assoc();
+                    $badgeName   = $db->real_escape_string($badgeRow['name'] ?? 'Badge');
+                    $bonusPoints = (int)($badgeRow['points_bonus'] ?? 0);
+
+                    if ($bonusPoints > 0) {
+                        $reasonEsc = $db->real_escape_string('Badge awarded: ' . ($badgeRow['name'] ?? ''));
+                        $db->query("INSERT INTO student_points_log (student_id, points, reason, awarded_at)
+                                    VALUES ($sid, $bonusPoints, '$reasonEsc', NOW())");
+                        $totalRes = $db->query("SELECT COALESCE(SUM(points), 0) as total FROM student_points_log WHERE student_id=$sid");
+                        $newTotal = $totalRes ? (int)$totalRes->fetch_assoc()['total'] : 0;
+                        $db->query("UPDATE internship_students SET total_points=$newTotal WHERE id=$sid");
+                    }
+
+                    $notifTitle = $db->real_escape_string('🏅 Badge Awarded: ' . ($badgeRow['name'] ?? 'Badge'));
+                    $notifMsg   = $db->real_escape_string(
+                        'Congratulations! You earned the "' . ($badgeRow['name'] ?? 'Badge') . '" badge!' .
+                        ($bonusPoints > 0 ? ' +' . $bonusPoints . ' bonus points added to your score.' : '') .
+                        ($note ? ' Note: ' . ($_POST['award_note'] ?? '') : '')
+                    );
+                    $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
+                                VALUES ($sid, '$notifTitle', '$notifMsg', 'system', NOW())");
+
+                    $_SESSION['admin_success'] = 'Badge "' . ($badgeRow['name'] ?? '') . '" awarded!' .
+                        ($bonusPoints > 0 ? " +$bonusPoints bonus points added to student score." : '');
+                } else {
+                    $_SESSION['admin_error'] = 'Failed to award badge: ' . $db->error;
+                }
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=badges');
+        exit;
+    }
+
+    // --- Revoke Badge ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoke_badge'])) {
+        $sbid = (int)$_POST['student_badge_id'];
+        if ($sbid <= 0) {
+            $_SESSION['admin_error'] = 'Invalid record';
+        } else {
+            if ($db->query("DELETE FROM student_badges WHERE id=$sbid")) {
+                $_SESSION['admin_success'] = 'Badge revoked successfully!';
+            } else {
+                $_SESSION['admin_error'] = 'Failed to revoke badge: ' . $db->error;
+            }
+        }
+        ob_end_clean();
+        header('Location: admin.php?tab=badges');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 
