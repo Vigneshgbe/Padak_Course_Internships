@@ -1,0 +1,44 @@
+# ── PHP OPcache: always revalidate, never serve stale bytecode ──
+php_value opcache.revalidate_freq 0
+php_value opcache.validate_timestamps 1
+php_value opcache.enable 1
+
+# ── Suppress PHP notices/warnings from corrupting output/JSON ──
+php_value error_reporting 0
+php_value display_errors 0
+php_value log_errors 1
+
+# ── Output buffering: ensure ob_start() always has a clean slate ──
+php_value output_buffering 4096
+php_value implicit_flush 0
+
+# ── Session stability ──
+php_value session.cookie_httponly 1
+php_value session.use_strict_mode 1
+php_value session.gc_maxlifetime 3600
+
+# ── Upload limits (for messenger file uploads) ──
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
+php_value max_execution_time 60
+
+# ── Prevent direct access to config and module files ──
+<FilesMatch "^(config\.php|admin_modules/.+\.php)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# ── Block direct access to uploads folder PHP execution ──
+<FilesMatch "uploads/.*\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# ── Force HTTPS ──
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── Remove trailing slash issues ──
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)/$ /$1 [R=301,L]

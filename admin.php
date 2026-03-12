@@ -203,15 +203,17 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         if (!in_array($type,     ['general','task_deadline','certificate','attendance'])) $errors[] = 'Invalid type';
         if (!in_array($priority, ['urgent','important','normal']))                        $errors[] = 'Invalid priority';
 
-        if (empty($errors)) {
+       if (empty($errors)) {
             if ($edit_id > 0) {
                 $stmt = $db->prepare("UPDATE announcements SET title=?,content=?,type=?,priority=?,batch_id=?,coordinator_id=?,target_all=?,is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?");
                 $stmt->bind_param("ssssiiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active, $edit_id);
-                $_SESSION[$stmt->execute() ? 'admin_success' : 'admin_error'] = $stmt->execute() ? 'Announcement updated successfully' : 'Failed to update announcement';
+                $ok = $stmt->execute();
+                $_SESSION[$ok ? 'admin_success' : 'admin_error'] = $ok ? 'Announcement updated successfully' : 'Failed to update announcement';
             } else {
                 $stmt = $db->prepare("INSERT INTO announcements (title,content,type,priority,batch_id,coordinator_id,target_all,is_active) VALUES (?,?,?,?,?,?,?,?)");
                 $stmt->bind_param("ssssiiii", $title, $content, $type, $priority, $batch_id, $coordinator_id, $target_all, $is_active);
-                $_SESSION[$stmt->execute() ? 'admin_success' : 'admin_error'] = $stmt->execute() ? 'Announcement created successfully' : 'Failed to create announcement';
+                $ok = $stmt->execute();
+                $_SESSION[$ok ? 'admin_success' : 'admin_error'] = $ok ? 'Announcement created successfully' : 'Failed to create announcement';
             }
         } else {
             $_SESSION['admin_error'] = implode(', ', $errors);
