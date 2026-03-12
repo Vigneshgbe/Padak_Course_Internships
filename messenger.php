@@ -1,7 +1,4 @@
 <?php
-// OUTPUT BUFFERING FIRST - prevents any PHP warnings/notices from corrupting JSON
-ob_start();
-
 session_start();
 require_once 'config.php';
 $auth = new StudentAuth();
@@ -33,6 +30,7 @@ $db->query("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id
 // =============================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // Clear any buffered output (PHP warnings etc.) before sending JSON
+    ob_start();
     ob_clean();
     header('Content-Type: application/json; charset=utf-8');
 
@@ -523,8 +521,6 @@ if ($allRes) while ($r = $allRes->fetch_assoc()) $allStudents[] = $r;
 
 $initials = strtoupper(substr($student['full_name'], 0, 1));
 
-// Flush the ob buffer now that we're rendering HTML
-ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html lang="en">
