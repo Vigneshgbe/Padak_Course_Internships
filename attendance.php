@@ -627,20 +627,9 @@ html{
 <script>
 // Sidebar toggle functionality
 function toggleSidebar() {
-    const sidebar = document.getElementById('mainSidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
-    }
+    document.getElementById('studentSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
 }
-
-// Initialize sidebar state from localStorage
-document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('mainSidebar');
-    if (sidebar && localStorage.getItem('sidebarCollapsed') === '1') {
-        sidebar.classList.add('collapsed');
-    }
-});
 
 // Auto-hide alert after 8 seconds
 setTimeout(() => {

@@ -1030,14 +1030,35 @@ let selectedFile        = null;
 let currentReactionMsgId = null;
 
 // ─── MOBILE NAV ───────────────────────────────────────────────
-function toggleRoomsPanel(){ document.getElementById('roomsPanel').classList.toggle('mobile-visible'); }
-function goBackToRooms(){ if(window.innerWidth<=768) window.location.href='messenger.php'; }
+function toggleRoomsPanel(){ 
+    // On mobile: show rooms panel (chat list)
+    if(window.innerWidth <= 768){
+        document.getElementById('roomsPanel').classList.toggle('mobile-visible');
+    } else {
+        document.getElementById('studentSidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+}
+
+function goBackToRooms(){ 
+    if(window.innerWidth <= 768){
+        document.body.classList.remove('room-selected');
+        document.getElementById('roomsPanel').classList.add('mobile-visible');
+    }
+}
+
+function toggleSidebar() {
+    document.getElementById('studentSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
 function handleRoomClick(e,id){
     if(window.innerWidth<=768){
         document.body.classList.add('room-selected');
         document.getElementById('roomsPanel').classList.remove('mobile-visible');
     }
 }
+
 document.addEventListener('click',function(e){
     if(window.innerWidth<=768){
         const panel=document.getElementById('roomsPanel');
