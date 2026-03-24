@@ -863,16 +863,16 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         <!-- Tab Navigation -->
         <div class="tabs">
             <button class="tab" data-tab="tasks">
-                <i class="fas fa-tasks"></i> Manage Tasks
+                <i class="fas fa-tasks"></i> Tasks
             </button>
             <button class="tab" data-tab="reviews">
-                <i class="fas fa-clipboard-check"></i> Review Submissions
+                <i class="fas fa-clipboard-check"></i> Reviews
                 <?php if ($stats['pending_reviews'] > 0): ?>
                 <span class="badge-count"><?php echo $stats['pending_reviews']; ?></span>
                 <?php endif; ?>
             </button>
             <button class="tab" data-tab="all_submissions">
-                <i class="fas fa-inbox"></i> All Submissions
+                <i class="fas fa-inbox"></i> Submissions
             </button>
             <button class="tab" data-tab="announcements">
                 <i class="fas fa-bullhorn"></i> Announcements
