@@ -707,7 +707,6 @@ body{
         <div class="topbar-breadcrumb">
             Padak › <span>My Earnings</span>
         </div>
-        <div class="topbar-title">My Earnings</div>
         <a href="profile.php" class="topbar-avatar" title="<?php echo htmlspecialchars($student['full_name']); ?>">
             <?php echo $initials; ?>
         </a>
