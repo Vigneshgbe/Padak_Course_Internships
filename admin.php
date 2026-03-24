@@ -883,11 +883,14 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <button class="tab" data-tab="users">
                 <i class="fas fa-users"></i> User Management
             </button>
-            <button class="tab" data-tab="messages">
-                <i class="fas fa-comments"></i> Messages
-            </button>
             <button class="tab" data-tab="badges">
                 <i class="fas fa-burst"></i> Badges
+            </button>
+            <button class="tab" data-tab="earnings">
+                <i class="fas fa-gift"></i> Earnings
+            </button>
+            <button class="tab" data-tab="messages">
+                <i class="fas fa-comments"></i> Messages
             </button>
         </div>
         
@@ -922,6 +925,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
 
         <div id="tab-badges" class="tab-content">
             <?php include 'admin_modules/admin_badge_manage.php'; ?>
+        </div>
+
+        <div id="tab-earnings" class="tab-content">
+            <?php include 'admin_modules/admin_earnings_manage.php'; ?>
         </div>
     </div>
 
