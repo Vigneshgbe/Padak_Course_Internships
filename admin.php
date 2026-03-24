@@ -510,6 +510,110 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    // ── EARNINGS POST HANDLERS ─────────────────────────────────────────────────
+    // --- Award New Earning ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['award_earning'])) {
+        $studentId = (int)$_POST['student_id'];
+        $earningType = $db->real_escape_string($_POST['earning_type'] ?? 'bonus_reward');
+        $category = $db->real_escape_string(trim($_POST['category'] ?? ''));
+        $title = $db->real_escape_string(trim($_POST['title'] ?? ''));
+        $description = $db->real_escape_string(trim($_POST['description'] ?? ''));
+        $value = $db->real_escape_string(trim($_POST['value'] ?? ''));
+        $quantity = (int)($_POST['quantity'] ?? 1);
+        $priority = $db->real_escape_string($_POST['priority'] ?? 'medium');
+        $awardedFor = $db->real_escape_string(trim($_POST['awarded_for'] ?? ''));
+        $expiresAt = !empty($_POST['expires_at']) ? "'" . $db->real_escape_string($_POST['expires_at']) . "'" : 'NULL';
+        $thumbnailUrl = $db->real_escape_string(trim($_POST['thumbnail_url'] ?? ''));
+        $redemptionInstructions = $db->real_escape_string(trim($_POST['redemption_instructions'] ?? ''));
+        $isFeatured = isset($_POST['is_featured']) ? 1 : 0;
+        $awardedBy = $db->real_escape_string($_SESSION['admin_username'] ?? 'Admin');
+        
+        $errors = [];
+        if ($studentId <= 0) $errors[] = 'Please select a valid student';
+        if (empty($title)) $errors[] = 'Title is required';
+        if (empty($awardedFor)) $errors[] = 'Please specify the reason for this earning';
+        if (!in_array($earningType, ['mentorship','software_access','learning_resource','exclusive_perk','bonus_reward'])) {
+            $errors[] = 'Invalid earning type';
+        }
+        if (!in_array($priority, ['low','medium','high','urgent'])) {
+            $errors[] = 'Invalid priority';
+        }
+        
+        if (empty($errors)) {
+            $sql = "INSERT INTO student_earnings 
+                    (student_id, earning_type, category, title, description, value, quantity, 
+                    status, awarded_by, awarded_for, awarded_at, expires_at, redemption_instructions, 
+                    priority, is_featured, thumbnail_url)
+                    VALUES 
+                    ($studentId, '$earningType', '$category', '$title', '$description', '$value', $quantity,
+                    'pending', '$awardedBy', '$awardedFor', NOW(), $expiresAt, '$redemptionInstructions',
+                    '$priority', $isFeatured, '$thumbnailUrl')";
+            
+            if ($db->query($sql)) {
+                // Send notification to student
+                $notifTitle = $db->real_escape_string("🎁 New Reward Earned: $title");
+                $notifMsg = $db->real_escape_string("Congratulations! You've earned a new reward. " . ($awardedFor ? "Reason: $awardedFor" : ""));
+                $db->query("INSERT INTO student_notifications (student_id, title, message, type, link, created_at)
+                        VALUES ($studentId, '$notifTitle', '$notifMsg', 'system', 'earnings.php', NOW())");
+                
+                $_SESSION['admin_success'] = "Earning awarded successfully to student!";
+            } else {
+                $_SESSION['admin_error'] = 'Failed to award earning: ' . $db->error;
+            }
+        } else {
+            $_SESSION['admin_error'] = implode(', ', $errors);
+        }
+        
+        ob_end_clean();
+        header('Location: admin.php?tab=earnings');
+        exit;
+    }
+
+    // --- Revoke Earning ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoke_earning'])) {
+        $earningId = (int)$_POST['earning_id'];
+        $revokeReason = $db->real_escape_string(trim($_POST['revoke_reason'] ?? 'Revoked by admin'));
+        $revokedBy = $db->real_escape_string($_SESSION['admin_username'] ?? 'Admin');
+        
+        if ($earningId > 0) {
+            // Get earning details for notification
+            $earningData = $db->query("SELECT e.*, s.id as sid FROM student_earnings e 
+                                    JOIN internship_students s ON s.id = e.student_id 
+                                    WHERE e.id=$earningId")->fetch_assoc();
+            
+            if ($earningData) {
+                $sql = "UPDATE student_earnings 
+                    SET status='revoked', 
+                        revoked_at=NOW(), 
+                        revoked_by='$revokedBy',
+                        revoke_reason='$revokeReason'
+                    WHERE id=$earningId";
+                
+                if ($db->query($sql)) {
+                    // Notify student
+                    $studentId = (int)$earningData['sid'];
+                    $earningTitle = $db->real_escape_string($earningData['title']);
+                    $notifTitle = $db->real_escape_string("Reward Revoked: $earningTitle");
+                    $notifMsg = $db->real_escape_string("Your reward has been revoked. Reason: $revokeReason");
+                    $db->query("INSERT INTO student_notifications (student_id, title, message, type, created_at)
+                            VALUES ($studentId, '$notifTitle', '$notifMsg', 'system', NOW())");
+                    
+                    $_SESSION['admin_success'] = 'Earning revoked successfully!';
+                } else {
+                    $_SESSION['admin_error'] = 'Failed to revoke earning: ' . $db->error;
+                }
+            } else {
+                $_SESSION['admin_error'] = 'Earning not found';
+            }
+        } else {
+            $_SESSION['admin_error'] = 'Invalid earning ID';
+        }
+        
+        ob_end_clean();
+        header('Location: admin.php?tab=earnings');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
 
