@@ -43,6 +43,7 @@ $navInternship = [
     ['key'=>'social feed',  'label'=>'Social Feed',    'icon'=>'fas fa-rss',       'href'=>'social_feed.php'],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
     ['key'=>'badges',  'label'=>'My Badges',    'icon'=>'fas fa-dharmachakra',       'href'=>'badges.php'],
+    ['key'=>'earnings', 'label'=>'My Earnings', 'icon'=>'fas fa-gift', 'href'=>'earnings.php'],
     ['key'=>'certificate',  'label'=>'Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
     ['key'=>'attendance',    'label'=>'Attendance',      'icon'=>'fas fa-book',         'href'=>'attendance.php'],
     ['key'=>'verify certificate',    'label'=>'Verify Certificate',      'icon'=>'fas fa-id-card',         'href'=>'verify_certificate.php'],
