@@ -288,27 +288,27 @@ $rewardTemplates = [
     <!-- Quick Stats -->
     <div class="rew-stats">
         <div class="rs-box">
-            <div class="rs-val"><?php echo number_format($stats['total']); ?></div>
+            <div class="rs-val"><?php echo number_format($stats['total'] ?? 0); ?></div>
             <div class="rs-lbl">Total</div>
         </div>
         <div class="rs-box">
-            <div class="rs-val" style="background:linear-gradient(135deg,#94a3b8,#64748b);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['locked']); ?></div>
+            <div class="rs-val" style="background:linear-gradient(135deg,#94a3b8,#64748b);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['locked'] ?? 0); ?></div>
             <div class="rs-lbl">Locked</div>
         </div>
         <div class="rs-box">
-            <div class="rs-val" style="background:linear-gradient(135deg,#22c55e,#16a34a);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['unlocked']); ?></div>
+            <div class="rs-val" style="background:linear-gradient(135deg,#22c55e,#16a34a);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['unlocked'] ?? 0); ?></div>
             <div class="rs-lbl">Unlocked</div>
         </div>
         <div class="rs-box">
-            <div class="rs-val" style="background:linear-gradient(135deg,#f59e0b,#d97706);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['act_req']); ?></div>
+            <div class="rs-val" style="background:linear-gradient(135deg,#f59e0b,#d97706);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['act_req'] ?? 0); ?></div>
             <div class="rs-lbl">Activation Req.</div>
         </div>
         <div class="rs-box">
-            <div class="rs-val" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['activated']); ?></div>
+            <div class="rs-val" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['activated'] ?? 0); ?></div>
             <div class="rs-lbl">Activated</div>
         </div>
         <div class="rs-box">
-            <div class="rs-val" style="background:linear-gradient(135deg,#a855f7,#7c3aed);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['claimed']); ?></div>
+            <div class="rs-val" style="background:linear-gradient(135deg,#a855f7,#7c3aed);-webkit-background-clip:text;background-clip:text;"><?php echo number_format($stats['claimed'] ?? 0); ?></div>
             <div class="rs-lbl">Claimed</div>
         </div>
     </div>
