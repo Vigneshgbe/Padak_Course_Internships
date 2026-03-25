@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_activate'])) 
     $check = $db->query("SELECT * FROM student_rewards WHERE id=$rewardId AND student_id=$sid AND status='unlocked'");
     if ($check && $check->num_rows > 0) {
         $reward = $check->fetch_assoc();
-        $db->query("UPDATE student_rewards SET status='activate_requested' WHERE id=$rewardId");
+        $db->query("UPDATE student_rewards SET status='activate_requested', activation_requested_at=NOW() WHERE id=$rewardId");
         $rewardTitle = $db->real_escape_string($reward['title']);
         $studentName = $db->real_escape_string($student['full_name']);
         // Notify the student that request was sent

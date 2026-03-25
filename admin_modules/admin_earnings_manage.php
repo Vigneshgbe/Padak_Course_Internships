@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_activate_reward
     $rewardId = (int)$_POST['reward_id'];
     $rewardData = $db->query("SELECT * FROM student_rewards WHERE id=$rewardId AND status='activate_requested'")->fetch_assoc();
     if ($rewardData) {
-        $db->query("UPDATE student_rewards SET status='activated' WHERE id=$rewardId");
+        $db->query("UPDATE student_rewards SET status='activated', activated_at=NOW() WHERE id=$rewardId");
         $sid = (int)$rewardData['student_id'];
         $titleEsc = $db->real_escape_string($rewardData['title']);
         $notifMsg = $db->real_escape_string("Your reward \"$titleEsc\" has been activated! Go to My Earnings to claim it.");
