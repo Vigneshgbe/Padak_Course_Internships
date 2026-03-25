@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 20, 2026 at 09:44 AM
+-- Generation Time: Mar 25, 2026 at 11:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -17,11 +17,6 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
---
--- Database: `padak_course_internships`
---
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `announcements`
@@ -41,17 +36,6 @@ CREATE TABLE `announcements` (
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `announcements`
---
-
-INSERT INTO `announcements` (`id`, `title`, `content`, `type`, `priority`, `batch_id`, `coordinator_id`, `target_all`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Welcome to Padak Internship Program!', 'We are thrilled to have you join. Please complete your profile and review your assigned tasks to get started. Your journey to a free internship certificate begins here!', 'general', 'important', NULL, 1, 1, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32'),
-(2, 'First Task Released', 'Your first internship task has been assigned. Please check the Tasks section and submit before the deadline. Early submissions get bonus points!', 'task', 'urgent', NULL, 2, 1, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32'),
-(3, 'Certificate Policy Update', 'Students who earn 1200+ points and complete all mandatory tasks will receive a FREE internship completion certificate. Top 3 earners get Outstanding grade certificates.', 'certificate', 'important', NULL, 1, 1, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32'),
-(4, 'Team Formation Open', 'You can now create or join teams for group tasks. Navigate to the Messenger section to collaborate with your teammates.', 'general', 'normal', NULL, 2, 1, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `announcement_reads`
@@ -64,14 +48,25 @@ CREATE TABLE `announcement_reads` (
   `read_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
 --
--- Dumping data for table `announcement_reads`
+-- Table structure for table `badges`
 --
 
-INSERT INTO `announcement_reads` (`id`, `announcement_id`, `student_id`, `read_at`) VALUES
-(1, 1, 1, '2024-02-20 11:00:00');
+CREATE TABLE `badges` (
+  `id` int(11) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `icon` varchar(20) DEFAULT '?' COMMENT 'Single emoji character',
+  `tier` enum('bronze','silver','gold','platinum','diamond') DEFAULT 'bronze',
+  `category` varchar(100) DEFAULT 'general',
+  `points_bonus` int(11) DEFAULT 0,
+  `awarded_for` text DEFAULT NULL COMMENT 'Criteria description shown to students',
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
 
 --
 -- Table structure for table `chat_messages`
@@ -82,19 +77,14 @@ CREATE TABLE `chat_messages` (
   `room_id` int(11) NOT NULL,
   `sender_id` int(11) NOT NULL,
   `message` text NOT NULL,
+  `reply_to_id` int(11) DEFAULT NULL,
+  `attachment_path` varchar(500) DEFAULT NULL,
+  `attachment_type` enum('image','file') DEFAULT NULL,
+  `attachment_name` varchar(255) DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `chat_messages`
---
-
-INSERT INTO `chat_messages` (`id`, `room_id`, `sender_id`, `message`, `is_deleted`, `created_at`) VALUES
-(1, 1, 1, 'Hi.. Testing Messages', 0, '2026-02-20 08:17:15'),
-(2, 1, 2, 'Hi Padak..!', 0, '2026-02-20 08:25:19');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `chat_rooms`
@@ -111,15 +101,6 @@ CREATE TABLE `chat_rooms` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `chat_rooms`
---
-
-INSERT INTO `chat_rooms` (`id`, `room_name`, `room_type`, `created_by`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Admin', 'direct', 1, 1, '2026-02-20 07:56:27', '2026-02-20 07:56:27');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `chat_room_members`
 --
 
@@ -131,15 +112,6 @@ CREATE TABLE `chat_room_members` (
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `chat_room_members`
---
-
-INSERT INTO `chat_room_members` (`id`, `room_id`, `student_id`, `last_read_at`, `joined_at`) VALUES
-(1, 1, 1, '2026-02-20 14:14:48', '2026-02-20 07:56:27'),
-(2, 1, 2, '2026-02-20 13:55:30', '2026-02-20 07:56:27');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `coordinators`
@@ -159,16 +131,6 @@ CREATE TABLE `coordinators` (
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `coordinators`
---
-
-INSERT INTO `coordinators` (`id`, `full_name`, `email`, `phone`, `password`, `role`, `department`, `profile_photo`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Admin User', 'admin@padak.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'Administration', NULL, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32'),
-(2, 'John Coordinator', 'coordinator@padak.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'coordinator', 'Web Development', NULL, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32'),
-(3, 'Sarah Mentor', 'mentor@padak.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'mentor', 'Data Science', NULL, 1, '2026-02-20 12:18:32', '2026-02-20 12:18:32');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `direct_message_pairs`
@@ -182,14 +144,6 @@ CREATE TABLE `direct_message_pairs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `direct_message_pairs`
---
-
-INSERT INTO `direct_message_pairs` (`id`, `room_id`, `student1_id`, `student2_id`, `created_at`) VALUES
-(1, 1, 1, 2, '2026-02-20 07:56:27');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `game_scores`
@@ -203,16 +157,6 @@ CREATE TABLE `game_scores` (
   `level_reached` int(11) DEFAULT NULL,
   `played_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `game_scores`
---
-
-INSERT INTO `game_scores` (`id`, `student_id`, `game_type`, `score`, `level_reached`, `played_at`) VALUES
-(1, 1, 'memory_match', 0, 1, '2026-02-20 06:42:58'),
-(2, 1, 'reflex_runner', 0, 1, '2026-02-20 06:43:04');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `internship_batches`
@@ -231,17 +175,6 @@ CREATE TABLE `internship_batches` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `internship_batches`
---
-
-INSERT INTO `internship_batches` (`id`, `batch_name`, `domain`, `start_date`, `end_date`, `max_students`, `description`, `is_active`, `created_at`) VALUES
-(1, 'Web Dev Batch 2025-A', 'Web Development', '2025-06-01', '2025-08-31', 50, 'Full Stack Web Development Internship', 1, '2026-02-20 12:10:38'),
-(2, 'Data Science Batch 2025-A', 'Data Science', '2025-06-01', '2025-08-31', 50, 'Data Science & ML Internship', 1, '2026-02-20 12:10:38'),
-(3, 'UI/UX Batch 2025-A', 'UI/UX Design', '2025-07-01', '2025-09-30', 50, 'User Interface Design Internship', 1, '2026-02-20 12:10:38');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `internship_certificates`
 --
 
@@ -258,16 +191,6 @@ CREATE TABLE `internship_certificates` (
   `certificate_file` varchar(500) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `internship_certificates`
---
-
-INSERT INTO `internship_certificates` (`id`, `student_id`, `batch_id`, `certificate_number`, `issued_date`, `completion_grade`, `total_points_earned`, `is_issued`, `certificate_url`, `certificate_file`, `created_at`) VALUES
-(1, 1, 1, 'CERT-2024-001', '2024-01-15', 'Outstanding', 95, 1, 'https://example.com/certificates/cert-001.pdf', '/certificates/cert-001.pdf', '2024-01-15 10:30:00'),
-(2, 2, 1, 'CERT-2024-002', '2024-01-16', 'Excellent', 88, 1, 'https://example.com/certificates/cert-002.pdf', '/certificates/cert-002.pdf', '2024-01-16 11:00:00');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `internship_students`
@@ -296,18 +219,11 @@ CREATE TABLE `internship_students` (
   `total_points` int(11) DEFAULT 0,
   `internship_status` enum('pending','active','completed','withdrawn') DEFAULT 'active',
   `created_at` datetime DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `reset_code` varchar(255) DEFAULT NULL,
+  `reset_code_expires` datetime DEFAULT NULL,
+  `batch_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `internship_students`
---
-
-INSERT INTO `internship_students` (`id`, `full_name`, `email`, `phone`, `password`, `college_name`, `degree`, `year_of_study`, `domain_interest`, `profile_photo`, `bio`, `linkedin_url`, `github_url`, `remember_token`, `token_expires_at`, `is_active`, `is_online`, `last_seen`, `email_verified`, `total_points`, `internship_status`, `created_at`, `updated_at`) VALUES
-(1, 'Padak', 'padak.service@gmail.com', '+91774433757', '$2y$10$D1DfloUO.t9q4hv6b.GssOXSsAasw8Bd6dc4kxik7ae3w2ugzIwTC', 'Sri Lanka', 'CSE', '2nd Year', 'Digital Marketing', 'https://png.pngtree.com/png-clipart/20231020/original/pngtree-avatar-of-a-brunette-man-png-image_13379741.png', '', '', '', NULL, NULL, 1, 1, '2026-02-20 14:14:48', 0, 179, 'active', '2026-02-20 12:11:39', '2026-02-20 14:14:48'),
-(2, 'Admin', 'a@gmail.com', '+91774433757', '$2y$10$0JdgpqHpr7f4s5OcFm7ee.mmaK9HJiGsPQ6JnY2qSoKoXJy.JYFl2', 'Sri Lanka', 'CSE', '4th Year', 'Digital Marketing', 'https://png.pngtree.com/png-clipart/20241117/original/pngtree-business-women-avatar-png-image_17163554.png', '', '', '', NULL, NULL, 1, 1, '2026-02-20 13:55:30', 0, 100, 'active', '2026-02-20 12:50:11', '2026-02-20 13:55:30');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `internship_tasks`
@@ -332,14 +248,34 @@ CREATE TABLE `internship_tasks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `internship_tasks`
+-- Table structure for table `message_reactions`
 --
 
-INSERT INTO `internship_tasks` (`id`, `title`, `description`, `task_type`, `batch_id`, `team_id`, `assigned_to_student`, `due_date`, `max_points`, `priority`, `status`, `resources_url`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 'Test', 'Database error', 'individual', NULL, NULL, NULL, '2026-02-19 00:00:00', 100, 'medium', 'active', 'http://localhost/Internships/admin.php', 'Admin', '2026-02-20 12:46:09', '2026-02-20 12:46:09'),
-(2, 'Total Value terst', 'Testing all data', 'team', NULL, NULL, 1, '2026-02-20 00:00:00', 100, 'urgent', 'active', '', 'Admin', '2026-02-20 13:46:34', '2026-02-20 13:46:34');
+CREATE TABLE `message_reactions` (
+  `id` int(11) NOT NULL,
+  `message_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `emoji` varchar(10) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
+--
+-- Table structure for table `social_feed`
+--
+
+CREATE TABLE `social_feed` (
+  `id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `student_id` int(11) NOT NULL,
+  `item_type` enum('post','like','comment') NOT NULL DEFAULT 'post',
+  `content` text DEFAULT NULL,
+  `media_path` varchar(500) DEFAULT NULL,
+  `media_type` enum('image','video') DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `is_viewed` tinyint(1) DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `student_attendance`
@@ -356,16 +292,18 @@ CREATE TABLE `student_attendance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `student_attendance`
+-- Table structure for table `student_badges`
 --
 
-INSERT INTO `student_attendance` (`id`, `student_id`, `batch_id`, `date`, `status`, `enrolled_date`, `marked_by`) VALUES
-(1, 1, NULL, '2026-02-20', 'present', '2026-02-20 07:23:28', NULL),
-(2, 1, NULL, '2026-02-19', 'present', '2026-02-20 07:23:41', NULL),
-(3, 2, NULL, '2026-02-20', 'present', '2026-02-20 07:23:28', NULL),
-(4, 2, NULL, '2026-02-19', 'present', '2026-02-20 07:23:41', NULL);
-
--- --------------------------------------------------------
+CREATE TABLE `student_badges` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `badge_id` int(11) NOT NULL,
+  `award_note` text DEFAULT NULL COMMENT 'Admin note / reason for awarding',
+  `awarded_by` varchar(150) DEFAULT 'Admin',
+  `awarded_at` datetime DEFAULT current_timestamp(),
+  `viewed_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `student_batch_enrollments`
@@ -379,13 +317,14 @@ CREATE TABLE `student_batch_enrollments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `student_batch_enrollments`
+-- Table structure for table `student_feed_views`
 --
 
-INSERT INTO `student_batch_enrollments` (`id`, `student_id`, `batch_id`, `enrolled_at`) VALUES
-(1, 1, 1, '2024-02-20 09:00:00');
-
--- --------------------------------------------------------
+CREATE TABLE `student_feed_views` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `last_viewed_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `student_login_logs`
@@ -399,21 +338,6 @@ CREATE TABLE `student_login_logs` (
   `ip_address` varchar(45) DEFAULT NULL,
   `logged_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `student_login_logs`
---
-
-INSERT INTO `student_login_logs` (`id`, `student_id`, `email`, `status`, `ip_address`, `logged_at`) VALUES
-(1, 1, 'padak.service@gmail.com', 'success', '::1', '2026-02-20 12:11:53'),
-(2, 1, 'padak.service@gmail.com', 'success', '::1', '2026-02-20 12:40:43'),
-(3, 2, 'a@gmail.com', 'success', '::1', '2026-02-20 12:50:25'),
-(4, 1, 'padak.service@gmail.com', 'success', '::1', '2026-02-20 13:11:06'),
-(5, 1, 'padak.service@gmail.com', 'success', '::1', '2026-02-20 13:19:32'),
-(6, 2, 'a@gmail.com', 'success', '::1', '2026-02-20 13:55:01'),
-(7, 1, 'padak.service@gmail.com', 'success', '::1', '2026-02-20 13:55:53');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `student_notifications`
@@ -431,22 +355,6 @@ CREATE TABLE `student_notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `student_notifications`
---
-
-INSERT INTO `student_notifications` (`id`, `student_id`, `title`, `message`, `type`, `link`, `is_read`, `created_at`) VALUES
-(1, 1, 'Task Submitted', 'Your submission for \"Test\" has been received.', 'task', NULL, 1, '2026-02-20 12:47:02'),
-(2, 1, 'Submission Reviewed', 'Your submission for \"Test\" has been approved! You earned 90 points.', 'task', NULL, 1, '2026-02-20 12:47:54'),
-(3, 2, 'Task Submitted', 'Your submission for \"Test\" has been received.', 'task', NULL, 1, '2026-02-20 12:51:58'),
-(4, 2, 'Submission Reviewed', 'Your submission for \"Test\" requires revision. Check feedback.', 'task', NULL, 1, '2026-02-20 12:54:12'),
-(5, 2, 'Task Submitted', 'Your submission for \"Test\" has been received.', 'task', NULL, 1, '2026-02-20 12:54:39'),
-(6, 2, 'Submission Reviewed', 'Your submission for \"Test\" has been approved! You earned 100 points.', 'task', NULL, 1, '2026-02-20 13:45:57'),
-(7, 1, 'Task Submitted', 'Your submission for \"Total Value terst\" has been received.', 'task', NULL, 1, '2026-02-20 13:47:32'),
-(8, 1, 'Submission Reviewed', 'Your submission for \"Total Value terst\" has been approved! You earned 89 points.', 'task', NULL, 1, '2026-02-20 13:48:06');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `student_points_log`
 --
 
@@ -460,15 +368,35 @@ CREATE TABLE `student_points_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `student_points_log`
+-- Table structure for table `student_rewards`
 --
 
-INSERT INTO `student_points_log` (`id`, `student_id`, `points`, `reason`, `task_id`, `awarded_at`) VALUES
-(1, 1, 90, 'Earned from task: Test', 1, '2026-02-20 12:47:54'),
-(2, 2, 100, 'Earned from task: Test', 1, '2026-02-20 13:45:57'),
-(3, 1, 89, 'Earned from task: Total Value terst', 2, '2026-02-20 13:48:06');
+CREATE TABLE `student_rewards` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `reward_type` enum('mentorship','software','resource','perk','bonus') NOT NULL DEFAULT 'bonus',
+  `title` varchar(150) NOT NULL,
+  `subtitle` varchar(255) DEFAULT NULL COMMENT 'Short description',
+  `icon` varchar(50) DEFAULT '?' COMMENT 'Emoji or icon class',
+  `color` varchar(20) DEFAULT 'orange' COMMENT 'Theme color: orange, blue, green, purple, pink',
+  `value` varchar(80) DEFAULT NULL COMMENT 'e.g., "60 min", "7 days", "Lifetime"',
+  `instructions` text DEFAULT NULL COMMENT 'Brief redemption steps',
+  `code` varchar(50) DEFAULT NULL COMMENT 'Redemption code (auto-generated)',
+  `awarded_for` varchar(255) DEFAULT NULL COMMENT 'Achievement reason',
+  `status` enum('locked','unlocked','activate_requested','activated','claimed') NOT NULL DEFAULT 'locked',
+  `awarded_at` datetime DEFAULT current_timestamp(),
+  `unlocked_at` datetime DEFAULT NULL,
+  `activation_requested_at` datetime DEFAULT NULL,
+  `activated_at` datetime DEFAULT NULL,
+  `activated_by` varchar(100) DEFAULT NULL,
+  `claimed_at` datetime DEFAULT NULL,
+  `expires_at` datetime DEFAULT NULL,
+  `awarded_by` varchar(100) DEFAULT 'Admin',
+  `priority` tinyint(1) DEFAULT 0 COMMENT '0=normal, 1=featured/urgent',
+  `position` int(11) DEFAULT 0 COMMENT 'Box order/position',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
 
 --
 -- Table structure for table `student_sessions`
@@ -509,17 +437,6 @@ CREATE TABLE `task_submissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `task_submissions`
---
-
-INSERT INTO `task_submissions` (`id`, `task_id`, `student_id`, `submission_text`, `submission_url`, `github_link`, `file_path`, `file_name`, `status`, `points_earned`, `feedback`, `reviewed_by`, `reviewed_at`, `submitted_at`, `updated_at`) VALUES
-(1, 1, 1, 'Resumbit test', 'http://localhost/Internships/submit.php?task_id=1', 'http://localhost/Internships/submit.php', 'uploads/submissions/sub_1_1_1771571822.jpg', 'vigneshg_profile.jpg', 'approved', 90, 'Goiod', 'Admin', '2026-02-20 12:47:54', '2026-02-20 12:47:02', '2026-02-20 12:47:54'),
-(2, 1, 2, 'Test 2 profile', 'http://localhost/Internships/submit.php?task_id=1', 'http://localhost/Internships/submit.php', 'uploads/submissions/sub_2_1_1771572118.jpg', 'naruto-kakashi.jpg', 'approved', 100, 'Good', 'Admin', '2026-02-20 13:45:57', '2026-02-20 12:54:39', '2026-02-20 13:45:57'),
-(3, 2, 1, 'Greart', '', '', 'uploads/submissions/sub_1_2_1771575452.jpg', 'rock-lee.jpg', 'approved', 89, '', 'Admin', '2026-02-20 13:48:06', '2026-02-20 13:47:32', '2026-02-20 13:48:06');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `teams`
 --
 
@@ -534,14 +451,6 @@ CREATE TABLE `teams` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `teams`
---
-
-INSERT INTO `teams` (`id`, `team_name`, `batch_id`, `team_code`, `description`, `max_members`, `created_by`, `created_at`) VALUES
-(1, 'Alpha Team', 1, 'TEAM-ALPHA-01', 'A high-performing team focused on web development projects', 5, 1, '2024-02-20 10:00:00');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `team_members`
@@ -554,17 +463,6 @@ CREATE TABLE `team_members` (
   `role` enum('leader','member') DEFAULT 'member',
   `joined_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `team_members`
---
-
-INSERT INTO `team_members` (`id`, `team_id`, `student_id`, `role`, `joined_at`) VALUES
-(1, 1, 1, 'leader', '2024-02-20 10:30:00');
-
---
--- Indexes for dumped tables
---
 
 --
 -- Indexes for table `announcements`
@@ -585,13 +483,26 @@ ALTER TABLE `announcement_reads`
   ADD KEY `student_id` (`student_id`);
 
 --
+-- Indexes for table `badges`
+--
+ALTER TABLE `badges`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_tier` (`tier`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_active` (`is_active`);
+
+--
 -- Indexes for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_room_id` (`room_id`),
   ADD KEY `idx_sender_id` (`sender_id`),
-  ADD KEY `idx_created_at` (`created_at`);
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_reply_to` (`reply_to_id`),
+  ADD KEY `idx_room_created` (`room_id`,`created_at`),
+  ADD KEY `idx_sender` (`sender_id`),
+  ADD KEY `idx_room_sender_created` (`room_id`,`sender_id`,`created_at`);
 
 --
 -- Indexes for table `chat_rooms`
@@ -608,7 +519,8 @@ ALTER TABLE `chat_rooms`
 ALTER TABLE `chat_room_members`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_room_member` (`room_id`,`student_id`),
-  ADD KEY `idx_student_id` (`student_id`);
+  ADD KEY `idx_student_id` (`student_id`),
+  ADD KEY `idx_student_room` (`student_id`,`room_id`);
 
 --
 -- Indexes for table `coordinators`
@@ -656,7 +568,8 @@ ALTER TABLE `internship_students`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`),
   ADD KEY `idx_student_points` (`total_points`),
-  ADD KEY `idx_online_students` (`is_online`,`last_seen`);
+  ADD KEY `idx_online_students` (`is_online`,`last_seen`),
+  ADD KEY `idx_batch` (`batch_id`);
 
 --
 -- Indexes for table `internship_tasks`
@@ -667,6 +580,28 @@ ALTER TABLE `internship_tasks`
   ADD KEY `team_id` (`team_id`),
   ADD KEY `assigned_to_student` (`assigned_to_student`),
   ADD KEY `idx_task_status_due` (`status`,`due_date`);
+
+--
+-- Indexes for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_reaction` (`message_id`,`student_id`,`emoji`),
+  ADD KEY `idx_message` (`message_id`),
+  ADD KEY `idx_student` (`student_id`);
+
+--
+-- Indexes for table `social_feed`
+--
+ALTER TABLE `social_feed`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_parent_id` (`parent_id`),
+  ADD KEY `idx_student_id` (`student_id`),
+  ADD KEY `idx_item_type` (`item_type`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_parent_type` (`parent_id`,`item_type`),
+  ADD KEY `idx_student_viewed` (`student_id`,`is_viewed`,`created_at`),
+  ADD KEY `idx_student_created_deleted` (`student_id`,`created_at`,`is_deleted`);
 
 --
 -- Indexes for table `student_attendance`
@@ -680,12 +615,30 @@ ALTER TABLE `student_attendance`
   ADD KEY `idx_status` (`status`);
 
 --
+-- Indexes for table `student_badges`
+--
+ALTER TABLE `student_badges`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_student_badge` (`student_id`,`badge_id`),
+  ADD KEY `idx_student_id` (`student_id`),
+  ADD KEY `idx_badge_id` (`badge_id`),
+  ADD KEY `idx_viewed` (`student_id`,`viewed_at`),
+  ADD KEY `idx_student_viewed` (`student_id`,`viewed_at`);
+
+--
 -- Indexes for table `student_batch_enrollments`
 --
 ALTER TABLE `student_batch_enrollments`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_enroll` (`student_id`,`batch_id`),
   ADD KEY `batch_id` (`batch_id`);
+
+--
+-- Indexes for table `student_feed_views`
+--
+ALTER TABLE `student_feed_views`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_student` (`student_id`);
 
 --
 -- Indexes for table `student_login_logs`
@@ -699,7 +652,7 @@ ALTER TABLE `student_login_logs`
 --
 ALTER TABLE `student_notifications`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `student_id` (`student_id`);
+  ADD KEY `idx_student_unread` (`student_id`,`is_read`,`created_at`);
 
 --
 -- Indexes for table `student_points_log`
@@ -708,6 +661,16 @@ ALTER TABLE `student_points_log`
   ADD PRIMARY KEY (`id`),
   ADD KEY `student_id` (`student_id`),
   ADD KEY `task_id` (`task_id`);
+
+--
+-- Indexes for table `student_rewards`
+--
+ALTER TABLE `student_rewards`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_student_status` (`student_id`,`status`),
+  ADD KEY `idx_position` (`position`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_student_position` (`student_id`,`position`);
 
 --
 -- Indexes for table `student_sessions`
@@ -722,8 +685,8 @@ ALTER TABLE `student_sessions`
 ALTER TABLE `task_submissions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_submission` (`task_id`,`student_id`),
-  ADD KEY `student_id` (`student_id`),
-  ADD KEY `idx_submission_review` (`status`,`submitted_at`);
+  ADD KEY `idx_submission_review` (`status`,`submitted_at`),
+  ADD KEY `idx_student_task` (`student_id`,`task_id`,`status`);
 
 --
 -- Indexes for table `teams`
@@ -756,13 +719,19 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `announcement_reads`
 --
 ALTER TABLE `announcement_reads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `badges`
+--
+ALTER TABLE `badges`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `chat_rooms`
@@ -792,7 +761,7 @@ ALTER TABLE `direct_message_pairs`
 -- AUTO_INCREMENT for table `game_scores`
 --
 ALTER TABLE `game_scores`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `internship_batches`
@@ -819,10 +788,28 @@ ALTER TABLE `internship_tasks`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `social_feed`
+--
+ALTER TABLE `social_feed`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
 -- AUTO_INCREMENT for table `student_attendance`
 --
 ALTER TABLE `student_attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `student_badges`
+--
+ALTER TABLE `student_badges`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `student_batch_enrollments`
@@ -831,21 +818,33 @@ ALTER TABLE `student_batch_enrollments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `student_feed_views`
+--
+ALTER TABLE `student_feed_views`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+
+--
 -- AUTO_INCREMENT for table `student_login_logs`
 --
 ALTER TABLE `student_login_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `student_notifications`
 --
 ALTER TABLE `student_notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `student_points_log`
 --
 ALTER TABLE `student_points_log`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `student_rewards`
+--
+ALTER TABLE `student_rewards`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
@@ -858,7 +857,7 @@ ALTER TABLE `student_sessions`
 -- AUTO_INCREMENT for table `task_submissions`
 --
 ALTER TABLE `task_submissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `teams`
@@ -895,6 +894,7 @@ ALTER TABLE `announcement_reads`
 -- Constraints for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
+  ADD CONSTRAINT `chat_messages_ibfk_1` FOREIGN KEY (`reply_to_id`) REFERENCES `chat_messages` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_chat_messages_room` FOREIGN KEY (`room_id`) REFERENCES `chat_rooms` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_chat_messages_sender` FOREIGN KEY (`sender_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
 
@@ -921,6 +921,20 @@ ALTER TABLE `internship_tasks`
   ADD CONSTRAINT `internship_tasks_ibfk_3` FOREIGN KEY (`assigned_to_student`) REFERENCES `internship_students` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  ADD CONSTRAINT `message_reactions_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `chat_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_reactions_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `social_feed`
+--
+ALTER TABLE `social_feed`
+  ADD CONSTRAINT `fk_social_feed_parent` FOREIGN KEY (`parent_id`) REFERENCES `social_feed` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_social_feed_student` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `student_attendance`
 --
 ALTER TABLE `student_attendance`
@@ -928,11 +942,24 @@ ALTER TABLE `student_attendance`
   ADD CONSTRAINT `fk_attendance_student` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `student_badges`
+--
+ALTER TABLE `student_badges`
+  ADD CONSTRAINT `fk_sb_badge` FOREIGN KEY (`badge_id`) REFERENCES `badges` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_sb_student` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `student_batch_enrollments`
 --
 ALTER TABLE `student_batch_enrollments`
   ADD CONSTRAINT `student_batch_enrollments_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `student_batch_enrollments_ibfk_2` FOREIGN KEY (`batch_id`) REFERENCES `internship_batches` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `student_feed_views`
+--
+ALTER TABLE `student_feed_views`
+  ADD CONSTRAINT `student_feed_views_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `student_login_logs`
@@ -952,6 +979,12 @@ ALTER TABLE `student_notifications`
 ALTER TABLE `student_points_log`
   ADD CONSTRAINT `student_points_log_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `student_points_log_ibfk_2` FOREIGN KEY (`task_id`) REFERENCES `internship_tasks` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `student_rewards`
+--
+ALTER TABLE `student_rewards`
+  ADD CONSTRAINT `fk_rewards_student` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `student_sessions`
@@ -984,128 +1017,3 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
--- MESSENGER POGE CODE ALTER
--- Add columns to existing tables for new features
-
--- Add attachment and reply columns to chat_messages table
-ALTER TABLE `chat_messages` 
-ADD COLUMN `reply_to_id` INT(11) NULL DEFAULT NULL AFTER `message`,
-ADD COLUMN `attachment_path` VARCHAR(500) NULL DEFAULT NULL AFTER `reply_to_id`,
-ADD COLUMN `attachment_type` ENUM('image','file') NULL DEFAULT NULL AFTER `attachment_path`,
-ADD COLUMN `attachment_name` VARCHAR(255) NULL DEFAULT NULL AFTER `attachment_type`,
-ADD INDEX `idx_reply_to` (`reply_to_id`),
-ADD FOREIGN KEY (`reply_to_id`) REFERENCES `chat_messages`(`id`) ON DELETE SET NULL;
-
--- Create reactions table (uses existing internship_students table)
-CREATE TABLE IF NOT EXISTS `message_reactions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `message_id` INT(11) NOT NULL,
-  `student_id` INT(11) NOT NULL,
-  `emoji` VARCHAR(10) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_reaction` (`message_id`, `student_id`, `emoji`),
-  KEY `idx_message` (`message_id`),
-  KEY `idx_student` (`student_id`),
-  FOREIGN KEY (`message_id`) REFERENCES `chat_messages`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`student_id`) REFERENCES `internship_students`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Add index for better query performance
-ALTER TABLE `chat_messages` ADD INDEX `idx_room_created` (`room_id`, `created_at`);
-ALTER TABLE `chat_messages` ADD INDEX `idx_sender` (`sender_id`);
-
-
-
--- =====================================================
--- SOCIAL FEED TABLE - Single table design
--- =====================================================
--- This single table handles posts, likes, and comments
--- item_type column determines the type of record
--- parent_id links comments and likes to their parent post
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS `social_feed` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `parent_id` int(11) DEFAULT NULL,
-  `student_id` int(11) NOT NULL,
-  `item_type` enum('post','like','comment') NOT NULL DEFAULT 'post',
-  `content` text DEFAULT NULL,
-  `media_path` varchar(500) DEFAULT NULL,
-  `media_type` enum('image','video') DEFAULT NULL,
-  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_parent_id` (`parent_id`),
-  KEY `idx_student_id` (`student_id`),
-  KEY `idx_item_type` (`item_type`),
-  KEY `idx_created_at` (`created_at`),
-  KEY `idx_parent_type` (`parent_id`, `item_type`),
-  CONSTRAINT `fk_social_feed_parent` FOREIGN KEY (`parent_id`) REFERENCES `social_feed` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_social_feed_student` FOREIGN KEY (`student_id`) REFERENCES `internship_students` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =====================================================
--- TABLE STRUCTURE EXPLANATION:
--- =====================================================
--- 
--- POSTS (item_type='post'):
---   - parent_id: NULL (posts are top-level)
---   - content: Post text content
---   - media_path: Path to uploaded image/video
---   - media_type: 'image' or 'video'
---
--- LIKES (item_type='like'):
---   - parent_id: ID of the post being liked
---   - content: NULL
---   - media_path: NULL
---   - media_type: NULL
---
--- COMMENTS (item_type='comment'):
---   - parent_id: ID of the post being commented on
---   - content: Comment text
---   - media_path: NULL (comments don't support media)
---   - media_type: NULL
---
--- BENEFITS:
---   - Single table reduces complexity
---   - Easy to query related data
---   - Efficient indexing
---   - Scalable for future features (shares, reactions, etc.)
---   - Maintains referential integrity
---
--- =====================================================
-
--- Sample queries for reference:
-
--- Get all posts with like and comment counts:
-/*
-SELECT 
-  sf.*,
-  s.full_name,
-  s.profile_photo,
-  (SELECT COUNT(*) FROM social_feed WHERE parent_id=sf.id AND item_type='like' AND is_deleted=0) as likes_count,
-  (SELECT COUNT(*) FROM social_feed WHERE parent_id=sf.id AND item_type='comment' AND is_deleted=0) as comments_count
-FROM social_feed sf
-JOIN internship_students s ON s.id = sf.student_id
-WHERE sf.item_type='post' AND sf.is_deleted=0
-ORDER BY sf.created_at DESC;
-*/
-
--- Get all comments for a specific post:
-/*
-SELECT sf.*, s.full_name, s.profile_photo
-FROM social_feed sf
-JOIN internship_students s ON s.id = sf.student_id
-WHERE sf.parent_id = ? AND sf.item_type='comment' AND sf.is_deleted=0
-ORDER BY sf.created_at ASC;
-*/
-
--- Check if user has liked a post:
-/*
-SELECT COUNT(*) as has_liked
-FROM social_feed
-WHERE parent_id = ? AND student_id = ? AND item_type='like' AND is_deleted=0;
-*/
