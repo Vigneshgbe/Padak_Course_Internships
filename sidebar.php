@@ -1,20 +1,99 @@
 <?php
-// sidebar.php
+// sidebar.php - UPDATED WITH ALL BADGE COUNTS
 if (!isset($activePage)) $activePage = '';
 $db = getPadakDB();
 $sid = (int)$_SESSION['student_id'];
 
+// ══════════════════════════════════════════════════════════════════════
+// BADGE COUNT CALCULATIONS
+// ══════════════════════════════════════════════════════════════════════
+
+// 1. NOTIFICATIONS - Unread notifications
 $notifCount = 0;
 $r = $db->query("SELECT COUNT(*) as c FROM student_notifications WHERE student_id=$sid AND is_read=0");
 if ($r) $notifCount = (int)$r->fetch_assoc()['c'];
 
+// 2. MESSENGER - Unread messages
 $msgCount = 0;
-$r2 = $db->query("SELECT COUNT(*) as c FROM chat_messages cm JOIN chat_room_members crm ON crm.room_id=cm.room_id AND crm.student_id=$sid WHERE cm.sender_id!=$sid AND cm.is_deleted=0 AND (crm.last_read_at IS NULL OR cm.created_at > crm.last_read_at)");
+$r2 = $db->query("SELECT COUNT(*) as c FROM chat_messages cm 
+    JOIN chat_room_members crm ON crm.room_id=cm.room_id AND crm.student_id=$sid 
+    WHERE cm.sender_id!=$sid AND cm.is_deleted=0 
+    AND (crm.last_read_at IS NULL OR cm.created_at > crm.last_read_at)");
 if ($r2) $msgCount = (int)$r2->fetch_assoc()['c'];
 
+// 3. MY TASKS - Pending tasks (not submitted yet)
 $pendingTasks = 0;
-$r3 = $db->query("SELECT COUNT(*) as c FROM internship_tasks t LEFT JOIN task_submissions ts ON ts.task_id=t.id AND ts.student_id=$sid WHERE t.status='active' AND ts.id IS NULL AND (t.assigned_to_student IS NULL OR t.assigned_to_student=$sid)");
+$r3 = $db->query("SELECT COUNT(*) as c FROM internship_tasks t 
+    LEFT JOIN task_submissions ts ON ts.task_id=t.id AND ts.student_id=$sid 
+    WHERE t.status='active' AND ts.id IS NULL 
+    AND (t.assigned_to_student IS NULL OR t.assigned_to_student=$sid)");
 if ($r3) $pendingTasks = (int)$r3->fetch_assoc()['c'];
+
+// 4. SOCIAL FEED - New posts since last view
+$socialFeedCount = 0;
+// First, ensure the student has a record in student_feed_views
+$db->query("INSERT IGNORE INTO student_feed_views (student_id, last_viewed_at) 
+           VALUES ($sid, DATE_SUB(NOW(), INTERVAL 7 DAY))");
+
+$r4 = $db->query("SELECT COUNT(*) as c FROM social_feed sf
+    LEFT JOIN student_feed_views sfv ON sfv.student_id=$sid
+    WHERE sf.is_deleted=0 
+    AND sf.student_id != $sid
+    AND sf.created_at > IFNULL(sfv.last_viewed_at, DATE_SUB(NOW(), INTERVAL 1 DAY))");
+if ($r4) $socialFeedCount = (int)$r4->fetch_assoc()['c'];
+
+// 5. MY BADGES - New badges (awarded within last 7 days AND not viewed yet)
+$newBadgesCount = 0;
+$r5 = $db->query("SELECT COUNT(*) as c FROM student_badges 
+    WHERE student_id=$sid 
+    AND viewed_at IS NULL 
+    AND awarded_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)");
+if ($r5) $newBadgesCount = (int)$r5->fetch_assoc()['c'];
+
+// 6. MY EARNINGS - 🎁 CRITICAL - New locked rewards + activated rewards ready to claim
+$earningsCount = 0;
+$r6 = $db->query("SELECT COUNT(*) as c FROM student_rewards 
+    WHERE student_id=$sid 
+    AND (status='locked' OR status='activated')");
+if ($r6) $earningsCount = (int)$r6->fetch_assoc()['c'];
+
+
+// 7. ANNOUNCEMENTS - Unread announcements
+$announcementsCount = 0;
+$batchId = null;
+
+$studentBatchResult = $db->query("SELECT batch_id FROM internship_students WHERE id=$sid");
+if ($studentBatchResult) {
+    $studentBatchRow = $studentBatchResult->fetch_assoc();
+    $batchId = isset($studentBatchRow['batch_id']) ? (int)$studentBatchRow['batch_id'] : null;
+}
+
+$batchCondition = $batchId ? "OR a.batch_id=$batchId" : "";
+$r7 = $db->query("SELECT COUNT(*) as c FROM announcements a
+    LEFT JOIN announcement_reads ar ON ar.announcement_id=a.id AND ar.student_id=$sid
+    WHERE a.is_active=1 
+    AND ar.id IS NULL
+    AND (a.target_all=1 OR a.batch_id IS NULL $batchCondition)");
+if ($r7) $announcementsCount = (int)$r7->fetch_assoc()['c'];
+
+// 8. CERTIFICATE - Show badge if certificate is ready (points >= 2000 and not issued)
+$certificateReady = 0;
+$r8 = $db->query("SELECT 
+    COALESCE(SUM(points), 0) as total_points,
+    (SELECT COUNT(*) FROM internship_certificates WHERE student_id=$sid AND is_issued=1) as has_cert
+    FROM student_points_log WHERE student_id=$sid");
+if ($r8) {
+    $certData = $r8->fetch_assoc();
+    $totalPoints = (int)$certData['total_points'];
+    $hasCert = (int)$certData['has_cert'];
+    if ($totalPoints >= 1000 && $hasCert == 0) {
+        $certificateReady = 1;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// STUDENT INFO & PROGRESS
+// ══════════════════════════════════════════════════════════════════════
 
 // Calculate total points from student_points_log
 $pointsResult = $db->query("SELECT COALESCE(SUM(points), 0) as total FROM student_points_log WHERE student_id=$sid");
@@ -30,25 +109,29 @@ $rank = $rankResult ? (int)$rankResult->fetch_assoc()['rnk'] : '-';
 $certThreshold = 2000;
 $progress = min(100, round(($points / $certThreshold) * 100));
 
-// Check if user is admin (adjust this condition based on your database structure)
+// Check if user is admin
 $isAdmin = isset($student['is_admin']) && $student['is_admin'] == 1;
+
+// ══════════════════════════════════════════════════════════════════════
+// NAVIGATION STRUCTURE WITH BADGES
+// ══════════════════════════════════════════════════════════════════════
 
 $navMain = [
     ['key'=>'dashboard',    'label'=>'Dashboard',     'icon'=>'fas fa-home',         'href'=>'dashboard.php'],
     ['key'=>'messenger',    'label'=>'Messenger',      'icon'=>'fas fa-comments',     'href'=>'messenger.php', 'badge'=>$msgCount],
 ];
+
 $navInternship = [
     ['key'=>'tasks',        'label'=>'My Tasks',       'icon'=>'fas fa-tasks',        'href'=>'tasks.php',     'badge'=>$pendingTasks],
-    // ['key'=>'submit',       'label'=>'Submit Task',    'icon'=>'fas fa-paper-plane',  'href'=>'submit.php'],
-    ['key'=>'social feed',  'label'=>'Social Feed',    'icon'=>'fas fa-rss',       'href'=>'social_feed.php'],
+    ['key'=>'social feed',  'label'=>'Social Feed',    'icon'=>'fas fa-rss',          'href'=>'social_feed.php', 'badge'=>$socialFeedCount],
     ['key'=>'leaderboard',  'label'=>'Leaderboard',    'icon'=>'fas fa-trophy',       'href'=>'leaderboard.php'],
-    ['key'=>'badges',  'label'=>'My Badges',    'icon'=>'fas fa-dharmachakra',       'href'=>'badges.php'],
-    ['key'=>'earnings', 'label'=>'My Earnings', 'icon'=>'fas fa-gift', 'href'=>'earnings.php'],
-    ['key'=>'certificate',  'label'=>'Certificate', 'icon'=>'fas fa-certificate',  'href'=>'certificate.php'],
-    ['key'=>'attendance',    'label'=>'Attendance',      'icon'=>'fas fa-book',         'href'=>'attendance.php'],
-    ['key'=>'verify certificate',    'label'=>'Verify Certificate',      'icon'=>'fas fa-id-card',         'href'=>'verify_certificate.php'],
-    ['key'=>'announcements',    'label'=>'Announcements',      'icon'=>'fas fa-bullhorn',         'href'=>'announcements.php'],
-    ['key'=>'game',  'label'=>'Gamer Hub', 'icon'=>'fas fa-gamepad',  'href'=>'game.php'],
+    ['key'=>'badges',       'label'=>'My Badges',      'icon'=>'fas fa-dharmachakra', 'href'=>'badges.php', 'badge'=>$newBadgesCount],
+    ['key'=>'earnings',     'label'=>'My Earnings',    'icon'=>'fas fa-gift',         'href'=>'earnings.php', 'badge'=>$earningsCount],
+    ['key'=>'certificate',  'label'=>'Certificate',    'icon'=>'fas fa-certificate',  'href'=>'certificate.php', 'badge'=>$certificateReady],
+    ['key'=>'attendance',   'label'=>'Attendance',     'icon'=>'fas fa-book',         'href'=>'attendance.php'],
+    ['key'=>'verify certificate', 'label'=>'Verify Certificate', 'icon'=>'fas fa-id-card', 'href'=>'verify_certificate.php'],
+    ['key'=>'announcements','label'=>'Announcements',  'icon'=>'fas fa-bullhorn',     'href'=>'announcements.php', 'badge'=>$announcementsCount],
+    ['key'=>'game',         'label'=>'Gamer Hub',      'icon'=>'fas fa-gamepad',      'href'=>'game.php'],
 ];
 
 $navAccount = [
@@ -57,16 +140,8 @@ $navAccount = [
 ];
 
 $navAdmin = [
-        ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-    ];
-
-// Admin navigation (only shown to admins)
-// $navAdmin = [];
-// if ($isAdmin) {
-//     $navAdmin = [
-//         ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
-//     ];
-// }
+    ['key'=>'admin',  'label'=>'Admin Panel', 'icon'=>'fas fa-user-shield',  'href'=>'admin.php'],
+];
 
 $firstName = explode(' ', trim($student['full_name']))[0] ?? $student['full_name'];
 $initials = strtoupper(substr($student['full_name'], 0, 1));
@@ -76,13 +151,7 @@ $initials = strtoupper(substr($student['full_name'], 0, 1));
 
 <aside class="student-sidebar" id="studentSidebar">
     <div class="sb-logo">
-        <!-- <div class="sb-logo-mark">
-            <img src="https://github.com/Sweety-Vigneshg/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true"
-                 alt="P" onerror="this.style.display='none';document.getElementById('sbLogoFallback').style.display='flex';">
-            <div id="sbLogoFallback" style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:800;font-size:17px;color:#fff;">P</div>
-        </div> -->
         <div class="sb-logo-text">
-            <!-- <span class="sb-brand">Padak</span> -->
             <span class="sb-tagline">Padak Internship Portal</span>
         </div>
         <button class="sb-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>

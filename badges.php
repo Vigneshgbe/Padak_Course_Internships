@@ -8,6 +8,13 @@ if (!isset($_SESSION['student_id'])) {
     exit;
 }
 
+// Mark all badges as viewed
+$sid = (int)$_SESSION['student_id'];
+$db = getPadakDB();
+$db->query("UPDATE student_badges 
+           SET viewed_at = NOW() 
+           WHERE student_id=$sid AND viewed_at IS NULL");
+
 $db = getPadakDB();
 $studentId = (int)$_SESSION['student_id'];
 

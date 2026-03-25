@@ -5,6 +5,25 @@ require_once 'config.php';
 $auth = new StudentAuth();
 if (!$auth->isLoggedIn()) { header('Location: login.php'); exit; }
 
+// Mark all announcements as read
+$sid = (int)$_SESSION['student_id'];
+$db = getPadakDB();
+$studentData = $db->query("SELECT batch_id FROM internship_students WHERE id=$sid")->fetch_assoc();
+$batchId = $studentData['batch_id'] ?? null;
+
+$batchCondition = $batchId ? "OR a.batch_id=$batchId" : "";
+$announcementsToMark = $db->query("SELECT id FROM announcements 
+    WHERE is_active=1 
+    AND (target_all=1 OR batch_id IS NULL $batchCondition)");
+
+if ($announcementsToMark && $announcementsToMark->num_rows > 0) {
+    while ($ann = $announcementsToMark->fetch_assoc()) {
+        $annId = (int)$ann['id'];
+        $db->query("INSERT IGNORE INTO announcement_reads (announcement_id, student_id, read_at) 
+                   VALUES ($annId, $sid, NOW())");
+    }
+}
+
 $student = $auth->getCurrentStudent();
 $db = getPadakDB();
 $sid = (int)$student['id'];

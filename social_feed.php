@@ -15,6 +15,13 @@ $db = getPadakDB();
 $sid = (int)$student['id'];
 $activePage = 'social';
 
+// Mark social feed as viewed
+$sid = (int)$_SESSION['student_id'];
+$db = getPadakDB();
+$db->query("INSERT INTO student_feed_views (student_id, last_viewed_at) 
+           VALUES ($sid, NOW()) 
+           ON DUPLICATE KEY UPDATE last_viewed_at=NOW()");
+
 // =============================================
 // UPLOADS DIRECTORY SETUP
 // =============================================
