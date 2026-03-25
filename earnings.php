@@ -1,5 +1,5 @@
 <?php
-// earnings.php — Gamified Rewards System (Redesigned v2)
+// earnings.php — Gamified Rewards System (Redesigned v2 - FIXED FONT)
 session_start();
 require_once 'config.php';
 
@@ -115,7 +115,7 @@ function rewardTypeMeta(string $type): array {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Earnings – Padak</title>
 <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 /* ── Reset & Variables ─────────────────────────────────────────────────── */
@@ -157,7 +157,7 @@ function rewardTypeMeta(string $type): array {
     --shadow-md: 0 4px 16px rgba(0,0,0,.08);
     --shadow-lg: 0 10px 40px rgba(0,0,0,.1);
 }
-*{font-family:'Space Grotesk',sans-serif;}
+*{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;}
 body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
 /* ── Layout ────────────────────────────────────────────────────────────── */
@@ -174,8 +174,9 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 .topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:8px;border-radius:8px;transition:all .2s;}
 .topbar-hamburger:hover{background:var(--card2);color:var(--text);}
 .topbar-title{
-    font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;
+    font-size:1.1rem;font-weight:800;
     color:var(--text);flex:1;display:flex;align-items:center;gap:10px;
+    letter-spacing:-.01em;
 }
 .t-icon{
     width:32px;height:32px;
@@ -213,10 +214,10 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     pointer-events:none;
 }
 .hero-left h1{
-    font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;
-    color:#fff;margin-bottom:6px;letter-spacing:-.01em;
+    font-size:1.85rem;font-weight:800;
+    color:#fff;margin-bottom:8px;letter-spacing:-.02em;
 }
-.hero-left p{color:rgba(255,255,255,.85);font-size:.9rem;max-width:380px;line-height:1.5;}
+.hero-left p{color:rgba(255,255,255,.9);font-size:.95rem;max-width:420px;line-height:1.55;font-weight:500;}
 .hero-badge{
     background:rgba(255,255,255,.22);backdrop-filter:blur(8px);
     border:1px solid rgba(255,255,255,.35);
@@ -246,19 +247,19 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 .si-blue{background:var(--blue-bg);color:#1d4ed8;}
 .si-purple{background:var(--purple-bg);color:#7c3aed;}
 .stat-info{}
-.stat-val{font-family:'Syne',sans-serif;font-size:1.55rem;font-weight:800;color:var(--text);line-height:1;}
-.stat-lbl{font-size:.72rem;color:var(--text3);margin-top:3px;font-weight:600;letter-spacing:.01em;}
+.stat-val{font-size:1.65rem;font-weight:900;color:var(--text);line-height:1;letter-spacing:-.02em;}
+.stat-lbl{font-size:.72rem;color:var(--text3);margin-top:4px;font-weight:700;letter-spacing:.01em;}
 
 /* ── Section Header ────────────────────────────────────────────────────── */
 .section-hdr{
     display:flex;align-items:center;gap:12px;margin-bottom:20px;
 }
-.section-hdr h2{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:var(--text);}
+.section-hdr h2{font-size:1.05rem;font-weight:800;color:var(--text);letter-spacing:-.01em;}
 .section-hdr::after{content:'';flex:1;height:1px;background:var(--border);}
 .section-hdr .hdr-badge{
     background:var(--orange-bg);color:var(--orange3);
     border:1px solid var(--orange-border);
-    font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:20px;
+    font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:20px;
     text-transform:uppercase;letter-spacing:.06em;
 }
 
@@ -286,7 +287,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     align-items:center;justify-content:center;gap:8px;
 }
 .gb-empty-icon{font-size:1.8rem;opacity:.25;}
-.gb-empty-lbl{font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.gb-empty-lbl{font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
 
 /* LOCKED — ready to open */
 .gift-box.locked{
@@ -368,16 +369,16 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 }
 
 .gb-title{
-    font-size:.72rem;font-weight:700;color:var(--text);
-    text-align:center;line-height:1.3;
+    font-size:.75rem;font-weight:700;color:var(--text);
+    text-align:center;line-height:1.35;letter-spacing:-.01em;
 }
-.gb-sub{font-size:.6rem;color:var(--text3);text-align:center;}
+.gb-sub{font-size:.62rem;color:var(--text3);text-align:center;font-weight:500;}
 
 /* NEW badge */
 .gb-new{
     position:absolute;top:8px;right:8px;
     background:linear-gradient(135deg,var(--orange),var(--orange2));
-    color:#fff;font-size:.55rem;font-weight:700;
+    color:#fff;font-size:.55rem;font-weight:800;
     padding:2px 7px;border-radius:20px;
     text-transform:uppercase;letter-spacing:.05em;
     animation:newPop 1.6s ease infinite;
@@ -387,7 +388,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 /* Status chip */
 .gb-chip{
     position:absolute;bottom:0;left:0;right:0;
-    font-size:.58rem;font-weight:700;text-align:center;padding:6px;
+    font-size:.6rem;font-weight:800;text-align:center;padding:6px;
     text-transform:uppercase;letter-spacing:.05em;border-radius:0 0 14px 14px;
 }
 .gb-chip.chip-open{background:linear-gradient(90deg,var(--orange3),var(--orange));color:#fff;}
@@ -401,7 +402,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;
 }
 .filter-tab{
-    padding:8px 18px;border-radius:50px;font-size:.82rem;font-weight:600;
+    padding:8px 18px;border-radius:50px;font-size:.82rem;font-weight:700;
     border:1.5px solid var(--border);background:var(--card);color:var(--text2);
     cursor:pointer;text-decoration:none;transition:all .18s;
     display:inline-flex;align-items:center;gap:6px;
@@ -409,7 +410,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 .filter-tab:hover{border-color:var(--orange);color:var(--orange);}
 .filter-tab.active{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 2px 10px rgba(249,115,22,.25);}
 .ft-count{
-    font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:10px;
+    font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:10px;
     background:rgba(255,255,255,.25);
 }
 .filter-tab:not(.active) .ft-count{background:var(--card2);color:var(--text3);}
@@ -437,7 +438,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     content:'FEATURED';
     position:absolute;top:14px;right:-26px;
     background:var(--orange);color:#fff;
-    font-size:.55rem;font-weight:800;
+    font-size:.55rem;font-weight:900;
     padding:4px 32px;letter-spacing:.08em;
     transform:rotate(45deg);box-shadow:0 2px 8px rgba(249,115,22,.4);
     z-index:2;
@@ -447,7 +448,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 .rc-type-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
 .rc-type-badge{
     display:inline-flex;align-items:center;gap:5px;
-    font-size:.68rem;font-weight:700;padding:4px 10px;border-radius:20px;
+    font-size:.68rem;font-weight:800;padding:4px 10px;border-radius:20px;
     text-transform:uppercase;letter-spacing:.04em;
 }
 .type-mentorship{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border);}
@@ -468,30 +469,30 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
 .rc-icon-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
 .rc-big-icon{font-size:2rem;}
-.rc-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:var(--text);line-height:1.3;}
+.rc-title{font-size:1.05rem;font-weight:800;color:var(--text);line-height:1.3;letter-spacing:-.01em;}
 .rc-value-pill{
     display:inline-flex;align-items:center;gap:5px;
     background:var(--orange-bg);color:var(--orange3);
     border:1px solid var(--orange-border);
-    font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;
+    font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:20px;
     margin-top:8px;
 }
 
 .rc-body{padding:0 20px 14px;flex:1;}
-.rc-desc{font-size:.8rem;color:var(--text2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.rc-desc{font-size:.82rem;color:var(--text2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:500;}
 
 .rc-footer{
     padding:12px 20px;border-top:1px solid var(--border);
     display:flex;align-items:center;gap:8px;background:var(--bg);
 }
 .rc-code-snippet{
-    flex:1;font-size:.72rem;color:var(--text3);font-family:'Courier New',monospace;
+    flex:1;font-size:.72rem;color:var(--text3);font-family:'Courier New',monospace;font-weight:600;
     display:flex;align-items:center;gap:6px;
     background:var(--card2);padding:6px 10px;border-radius:8px;overflow:hidden;
 }
 .rc-code-snippet span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .btn-sm{
-    padding:7px 14px;border-radius:8px;font-size:.76rem;font-weight:700;
+    padding:7px 14px;border-radius:8px;font-size:.76rem;font-weight:800;
     border:none;cursor:pointer;transition:all .18s;white-space:nowrap;
     display:inline-flex;align-items:center;gap:5px;font-family:inherit;
 }
@@ -507,7 +508,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
 /* Status label */
 .rc-status-label{
-    font-size:.67rem;font-weight:700;padding:3px 10px;border-radius:20px;
+    font-size:.67rem;font-weight:800;padding:3px 10px;border-radius:20px;
     text-transform:uppercase;letter-spacing:.04em;
 }
 .sl-pending{background:#f1f5f9;color:var(--text3);}
@@ -521,7 +522,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     color:var(--text3);
 }
 .empty-state i{font-size:2.8rem;opacity:.3;margin-bottom:14px;display:block;}
-.empty-state p{font-size:.9rem;}
+.empty-state p{font-size:.9rem;font-weight:500;}
 
 /* ── Reward Reveal Modal ────────────────────────────────────────────────── */
 .rmodal{
@@ -562,16 +563,16 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     from{transform:scale(0) rotate(-180deg);opacity:0;}
     to{transform:scale(1) rotate(0);opacity:1;}
 }
-.rmc-eyebrow{font-size:.62rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.18em;margin-bottom:5px;}
-.rmc-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:3px;}
-.rmc-sub{font-size:.85rem;color:var(--text2);}
+.rmc-eyebrow{font-size:.62rem;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:.18em;margin-bottom:5px;}
+.rmc-title{font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:3px;letter-spacing:-.02em;}
+.rmc-sub{font-size:.87rem;color:var(--text2);font-weight:500;}
 
 .rmc-body{padding:20px 24px;}
 .rmc-pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .rmc-pill{
     display:inline-flex;align-items:center;gap:5px;
     background:var(--card2);color:var(--text2);
-    font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:20px;
+    font-size:.72rem;font-weight:700;padding:5px 12px;border-radius:20px;
     border:1px solid var(--border);
 }
 .rmc-pill i{color:var(--orange);}
@@ -580,15 +581,15 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
     background:var(--card2);border:1.5px dashed var(--border);
     border-radius:12px;padding:14px 16px;margin-bottom:14px;
 }
-.rmc-code-lbl{font-size:.62rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;display:flex;align-items:center;gap:5px;}
+.rmc-code-lbl{font-size:.62rem;font-weight:800;color:var(--purple);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;display:flex;align-items:center;gap:5px;}
 .rmc-code-val{
-    font-size:1.2rem;font-weight:700;font-family:'Courier New',monospace;color:var(--text);
+    font-size:1.2rem;font-weight:800;font-family:'Courier New',monospace;color:var(--text);
     letter-spacing:.08em;display:flex;align-items:center;justify-content:space-between;gap:10px;
 }
 
 .rmc-footer{padding:0 24px 22px;display:flex;gap:10px;}
 .btn-rmc{
-    flex:1;padding:12px 16px;border-radius:12px;font-size:.86rem;font-weight:700;
+    flex:1;padding:12px 16px;border-radius:12px;font-size:.86rem;font-weight:800;
     cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;
     gap:7px;transition:all .18s;font-family:inherit;
 }
@@ -648,7 +649,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
         <!-- Hero Banner -->
         <div class="hero-banner">
             <div class="hero-left">
-                <h1>🎁 My Earnings &amp; Rewards</h1>
+                <h1>🎁 My Earnings & Rewards</h1>
                 <p>Exclusive benefits and perks earned through your outstanding performance</p>
             </div>
             <?php if ($pendingCount > 0): ?>
@@ -855,7 +856,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
                     <div class="rc-footer">
                         <?php if ($status === 'locked'): ?>
-                            <span style="flex:1;font-size:.72rem;color:var(--text3);">Open the box above ↑</span>
+                            <span style="flex:1;font-size:.72rem;color:var(--text3);font-weight:500;">Open the box above ↑</span>
 
                         <?php elseif ($status === 'unlocked'): ?>
                             <?php if ($r['code']): ?>
@@ -1022,7 +1023,7 @@ function showModal(reward) {
                     <button class="btn-sm btn-copy" onclick="copyCode('${x(reward.code)}',this)"><i class="fas fa-copy"></i></button>
                 </div>
             </div>` : ''}
-            ${reward.instructions ? `<p style="font-size:.8rem;color:var(--text2);line-height:1.55;">${x(reward.instructions)}</p>` : ''}
+            ${reward.instructions ? `<p style="font-size:.82rem;color:var(--text2);line-height:1.6;font-weight:500;">${x(reward.instructions)}</p>` : ''}
         </div>
         <div class="rmc-footer">
             ${canActivate ? `<button class="btn-rmc btn-rmc-primary" onclick="requestActivate(${reward.id},this,true)"><i class="fas fa-bolt"></i> Activate Reward</button>` : ''}
