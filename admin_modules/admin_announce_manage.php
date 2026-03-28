@@ -127,7 +127,8 @@ if (!empty($params)) {
                 <label class="form-label">Type *</label>
                 <select name="type" class="form-select" required>
                     <option value="general"       <?php echo ($announcement['type']??'')==='general'       ?'selected':''; ?>>General</option>
-                    <option value="task_deadline" <?php echo ($announcement['type']??'')==='task_deadline' ?'selected':''; ?>>Task Deadline</option>
+                    <option value="task" <?php echo ($announcement['type']??'')==='task' ?'selected':''; ?>>Task</option>
+                    <option value="deadline" <?php echo ($announcement['type']??'')==='deadline' ?'selected':''; ?>>Deadline</option>
                     <option value="certificate"   <?php echo ($announcement['type']??'')==='certificate'   ?'selected':''; ?>>Certificate</option>
                     <option value="attendance"    <?php echo ($announcement['type']??'')==='attendance'    ?'selected':''; ?>>Attendance</option>
                 </select>
@@ -225,7 +226,8 @@ if (!empty($params)) {
         <select name="filter_type" class="filter-select" onchange="this.form.submit()">
             <option value="">All Types</option>
             <option value="general"       <?php echo $filter_type==='general'       ?'selected':''; ?>>General</option>
-            <option value="task_deadline" <?php echo $filter_type==='task_deadline' ?'selected':''; ?>>Task Deadline</option>
+            <option value="task" <?php echo $filter_type==='task' ?'selected':''; ?>>Task</option>
+            <option value="deadline" <?php echo $filter_type==='deadline' ?'selected':''; ?>>Deadline</option>
             <option value="certificate"   <?php echo $filter_type==='certificate'   ?'selected':''; ?>>Certificate</option>
             <option value="attendance"    <?php echo $filter_type==='attendance'    ?'selected':''; ?>>Attendance</option>
         </select>
