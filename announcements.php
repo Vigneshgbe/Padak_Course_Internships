@@ -14,7 +14,7 @@ $batchId = $studentData['batch_id'] ?? null;
 $batchCondition = $batchId ? "OR a.batch_id=$batchId" : "";
 $announcementsToMark = $db->query("SELECT id FROM announcements 
     WHERE is_active=1 
-    AND (target_all=1 OR batch_id IS NULL $batchCondition)");
+    AND (target_all=1 OR batch_id IS NULL" . ($batchId ? " OR batch_id=$batchId" : "") . ")");
 
 if ($announcementsToMark && $announcementsToMark->num_rows > 0) {
     while ($ann = $announcementsToMark->fetch_assoc()) {
@@ -36,8 +36,14 @@ $announcements = [];
 $ar = $db->query("SELECT a.*, c.full_name as coordinator_name, ib.batch_name FROM announcements a
     LEFT JOIN coordinators c ON a.coordinator_id=c.id
     LEFT JOIN internship_batches ib ON a.batch_id=ib.id
-    WHERE a.is_active=1 AND (a.batch_id IS NULL OR a.batch_id=$batchId)
+    WHERE a.is_active=1 
+    AND (
+        a.target_all=1 
+        OR a.batch_id IS NULL 
+        OR a.batch_id=$batchId
+    )
     ORDER BY a.priority='urgent' DESC, a.priority='important' DESC, a.created_at DESC");
+
 while ($ar && $row = $ar->fetch_assoc()) $announcements[] = $row;
 $initials = strtoupper(substr($student['full_name'],0,1).(str_contains($student['full_name'],' ')?substr(explode(' ',$student['full_name'])[1],0,1):''));
 $activePage = 'announcements';
