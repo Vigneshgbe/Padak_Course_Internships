@@ -97,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $newFileName = uniqid() . '_' . time() . '.jpg';
                 $optimizedPath = $uploadsDir . '/' . $newFileName;
 
-                // Optimize image with GD if available
                 if (extension_loaded('gd')) {
                     $image = null;
                     switch ($fileExt) {
@@ -215,27 +214,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // Check if already liked
         $checkStmt = $db->prepare("SELECT id FROM social_feed WHERE parent_id=? AND student_id=? AND item_type='like'");
         $checkStmt->bind_param("ii", $postId, $sid);
         $checkStmt->execute();
         $exists = $checkStmt->get_result()->num_rows > 0;
 
         if ($exists) {
-            // Unlike
             $delStmt = $db->prepare("UPDATE social_feed SET is_deleted=1 WHERE parent_id=? AND student_id=? AND item_type='like'");
             $delStmt->bind_param("ii", $postId, $sid);
             $delStmt->execute();
             $action = 'unliked';
         } else {
-            // Like
             $insStmt = $db->prepare("INSERT INTO social_feed (parent_id, student_id, item_type) VALUES (?,?,'like')");
             $insStmt->bind_param("ii", $postId, $sid);
             $insStmt->execute();
             $action = 'liked';
         }
 
-        // Get updated count
         $countStmt = $db->prepare("SELECT COUNT(*) as count FROM social_feed WHERE parent_id=? AND item_type='like' AND is_deleted=0");
         $countStmt->bind_param("i", $postId);
         $countStmt->execute();
@@ -267,7 +262,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $commentId = $db->insert_id;
 
-        // Get comment details
         $detailStmt = $db->prepare(
             "SELECT sf.*, s.full_name, s.profile_photo 
              FROM social_feed sf 
@@ -278,7 +272,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $detailStmt->execute();
         $commentData = $detailStmt->get_result()->fetch_assoc();
 
-        // Get updated count
         $countStmt = $db->prepare("SELECT COUNT(*) as count FROM social_feed WHERE parent_id=? AND item_type='comment' AND is_deleted=0");
         $countStmt->bind_param("i", $postId);
         $countStmt->execute();
@@ -336,7 +329,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // Verify ownership
         $checkStmt = $db->prepare("SELECT media_path FROM social_feed WHERE id=? AND student_id=? AND item_type='post'");
         $checkStmt->bind_param("ii", $postId, $sid);
         $checkStmt->execute();
@@ -352,7 +344,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $mediaPath = $oldMediaPath;
         $mediaType = null;
 
-        // Handle new file upload
         if ($hasFile) {
             $fileError = $_FILES['media']['error'];
             if ($fileError !== UPLOAD_ERR_OK) {
@@ -425,7 +416,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $mediaPath = $uploadsUrl . '/' . $newFileName;
                 }
 
-                // Delete old media file
                 if ($oldMediaPath && file_exists($oldMediaPath)) {
                     @unlink($oldMediaPath);
                 }
@@ -436,7 +426,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $destPath = $uploadsDir . '/' . $newFileName;
                 if (move_uploaded_file($fileTmp, $destPath)) {
                     $mediaPath = $uploadsUrl . '/' . $newFileName;
-                    // Delete old media file
                     if ($oldMediaPath && file_exists($oldMediaPath)) {
                         @unlink($oldMediaPath);
                     }
@@ -450,7 +439,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
-        // Update post
         if ($hasFile) {
             $stmt = $db->prepare("UPDATE social_feed SET content=?, media_path=?, media_type=?, updated_at=NOW() WHERE id=?");
             $stmt->bind_param("sssi", $content, $mediaPath, $mediaType, $postId);
@@ -483,7 +471,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // Verify ownership
         $checkStmt = $db->prepare("SELECT id FROM social_feed WHERE id=? AND student_id=? AND item_type='post'");
         $checkStmt->bind_param("ii", $postId, $sid);
         $checkStmt->execute();
@@ -493,7 +480,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // Soft delete
         $delStmt = $db->prepare("UPDATE social_feed SET is_deleted=1 WHERE id=?");
         $delStmt->bind_param("i", $postId);
         $delStmt->execute();
@@ -509,7 +495,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // =============================================
 // PAGE DATA LOADING
 // =============================================
-// Fetch initial posts
 $posts = [];
 $res = $db->query(
     "SELECT sf.*, s.full_name, s.profile_photo, s.domain_interest,
@@ -540,6 +525,8 @@ ob_end_flush();
 <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- TinyMCE 6 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.7.0/tinymce.min.js" referrerpolicy="origin"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    RESET & BASE STYLES
@@ -547,10 +534,7 @@ ob_end_flush();
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 
 :root{
-    /* Sidebar width */
     --sbw:258px;
-    
-    /* Colors */
     --o5:#f97316;
     --o4:#fb923c;
     --bg:#f8fafc;
@@ -561,8 +545,6 @@ ob_end_flush();
     --border:#e2e8f0;
     --green:#22c55e;
     --blue:#3b82f6;
-    
-    /* Responsive spacing */
     --page-padding:24px;
     --card-padding:22px;
     --card-radius:14px;
@@ -578,7 +560,7 @@ body{
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LAYOUT - DESKTOP FIRST
+   LAYOUT
    ═══════════════════════════════════════════════════════════ */
 .page-wrap{
     margin-left:var(--sbw);
@@ -614,13 +596,8 @@ body{
     transition:background 0.2s;
 }
 
-.topbar-hamburger:hover{
-    background:var(--bg);
-}
-
-.topbar-hamburger:active{
-    transform:scale(0.95);
-}
+.topbar-hamburger:hover{ background:var(--bg); }
+.topbar-hamburger:active{ transform:scale(0.95); }
 
 .topbar-title{
     font-size:1.05rem;
@@ -632,9 +609,7 @@ body{
     gap:8px;
 }
 
-.topbar-title i{
-    color:var(--o5);
-}
+.topbar-title i{ color:var(--o5); }
 
 /* ═══════════════════════════════════════════════════════════
    FEED CONTAINER
@@ -660,9 +635,7 @@ body{
     transition:box-shadow 0.3s ease;
 }
 
-.create-post-card:hover{
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
+.create-post-card:hover{ box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 
 .create-post-header{
     display:flex;
@@ -692,26 +665,43 @@ body{
     border-radius:50%;
 }
 
-.create-post-input{
+/* ── TinyMCE wrapper inside the create post card ── */
+.tinymce-post-wrap{
     flex:1;
-    padding:14px 18px;
+    min-width:0;
     border:1.5px solid var(--border);
-    border-radius:16px;
-    font-size:0.92rem;
-    font-family:inherit;
-    outline:none;
-    resize:none;
-    transition:all 0.2s;
+    border-radius:12px;
+    overflow:hidden;
+    transition:border-color 0.2s, box-shadow 0.2s;
     background:var(--bg);
-    min-height:80px;
-    max-height:200px;
-    line-height:1.5;
 }
 
-.create-post-input:focus{
+.tinymce-post-wrap:focus-within{
     border-color:var(--o5);
-    background:var(--card);
     box-shadow:0 0 0 3px rgba(249,115,22,0.1);
+    background:var(--card);
+}
+
+/* Override TinyMCE chrome to blend with card design */
+.tinymce-post-wrap .tox-tinymce{
+    border:none !important;
+    border-radius:0 !important;
+}
+
+.tinymce-post-wrap .tox-toolbar-overlord,
+.tinymce-post-wrap .tox-toolbar__primary{
+    background:var(--bg) !important;
+    border-bottom:1px solid var(--border) !important;
+}
+
+.tinymce-post-wrap .tox-edit-area__iframe{
+    background:transparent !important;
+}
+
+.tinymce-post-wrap .tox-statusbar{
+    border-top:1px solid var(--border) !important;
+    background:var(--bg) !important;
+    display:none !important; /* hide word count bar — keep it clean */
 }
 
 .create-post-actions{
@@ -733,11 +723,9 @@ body{
     overflow:hidden;
 }
 
-.media-preview.active{
-    display:block;
-}
+.media-preview.active{ display:block; }
 
-.media-preview img, .media-preview video{
+.media-preview img,.media-preview video{
     width:100%;
     max-height:300px;
     object-fit:cover;
@@ -764,9 +752,7 @@ body{
     z-index:1;
 }
 
-.media-preview-remove:hover{
-    background:rgba(0,0,0,0.85);
-}
+.media-preview-remove:hover{ background:rgba(0,0,0,0.85); }
 
 .post-actions-left{
     display:flex;
@@ -791,25 +777,14 @@ body{
     white-space:nowrap;
 }
 
-.post-action-btn:hover{
-    background:var(--bg);
-    color:var(--text);
-}
-
-.post-action-btn:active{
-    transform:scale(0.97);
-}
-
-.post-action-btn i{
-    font-size:1rem;
-}
+.post-action-btn:hover{ background:var(--bg); color:var(--text); }
+.post-action-btn:active{ transform:scale(0.97); }
+.post-action-btn i{ font-size:1rem; }
 
 /* ═══════════════════════════════════════════════════════════
    EMOJI PICKER
    ═══════════════════════════════════════════════════════════ */
-.emoji-picker-container{
-    position:relative;
-}
+.emoji-picker-container{ position:relative; }
 
 .emoji-picker-popup{
     display:none;
@@ -828,17 +803,10 @@ body{
     overflow-y:auto;
 }
 
-.emoji-picker-popup.active{
-    display:block;
-}
+.emoji-picker-popup.active{ display:block; }
 
-.emoji-category{
-    margin-bottom:14px;
-}
-
-.emoji-category:last-child{
-    margin-bottom:0;
-}
+.emoji-category{ margin-bottom:14px; }
+.emoji-category:last-child{ margin-bottom:0; }
 
 .emoji-category-title{
     font-size:0.72rem;
@@ -865,14 +833,8 @@ body{
     user-select:none;
 }
 
-.emoji-item:hover{
-    background:var(--bg);
-    transform:scale(1.2);
-}
-
-.emoji-item:active{
-    transform:scale(1.1);
-}
+.emoji-item:hover{ background:var(--bg); transform:scale(1.2); }
+.emoji-item:active{ transform:scale(1.1); }
 
 /* ═══════════════════════════════════════════════════════════
    POST BUTTON
@@ -894,21 +856,9 @@ body{
     white-space:nowrap;
 }
 
-.btn-post:hover{
-    opacity:0.9;
-    transform:translateY(-1px);
-    box-shadow:0 4px 12px rgba(249,115,22,0.4);
-}
-
-.btn-post:active{
-    transform:translateY(0);
-}
-
-.btn-post:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-    transform:none;
-}
+.btn-post:hover{ opacity:0.9; transform:translateY(-1px); box-shadow:0 4px 12px rgba(249,115,22,0.4); }
+.btn-post:active{ transform:translateY(0); }
+.btn-post:disabled{ opacity:0.5; cursor:not-allowed; transform:none; }
 
 /* ═══════════════════════════════════════════════════════════
    POST CARD
@@ -923,9 +873,7 @@ body{
     transition:box-shadow 0.3s ease;
 }
 
-.post-card:hover{
-    box-shadow:0 4px 12px rgba(0,0,0,0.1);
-}
+.post-card:hover{ box-shadow:0 4px 12px rgba(0,0,0,0.1); }
 
 .post-header{
     display:flex;
@@ -955,10 +903,7 @@ body{
     border-radius:50%;
 }
 
-.post-author-info{
-    flex:1;
-    min-width:0;
-}
+.post-author-info{ flex:1; min-width:0; }
 
 .post-author-name{
     font-size:0.92rem;
@@ -993,19 +938,24 @@ body{
     flex-shrink:0;
 }
 
-.post-options:hover{
-    background:var(--bg);
-    color:var(--text);
-}
+.post-options:hover{ background:var(--bg); color:var(--text); }
 
 .post-content{
     font-size:0.95rem;
     line-height:1.65;
     color:var(--text);
     margin-bottom:14px;
-    white-space:pre-wrap;
     word-break:break-word;
 }
+
+/* Rich content from TinyMCE inside post cards */
+.post-content p{ margin:0 0 8px 0; }
+.post-content p:last-child{ margin-bottom:0; }
+.post-content strong{ font-weight:700; }
+.post-content em{ font-style:italic; }
+.post-content ul,.post-content ol{ padding-left:20px; margin:4px 0 8px; }
+.post-content li{ margin-bottom:2px; }
+.post-content a{ color:var(--o5); text-decoration:underline; }
 
 .post-media{
     margin-bottom:16px;
@@ -1022,9 +972,7 @@ body{
     transition:transform 0.3s ease;
 }
 
-.post-media img:hover{
-    transform:scale(1.02);
-}
+.post-media img:hover{ transform:scale(1.02); }
 
 .post-media video{
     width:100%;
@@ -1054,9 +1002,7 @@ body{
     transition:color 0.2s;
 }
 
-.stat-item:hover{
-    color:var(--text2);
-}
+.stat-item:hover{ color:var(--text2); }
 
 .post-interactions{
     display:flex;
@@ -1083,17 +1029,10 @@ body{
     font-weight:600;
 }
 
-.interaction-btn:hover{
-    background:var(--bg);
-}
+.interaction-btn:hover{ background:var(--bg); }
+.interaction-btn:active{ transform:scale(0.97); }
 
-.interaction-btn:active{
-    transform:scale(0.97);
-}
-
-.interaction-btn.liked{
-    color:var(--o5);
-}
+.interaction-btn.liked{ color:var(--o5); }
 
 .interaction-btn.liked i{
     animation:likeAnim 0.4s ease;
@@ -1108,20 +1047,10 @@ body{
 /* ═══════════════════════════════════════════════════════════
    COMMENTS SECTION
    ═══════════════════════════════════════════════════════════ */
-.comments-section{
-    margin-top:12px;
-    display:none;
-}
+.comments-section{ margin-top:12px; display:none; }
+.comments-section.active{ display:block; }
 
-.comments-section.active{
-    display:block;
-}
-
-.comment-input-wrap{
-    display:flex;
-    gap:10px;
-    margin-bottom:14px;
-}
+.comment-input-wrap{ display:flex; gap:10px; margin-bottom:14px; }
 
 .comment-avatar{
     width:34px;
@@ -1185,30 +1114,13 @@ body{
     flex-shrink:0;
 }
 
-.btn-comment:hover{
-    opacity:0.9;
-    transform:translateY(-1px);
-}
+.btn-comment:hover{ opacity:0.9; transform:translateY(-1px); }
+.btn-comment:active{ transform:translateY(0); }
+.btn-comment:disabled{ opacity:0.5; cursor:not-allowed; }
 
-.btn-comment:active{
-    transform:translateY(0);
-}
+.comments-list{ display:flex; flex-direction:column; gap:12px; }
 
-.btn-comment:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-}
-
-.comments-list{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-}
-
-.comment-item{
-    display:flex;
-    gap:10px;
-}
+.comment-item{ display:flex; gap:10px; }
 
 .comment-content{
     flex:1;
@@ -1218,25 +1130,9 @@ body{
     min-width:0;
 }
 
-.comment-author{
-    font-size:0.82rem;
-    font-weight:700;
-    color:var(--text);
-    margin-bottom:4px;
-}
-
-.comment-text{
-    font-size:0.85rem;
-    line-height:1.5;
-    color:var(--text2);
-    word-break:break-word;
-}
-
-.comment-time{
-    font-size:0.72rem;
-    color:var(--text3);
-    margin-top:4px;
-}
+.comment-author{ font-size:0.82rem; font-weight:700; color:var(--text); margin-bottom:4px; }
+.comment-text{ font-size:0.85rem; line-height:1.5; color:var(--text2); word-break:break-word; }
+.comment-time{ font-size:0.72rem; color:var(--text3); margin-top:4px; }
 
 /* ═══════════════════════════════════════════════════════════
    OPTIONS MENU
@@ -1255,9 +1151,7 @@ body{
     overflow:hidden;
 }
 
-.options-menu.active{
-    display:block;
-}
+.options-menu.active{ display:block; }
 
 .option-item{
     padding:10px 16px;
@@ -1270,31 +1164,16 @@ body{
     gap:10px;
 }
 
-.option-item:hover{
-    background:var(--bg);
-}
-
-.option-item:active{
-    transform:scale(0.98);
-}
-
-.option-item.danger{
-    color:#ef4444;
-}
-
-.option-item.danger:hover{
-    background:#fef2f2;
-}
-
-.option-item i{
-    width:16px;
-    text-align:center;
-}
+.option-item:hover{ background:var(--bg); }
+.option-item:active{ transform:scale(0.98); }
+.option-item.danger{ color:#ef4444; }
+.option-item.danger:hover{ background:#fef2f2; }
+.option-item i{ width:16px; text-align:center; }
 
 /* ═══════════════════════════════════════════════════════════
    MODALS
    ═══════════════════════════════════════════════════════════ */
-.edit-modal, .image-modal{
+.edit-modal,.image-modal{
     display:none;
     position:fixed;
     inset:0;
@@ -1306,9 +1185,7 @@ body{
     backdrop-filter:blur(4px);
 }
 
-.edit-modal.open, .image-modal.open{
-    display:flex;
-}
+.edit-modal.open,.image-modal.open{ display:flex; }
 
 .edit-modal-content{
     background:var(--card);
@@ -1339,9 +1216,7 @@ body{
     gap:10px;
 }
 
-.edit-modal-title i{
-    color:var(--o5);
-}
+.edit-modal-title i{ color:var(--o5); }
 
 .edit-modal-close{
     background:none;
@@ -1359,14 +1234,9 @@ body{
     transition:all 0.2s;
 }
 
-.edit-modal-close:hover{
-    background:var(--bg);
-    color:var(--text);
-}
+.edit-modal-close:hover{ background:var(--bg); color:var(--text); }
 
-.edit-modal-body{
-    margin-bottom:20px;
-}
+.edit-modal-body{ margin-bottom:20px; }
 
 .edit-textarea{
     width:100%;
@@ -1389,9 +1259,7 @@ body{
     box-shadow:0 0 0 3px rgba(249,115,22,0.1);
 }
 
-.edit-media-section{
-    margin-bottom:16px;
-}
+.edit-media-section{ margin-bottom:16px; }
 
 .edit-current-media{
     border-radius:12px;
@@ -1407,11 +1275,7 @@ body{
     display:block;
 }
 
-.edit-current-media video{
-    width:100%;
-    max-height:300px;
-    border-radius:12px;
-}
+.edit-current-media video{ width:100%; max-height:300px; border-radius:12px; }
 
 .edit-remove-media{
     position:absolute;
@@ -1431,9 +1295,7 @@ body{
     transition:background 0.2s;
 }
 
-.edit-remove-media:hover{
-    background:rgba(0,0,0,0.85);
-}
+.edit-remove-media:hover{ background:rgba(0,0,0,0.85); }
 
 .edit-media-label{
     display:inline-block;
@@ -1448,15 +1310,8 @@ body{
     transition:all 0.2s;
 }
 
-.edit-media-label:hover{
-    border-color:var(--o5);
-    background:var(--card);
-}
-
-.edit-media-label i{
-    margin-right:6px;
-    color:var(--o5);
-}
+.edit-media-label:hover{ border-color:var(--o5); background:var(--card); }
+.edit-media-label i{ margin-right:6px; color:var(--o5); }
 
 .edit-modal-footer{
     display:flex;
@@ -1480,38 +1335,13 @@ body{
     gap:6px;
 }
 
-.edit-modal-btn.cancel{
-    background:var(--bg);
-    border:1.5px solid var(--border);
-    color:var(--text2);
-}
+.edit-modal-btn.cancel{ background:var(--bg); border:1.5px solid var(--border); color:var(--text2); }
+.edit-modal-btn.cancel:hover{ background:var(--card); border-color:var(--text3); }
+.edit-modal-btn.save{ background:linear-gradient(135deg,var(--o5),var(--o4)); color:#fff; box-shadow:0 2px 8px rgba(249,115,22,0.3); }
+.edit-modal-btn.save:hover{ opacity:0.9; transform:translateY(-1px); }
+.edit-modal-btn:active{ transform:translateY(0); }
+.edit-modal-btn:disabled{ opacity:0.5; cursor:not-allowed; }
 
-.edit-modal-btn.cancel:hover{
-    background:var(--card);
-    border-color:var(--text3);
-}
-
-.edit-modal-btn.save{
-    background:linear-gradient(135deg,var(--o5),var(--o4));
-    color:#fff;
-    box-shadow:0 2px 8px rgba(249,115,22,0.3);
-}
-
-.edit-modal-btn.save:hover{
-    opacity:0.9;
-    transform:translateY(-1px);
-}
-
-.edit-modal-btn:active{
-    transform:translateY(0);
-}
-
-.edit-modal-btn:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-}
-
-/* Image Modal */
 .image-modal img{
     max-width:90%;
     max-height:90vh;
@@ -1537,18 +1367,12 @@ body{
     transition:background 0.2s;
 }
 
-.image-modal-close:hover{
-    background:rgba(255,255,255,0.3);
-}
+.image-modal-close:hover{ background:rgba(255,255,255,0.3); }
 
 /* ═══════════════════════════════════════════════════════════
    LOADING & EMPTY STATES
    ═══════════════════════════════════════════════════════════ */
-.loading-posts{
-    text-align:center;
-    padding:40px 20px;
-    color:var(--text3);
-}
+.loading-posts{ text-align:center; padding:40px 20px; color:var(--text3); }
 
 .loading-spinner{
     display:inline-block;
@@ -1560,471 +1384,118 @@ body{
     animation:spin 1s linear infinite;
 }
 
-@keyframes spin{
-    to{transform:rotate(360deg);}
-}
+@keyframes spin{ to{transform:rotate(360deg);} }
 
-.no-posts{
-    text-align:center;
-    padding:60px 20px;
-    color:var(--text3);
-}
-
-.no-posts i{
-    font-size:3.5rem;
-    opacity:0.15;
-    margin-bottom:16px;
-    display:block;
-}
-
-.no-posts h3{
-    font-size:1.1rem;
-    font-weight:600;
-    margin-bottom:6px;
-    color:var(--text2);
-}
+.no-posts{ text-align:center; padding:60px 20px; color:var(--text3); }
+.no-posts i{ font-size:3.5rem; opacity:0.15; margin-bottom:16px; display:block; }
+.no-posts h3{ font-size:1.1rem; font-weight:600; margin-bottom:6px; color:var(--text2); }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE DESIGN - TABLET (768px - 1024px)
+   RESPONSIVE — TABLET
    ═══════════════════════════════════════════════════════════ */
 @media(max-width:1024px) and (min-width:769px){
-    :root{
-        --page-padding:20px;
-        --card-padding:18px;
-        --card-gap:20px;
-    }
-    
-    .feed-container{
-        max-width:750px;
-    }
+    :root{ --page-padding:20px; --card-padding:18px; --card-gap:20px; }
+    .feed-container{ max-width:750px; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE DESIGN - MOBILE (≤768px)
+   RESPONSIVE — MOBILE ≤768px
    ═══════════════════════════════════════════════════════════ */
 @media(max-width:768px){
-    :root{
-        --sbw:0;
-        --page-padding:14px;
-        --card-padding:16px;
-        --card-radius:12px;
-        --card-gap:16px;
-    }
-    
-    body{
-        font-size:15px;
-    }
-    
-    /* Layout adjustments */
-    .page-wrap{
-        margin-left:0;
-    }
-    
-    .topbar{
-        padding:10px 14px;
-    }
-    
-    .topbar-hamburger{
-        display:flex;
-    }
-    
-    .topbar-title{
-        font-size:1rem;
-    }
-    
-    /* Feed container */
-    .feed-container{
-        padding:var(--page-padding);
-        max-width:100%;
-    }
-    
-    /* Create post adjustments */
-    .create-post-card, .post-card{
-        border-radius:var(--card-radius);
-        padding:var(--card-padding);
-        margin-bottom:var(--card-gap);
-    }
-    
-    .create-post-header, .post-header{
-        gap:12px;
-    }
-    
-    .user-avatar, .post-avatar{
-        width:42px;
-        height:42px;
-        font-size:0.95rem;
-    }
-    
-    .create-post-input{
-        font-size:0.9rem;
-        padding:12px 16px;
-        min-height:70px;
-    }
-    
-    /* Action buttons - stack on very small screens */
-    .create-post-actions{
-        gap:8px;
-    }
-    
-    .post-action-btn{
-        padding:7px 12px;
-        font-size:0.85rem;
-    }
-    
-    .post-action-btn span{
-        display:none;
-    }
-    
-    .btn-post{
-        padding:8px 20px;
-        font-size:0.85rem;
-    }
-    
-    /* Media preview */
-    .media-preview img, .media-preview video{
-        max-height:250px;
-    }
-    
-    /* Post content */
-    .post-content{
-        font-size:0.9rem;
-        line-height:1.6;
-    }
-    
-    .post-media img, .post-media video{
-        max-height:400px;
-    }
-    
-    /* Interaction buttons */
-    .interaction-btn{
-        padding:8px;
-        font-size:0.85rem;
-        gap:5px;
-    }
-    
-    /* Comments */
-    .comment-avatar{
-        width:32px;
-        height:32px;
-        font-size:0.82rem;
-    }
-    
-    .comment-input{
-        font-size:0.82rem;
-        padding:9px 12px;
-    }
-    
-    .btn-comment{
-        font-size:0.82rem;
-        padding:0 16px;
-    }
-    
-    /* Emoji picker - adjust for mobile */
-    .emoji-picker-popup{
-        width:calc(100vw - 40px);
-        max-width:320px;
-        max-height:240px;
-    }
-    
-    .emoji-grid{
-        grid-template-columns:repeat(6,1fr);
-    }
-    
-    .emoji-item{
-        font-size:1.3rem;
-        padding:5px;
-    }
-    
-    /* Edit modal */
-    .edit-modal-content{
-        padding:20px;
-        max-width:calc(100vw - 32px);
-    }
-    
-    .edit-modal-title{
-        font-size:1rem;
-    }
-    
-    .edit-textarea{
-        font-size:0.9rem;
-        padding:12px 14px;
-    }
-    
-    .edit-modal-footer{
-        flex-wrap:wrap;
-    }
-    
-    .edit-modal-btn{
-        flex:1;
-        min-width:calc(50% - 5px);
-        justify-content:center;
-    }
+    :root{ --sbw:0; --page-padding:14px; --card-padding:16px; --card-radius:12px; --card-gap:16px; }
+    body{ font-size:15px; }
+    .page-wrap{ margin-left:0; }
+    .topbar{ padding:10px 14px; }
+    .topbar-hamburger{ display:flex; }
+    .topbar-title{ font-size:1rem; }
+    .feed-container{ padding:var(--page-padding); max-width:100%; }
+    .create-post-card,.post-card{ border-radius:var(--card-radius); padding:var(--card-padding); margin-bottom:var(--card-gap); }
+    .create-post-header,.post-header{ gap:12px; }
+    .user-avatar,.post-avatar{ width:42px; height:42px; font-size:0.95rem; }
+    .create-post-actions{ gap:8px; }
+    .post-action-btn{ padding:7px 12px; font-size:0.85rem; }
+    .post-action-btn span{ display:none; }
+    .btn-post{ padding:8px 20px; font-size:0.85rem; }
+    .media-preview img,.media-preview video{ max-height:250px; }
+    .post-content{ font-size:0.9rem; line-height:1.6; }
+    .post-media img,.post-media video{ max-height:400px; }
+    .interaction-btn{ padding:8px; font-size:0.85rem; gap:5px; }
+    .comment-avatar{ width:32px; height:32px; font-size:0.82rem; }
+    .comment-input{ font-size:0.82rem; padding:9px 12px; }
+    .btn-comment{ font-size:0.82rem; padding:0 16px; }
+    .emoji-picker-popup{ width:calc(100vw - 40px); max-width:320px; max-height:240px; }
+    .emoji-grid{ grid-template-columns:repeat(6,1fr); }
+    .emoji-item{ font-size:1.3rem; padding:5px; }
+    .edit-modal-content{ padding:20px; max-width:calc(100vw - 32px); }
+    .edit-modal-title{ font-size:1rem; }
+    .edit-textarea{ font-size:0.9rem; padding:12px 14px; }
+    .edit-modal-footer{ flex-wrap:wrap; }
+    .edit-modal-btn{ flex:1; min-width:calc(50% - 5px); justify-content:center; }
+    /* TinyMCE toolbar wraps on mobile */
+    .tinymce-post-wrap .tox-toolbar__group{ flex-wrap:wrap; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE DESIGN - SMALL MOBILE (≤480px)
+   RESPONSIVE — SMALL MOBILE ≤480px
    ═══════════════════════════════════════════════════════════ */
 @media(max-width:480px){
-    :root{
-        --page-padding:10px;
-        --card-padding:14px;
-        --card-radius:10px;
-        --card-gap:12px;
-    }
-    
-    body{
-        font-size:14px;
-    }
-    
-    .topbar{
-        padding:8px 12px;
-    }
-    
-    .topbar-title{
-        font-size:0.95rem;
-    }
-    
-    .topbar-hamburger{
-        font-size:1.2rem;
-        padding:6px;
-    }
-    
-    /* Avatars */
-    .user-avatar, .post-avatar{
-        width:38px;
-        height:38px;
-        font-size:0.9rem;
-    }
-    
-    .comment-avatar{
-        width:30px;
-        height:30px;
-        font-size:0.8rem;
-    }
-    
-    /* Create post */
-    .create-post-header, .post-header{
-        gap:10px;
-    }
-    
-    .create-post-input{
-        padding:10px 14px;
-        font-size:0.88rem;
-        min-height:60px;
-    }
-    
-    .post-actions-left{
-        gap:4px;
-    }
-    
-    .post-action-btn{
-        padding:6px 10px;
-        font-size:0.82rem;
-        gap:4px;
-    }
-    
-    .btn-post{
-        padding:7px 18px;
-        font-size:0.82rem;
-        gap:5px;
-    }
-    
-    /* Media */
-    .media-preview img, .media-preview video{
-        max-height:200px;
-    }
-    
-    .post-media img, .post-media video{
-        max-height:300px;
-    }
-    
-    /* Typography */
-    .post-author-name{
-        font-size:0.88rem;
-    }
-    
-    .post-meta{
-        font-size:0.72rem;
-    }
-    
-    .post-content{
-        font-size:0.88rem;
-        line-height:1.55;
-    }
-    
-    .post-stats{
-        font-size:0.78rem;
-    }
-    
-    /* Interactions */
-    .interaction-btn{
-        padding:7px;
-        font-size:0.82rem;
-        gap:4px;
-    }
-    
-    /* Comments */
-    .comment-input-wrap{
-        gap:8px;
-    }
-    
-    .comment-input-form{
-        gap:6px;
-    }
-    
-    .comment-input{
-        font-size:0.8rem;
-        padding:8px 12px;
-    }
-    
-    .btn-comment{
-        font-size:0.8rem;
-        padding:0 14px;
-        height:36px;
-    }
-    
-    .comment-author{
-        font-size:0.8rem;
-    }
-    
-    .comment-text{
-        font-size:0.82rem;
-    }
-    
-    .comment-time{
-        font-size:0.7rem;
-    }
-    
-    /* Emoji picker */
-    .emoji-picker-popup{
-        width:calc(100vw - 24px);
-        max-height:200px;
-    }
-    
-    .emoji-grid{
-        grid-template-columns:repeat(5,1fr);
-        gap:3px;
-    }
-    
-    .emoji-item{
-        font-size:1.2rem;
-        padding:4px;
-    }
-    
-    /* Modals */
-    .edit-modal, .image-modal{
-        padding:12px;
-    }
-    
-    .edit-modal-content{
-        padding:16px;
-    }
-    
-    .edit-modal-header{
-        margin-bottom:16px;
-        padding-bottom:12px;
-    }
-    
-    .edit-modal-title{
-        font-size:0.95rem;
-    }
-    
-    .edit-textarea{
-        font-size:0.88rem;
-        padding:10px 12px;
-        min-height:100px;
-    }
-    
-    .edit-modal-footer{
-        padding-top:12px;
-    }
-    
-    .edit-modal-btn{
-        padding:9px 20px;
-        font-size:0.85rem;
-    }
-    
-    .image-modal img{
-        max-width:95%;
-        max-height:85vh;
-    }
-    
-    .image-modal-close{
-        top:12px;
-        right:12px;
-        width:40px;
-        height:40px;
-        font-size:1.2rem;
-    }
+    :root{ --page-padding:10px; --card-padding:14px; --card-radius:10px; --card-gap:12px; }
+    body{ font-size:14px; }
+    .topbar{ padding:8px 12px; }
+    .topbar-title{ font-size:0.95rem; }
+    .topbar-hamburger{ font-size:1.2rem; padding:6px; }
+    .user-avatar,.post-avatar{ width:38px; height:38px; font-size:0.9rem; }
+    .comment-avatar{ width:30px; height:30px; font-size:0.8rem; }
+    .create-post-header,.post-header{ gap:10px; }
+    .post-actions-left{ gap:4px; }
+    .post-action-btn{ padding:6px 10px; font-size:0.82rem; gap:4px; }
+    .btn-post{ padding:7px 18px; font-size:0.82rem; gap:5px; }
+    .media-preview img,.media-preview video{ max-height:200px; }
+    .post-media img,.post-media video{ max-height:300px; }
+    .post-author-name{ font-size:0.88rem; }
+    .post-meta{ font-size:0.72rem; }
+    .post-content{ font-size:0.88rem; line-height:1.55; }
+    .post-stats{ font-size:0.78rem; }
+    .interaction-btn{ padding:7px; font-size:0.82rem; gap:4px; }
+    .comment-input-wrap{ gap:8px; }
+    .comment-input-form{ gap:6px; }
+    .comment-input{ font-size:0.8rem; padding:8px 12px; }
+    .btn-comment{ font-size:0.8rem; padding:0 14px; height:36px; }
+    .comment-author{ font-size:0.8rem; }
+    .comment-text{ font-size:0.82rem; }
+    .comment-time{ font-size:0.7rem; }
+    .emoji-picker-popup{ width:calc(100vw - 24px); max-height:200px; }
+    .emoji-grid{ grid-template-columns:repeat(5,1fr); gap:3px; }
+    .emoji-item{ font-size:1.2rem; padding:4px; }
+    .edit-modal,.image-modal{ padding:12px; }
+    .edit-modal-content{ padding:16px; }
+    .edit-modal-header{ margin-bottom:16px; padding-bottom:12px; }
+    .edit-modal-title{ font-size:0.95rem; }
+    .edit-textarea{ font-size:0.88rem; padding:10px 12px; min-height:100px; }
+    .edit-modal-footer{ padding-top:12px; }
+    .edit-modal-btn{ padding:9px 20px; font-size:0.85rem; }
+    .image-modal img{ max-width:95%; max-height:85vh; }
+    .image-modal-close{ top:12px; right:12px; width:40px; height:40px; font-size:1.2rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LANDSCAPE MODE ADJUSTMENTS (Mobile)
-   ═══════════════════════════════════════════════════════════ */
 @media(max-width:896px) and (orientation:landscape){
-    .feed-container{
-        padding:12px 20px;
-    }
-    
-    .post-media img, .post-media video{
-        max-height:50vh;
-    }
-    
-    .media-preview img, .media-preview video{
-        max-height:30vh;
-    }
-    
-    .edit-modal-content{
-        max-height:85vh;
-    }
+    .feed-container{ padding:12px 20px; }
+    .post-media img,.post-media video{ max-height:50vh; }
+    .media-preview img,.media-preview video{ max-height:30vh; }
+    .edit-modal-content{ max-height:85vh; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ACCESSIBILITY & TOUCH IMPROVEMENTS
-   ═══════════════════════════════════════════════════════════ */
 @media(hover:none){
-    /* Larger touch targets for mobile */
-    .post-action-btn,
-    .interaction-btn,
-    .post-options,
-    .topbar-hamburger{
-        min-height:44px;
-        min-width:44px;
-    }
-    
-    .emoji-item{
-        min-width:40px;
-        min-height:40px;
-    }
+    .post-action-btn,.interaction-btn,.post-options,.topbar-hamburger{ min-height:44px; min-width:44px; }
+    .emoji-item{ min-width:40px; min-height:40px; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SMOOTH SCROLLING
-   ═══════════════════════════════════════════════════════════ */
-html{
-    scroll-behavior:smooth;
-}
+html{ scroll-behavior:smooth; }
 
-/* ═══════════════════════════════════════════════════════════
-   WEBKIT SCROLLBAR STYLING
-   ═══════════════════════════════════════════════════════════ */
-::-webkit-scrollbar{
-    width:8px;
-    height:8px;
-}
-
-::-webkit-scrollbar-track{
-    background:var(--bg);
-}
-
-::-webkit-scrollbar-thumb{
-    background:var(--border);
-    border-radius:4px;
-}
-
-::-webkit-scrollbar-thumb:hover{
-    background:var(--text3);
-}
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--text3); }
 </style>
 </head>
 <body>
@@ -2052,12 +1523,10 @@ html{
                         <?php echo strtoupper(substr($student['full_name'], 0, 1)); ?>
                     <?php endif; ?>
                 </div>
-                <textarea 
-                    class="create-post-input" 
-                    id="postContent" 
-                    placeholder="What's on your mind, <?php echo htmlspecialchars(explode(' ', $student['full_name'])[0]); ?>?"
-                    rows="1"
-                    aria-label="Post content"></textarea>
+                <!-- TinyMCE replaces this textarea -->
+                <div class="tinymce-post-wrap">
+                    <textarea id="postContent"></textarea>
+                </div>
             </div>
             
             <div class="media-preview" id="mediaPreview">
@@ -2248,20 +1717,65 @@ let hasMorePosts = true;
 let editingPostId = null;
 let editMediaToRemove = false;
 
-// Auto-resize textarea
-const postContent = document.getElementById('postContent');
-postContent.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+// ═══════════════════════════════════════════════════════════
+// TINYMCE INIT
+// ═══════════════════════════════════════════════════════════
+tinymce.init({
+    selector: '#postContent',
+    height: 140,
+    min_height: 100,
+    max_height: 400,
+    autoresize_bottom_margin: 0,
+    menubar: false,
+    statusbar: false,
+    plugins: 'autoresize lists link autolink',
+    toolbar: 'bold italic underline | forecolor | bullist numlist | link | removeformat',
+    toolbar_location: 'bottom',
+    skin: 'oxide',
+    content_style: `
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            color: #0f172a;
+            line-height: 1.65;
+            margin: 10px 14px;
+            word-break: break-word;
+        }
+        p { margin: 0 0 6px 0; }
+        p:last-child { margin-bottom: 0; }
+        a { color: #f97316; }
+    `,
+    placeholder: "What's on your mind, <?php echo htmlspecialchars(explode(' ', $student['full_name'])[0]); ?>?",
+    // Lock font — no font family selector exposed
+    font_family_formats: 'Inter=Inter,sans-serif',
+    branding: false,
+    // Clean paste — strip Word/external junk
+    paste_as_text: false,
+    smart_paste: true,
+    // Autoresize fires on content change
+    autoresize_on_init: true,
+    setup: function(editor) {
+        // Sync placeholder feel: focus border via wrapper
+        editor.on('focus', function() {
+            document.querySelector('.tinymce-post-wrap').style.borderColor = 'var(--o5)';
+            document.querySelector('.tinymce-post-wrap').style.boxShadow = '0 0 0 3px rgba(249,115,22,0.1)';
+            document.querySelector('.tinymce-post-wrap').style.background = '#fff';
+        });
+        editor.on('blur', function() {
+            document.querySelector('.tinymce-post-wrap').style.borderColor = '';
+            document.querySelector('.tinymce-post-wrap').style.boxShadow = '';
+            document.querySelector('.tinymce-post-wrap').style.background = '';
+        });
+    }
 });
 
 // ═══════════════════════════════════════════════════════════
-// EMOJI PICKER
+// EMOJI PICKER — uses TinyMCE insertContent
 // ═══════════════════════════════════════════════════════════
 function toggleEmojiPicker() {
     const picker = document.getElementById('emojiPicker');
     picker.classList.toggle('active');
-    
+
     if (picker.classList.contains('active')) {
         setTimeout(() => {
             document.addEventListener('click', closeEmojiPickerOutside);
@@ -2272,7 +1786,7 @@ function toggleEmojiPicker() {
 function closeEmojiPickerOutside(e) {
     const picker = document.getElementById('emojiPicker');
     const btn = document.querySelector('.emoji-picker-container .post-action-btn');
-    
+
     if (!picker.contains(e.target) && !btn.contains(e.target)) {
         picker.classList.remove('active');
         document.removeEventListener('click', closeEmojiPickerOutside);
@@ -2280,23 +1794,15 @@ function closeEmojiPickerOutside(e) {
 }
 
 function insertEmoji(emoji) {
-    const textarea = document.getElementById('postContent');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    
-    textarea.value = text.substring(0, start) + emoji + text.substring(end);
-    textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
-    textarea.focus();
-    
-    // Trigger resize
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
-    
-    // Close picker on mobile after selection
+    const editor = tinymce.get('postContent');
+    if (editor) {
+        editor.focus();
+        editor.insertContent(emoji);
+    }
+
+    // Close picker on mobile
     if (window.innerWidth <= 768) {
-        const picker = document.getElementById('emojiPicker');
-        picker.classList.remove('active');
+        document.getElementById('emojiPicker').classList.remove('active');
     }
 }
 
@@ -2306,11 +1812,11 @@ function insertEmoji(emoji) {
 function handleMediaSelect(input) {
     if (!input.files || !input.files[0]) return;
     selectedMedia = input.files[0];
-    
+
     const preview = document.getElementById('mediaPreview');
     const previewImg = document.getElementById('previewImage');
     const previewVid = document.getElementById('previewVideo');
-    
+
     if (selectedMedia.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = e => {
@@ -2338,10 +1844,15 @@ function removeMediaPreview() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// CREATE POST
+// CREATE POST — reads HTML from TinyMCE
 // ═══════════════════════════════════════════════════════════
 function createPost() {
-    const content = postContent.value.trim();
+    const editor = tinymce.get('postContent');
+    // Get raw HTML from TinyMCE; strip whitespace-only content
+    const rawContent = editor ? editor.getContent() : '';
+    const textContent = editor ? editor.getContent({format: 'text'}).trim() : '';
+    const content = textContent ? rawContent : '';
+
     if (!content && !selectedMedia) {
         alert('Please write something or add media');
         return;
@@ -2375,12 +1886,12 @@ function createPost() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// POST INTERACTIONS
+// POST INTERACTIONS (unchanged)
 // ═══════════════════════════════════════════════════════════
 function toggleLike(postId) {
     const btn = document.querySelector(`[data-post-id="${postId}"] .interaction-btn.like-btn`);
     const countEl = btn.querySelector('.like-count');
-    
+
     const fd = new FormData();
     fd.append('action', 'toggle_like');
     fd.append('post_id', postId);
@@ -2403,7 +1914,7 @@ function toggleLike(postId) {
 function toggleComments(postId) {
     const section = document.getElementById('comments-' + postId);
     const wasActive = section.classList.contains('active');
-    
+
     if (wasActive) {
         section.classList.remove('active');
     } else {
@@ -2417,9 +1928,9 @@ function toggleComments(postId) {
 function loadComments(postId) {
     const section = document.getElementById('comments-' + postId);
     const list = section.querySelector('.comments-list');
-    
+
     list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);"><i class="fas fa-spinner fa-spin"></i></div>';
-    
+
     const fd = new FormData();
     fd.append('action', 'fetch_comments');
     fd.append('post_id', postId);
@@ -2444,7 +1955,7 @@ function loadComments(postId) {
 function addComment(postId) {
     const input = document.getElementById('comment-input-' + postId);
     const comment = input.value.trim();
-    
+
     if (!comment) return;
 
     const btn = input.nextElementSibling;
@@ -2462,10 +1973,10 @@ function addComment(postId) {
                 const list = document.querySelector(`#comments-${postId} .comments-list`);
                 const noComments = list.querySelector('div[style*="No comments"]');
                 if (noComments) noComments.remove();
-                
+
                 list.insertAdjacentHTML('beforeend', renderComment(d.comment));
                 input.value = '';
-                
+
                 const countEl = document.querySelector(`[data-post-id="${postId}"] .comment-count`);
                 if (countEl) countEl.textContent = d.comments_count + (d.comments_count === 1 ? ' Comment' : ' Comments');
             } else {
@@ -2483,10 +1994,10 @@ function addComment(postId) {
 function renderComment(c) {
     const time = formatTime(c.created_at);
     const initial = c.full_name ? c.full_name[0].toUpperCase() : '?';
-    const profileImg = c.profile_photo 
+    const profileImg = c.profile_photo
         ? `<img src="${escHtml(c.profile_photo)}" alt="${escHtml(c.full_name)}">`
         : initial;
-    
+
     return `
         <div class="comment-item">
             <div class="comment-avatar">${profileImg}</div>
@@ -2500,14 +2011,14 @@ function renderComment(c) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// POST OPTIONS
+// POST OPTIONS (unchanged)
 // ═══════════════════════════════════════════════════════════
 function togglePostOptions(btn, postId, isOwner) {
     const menu = btn.nextElementSibling;
     const wasActive = menu.classList.contains('active');
-    
+
     document.querySelectorAll('.options-menu').forEach(m => m.classList.remove('active'));
-    
+
     if (!wasActive) {
         menu.classList.add('active');
         setTimeout(() => {
@@ -2522,27 +2033,30 @@ function togglePostOptions(btn, postId, isOwner) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// EDIT POST
+// EDIT POST — plain textarea (unchanged)
 // ═══════════════════════════════════════════════════════════
 function openEditModal(postId) {
     editingPostId = postId;
     const postCard = document.querySelector(`[data-post-id="${postId}"]`);
-    const content = postCard.querySelector('.post-content')?.textContent || '';
+    const contentEl = postCard.querySelector('.post-content');
+    // Strip HTML for plain edit textarea
+    const content = contentEl ? contentEl.innerText.trim() : '';
     const mediaEl = postCard.querySelector('.post-media img, .post-media video');
-    
-    document.getElementById('editContent').value = content.trim();
-    
+
+    document.getElementById('editContent').value = content;
+
     const currentMedia = document.getElementById('editCurrentMedia');
     const editImg = document.getElementById('editMediaImg');
     const editVid = document.getElementById('editMediaVideo');
-    
+
     if (mediaEl) {
         if (mediaEl.tagName === 'IMG') {
             editImg.src = mediaEl.src;
             editImg.style.display = 'block';
             editVid.style.display = 'none';
         } else if (mediaEl.tagName === 'VIDEO') {
-            editVid.querySelector('source').src = mediaEl.querySelector('source').src;
+            const src = mediaEl.querySelector('source');
+            if (src) editVid.setAttribute('src', src.src);
             editVid.load();
             editVid.style.display = 'block';
             editImg.style.display = 'none';
@@ -2551,7 +2065,7 @@ function openEditModal(postId) {
     } else {
         currentMedia.style.display = 'none';
     }
-    
+
     editMediaToRemove = false;
     document.getElementById('editModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -2569,12 +2083,12 @@ function closeEditModal() {
 
 function handleEditMediaSelect(input) {
     if (!input.files || !input.files[0]) return;
-    
+
     const file = input.files[0];
     const currentMedia = document.getElementById('editCurrentMedia');
     const editImg = document.getElementById('editMediaImg');
     const editVid = document.getElementById('editMediaVideo');
-    
+
     if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = e => {
@@ -2586,7 +2100,7 @@ function handleEditMediaSelect(input) {
         reader.readAsDataURL(file);
     } else if (file.type.startsWith('video/')) {
         const url = URL.createObjectURL(file);
-        editVid.querySelector('source').src = url;
+        editVid.src = url;
         editVid.load();
         editVid.style.display = 'block';
         editImg.style.display = 'none';
@@ -2603,7 +2117,7 @@ function removeEditMedia() {
 function saveEditPost() {
     const content = document.getElementById('editContent').value.trim();
     const fileInput = document.getElementById('editMediaInput');
-    
+
     if (!content && !fileInput.files[0] && editMediaToRemove) {
         alert('Post must have content or media');
         return;
@@ -2617,7 +2131,7 @@ function saveEditPost() {
     fd.append('action', 'edit_post');
     fd.append('post_id', editingPostId);
     fd.append('content', content);
-    
+
     if (fileInput.files[0]) {
         fd.append('media', fileInput.files[0]);
     }
@@ -2627,11 +2141,11 @@ function saveEditPost() {
         .then(d => {
             if (d.success) {
                 const postCard = document.querySelector(`[data-post-id="${editingPostId}"]`);
-                const contentEl = postCard.querySelector('.post-content');
-                
+                const contentElUpdate = postCard.querySelector('.post-content');
+
                 if (content) {
-                    if (contentEl) {
-                        contentEl.textContent = content;
+                    if (contentElUpdate) {
+                        contentElUpdate.textContent = content;
                     } else {
                         const mediaEl = postCard.querySelector('.post-media');
                         const newContent = document.createElement('div');
@@ -2643,10 +2157,10 @@ function saveEditPost() {
                             postCard.querySelector('.post-header').after(newContent);
                         }
                     }
-                } else if (contentEl) {
-                    contentEl.remove();
+                } else if (contentElUpdate) {
+                    contentElUpdate.remove();
                 }
-                
+
                 if (d.media_path) {
                     let mediaEl = postCard.querySelector('.post-media');
                     if (!mediaEl) {
@@ -2659,7 +2173,7 @@ function saveEditPost() {
                             postCard.querySelector('.post-header').after(mediaEl);
                         }
                     }
-                    
+
                     if (d.media_type === 'image') {
                         mediaEl.innerHTML = `<img src="${escHtml(d.media_path)}" alt="Post image" onclick="openImageModal('${escHtml(d.media_path)}')">`;
                     } else if (d.media_type === 'video') {
@@ -2669,7 +2183,7 @@ function saveEditPost() {
                     const mediaEl = postCard.querySelector('.post-media');
                     if (mediaEl) mediaEl.remove();
                 }
-                
+
                 closeEditModal();
             } else {
                 alert('Error: ' + (d.error || 'Failed to update post'));
@@ -2713,7 +2227,7 @@ function deletePost(postId) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// IMAGE MODAL
+// IMAGE MODAL (unchanged)
 // ═══════════════════════════════════════════════════════════
 function openImageModal(src) {
     document.getElementById('imageModalImg').src = src;
@@ -2727,15 +2241,15 @@ function closeImageModal() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// INFINITE SCROLL
+// INFINITE SCROLL (unchanged)
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('scroll', () => {
     if (isLoadingMore || !hasMorePosts) return;
-    
+
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollHeight = document.documentElement.scrollHeight;
     const clientHeight = document.documentElement.clientHeight;
-    
+
     if (scrollTop + clientHeight >= scrollHeight - 300) {
         loadMorePosts();
     }
@@ -2772,12 +2286,12 @@ function loadMorePosts() {
 function renderPostHTML(post) {
     const time = formatTime(post.created_at);
     const initial = post.full_name ? post.full_name[0].toUpperCase() : '?';
-    const profileImg = post.profile_photo 
+    const profileImg = post.profile_photo
         ? `<img src="${escHtml(post.profile_photo)}" alt="${escHtml(post.full_name)}">`
         : initial;
     const isOwner = post.student_id == MY_ID;
     const likedClass = post.has_liked ? 'liked' : '';
-    
+
     let mediaHTML = '';
     if (post.media_path) {
         if (post.media_type === 'image') {
@@ -2809,7 +2323,7 @@ function renderPostHTML(post) {
                     </div>
                 </div>
             </div>
-            ${post.content ? `<div class="post-content">${escHtml(post.content)}</div>` : ''}
+            ${post.content ? `<div class="post-content">${post.content}</div>` : ''}
             ${mediaHTML}
             <div class="post-stats">
                 <div class="stat-item">
@@ -2845,7 +2359,7 @@ function renderPostHTML(post) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// UTILITY FUNCTIONS
+// UTILITY FUNCTIONS (unchanged)
 // ═══════════════════════════════════════════════════════════
 function escHtml(s) {
     if (!s) return '';
@@ -2861,7 +2375,7 @@ function formatTime(dateStr) {
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
     if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-    
+
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 }
 
@@ -2870,20 +2384,16 @@ function toggleSidebar() {
     document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-// Prevent modal close propagation
+// Modal click-outside close
 document.getElementById('editModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditModal();
-    }
+    if (e.target === this) closeEditModal();
 });
 
 document.getElementById('imageModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeImageModal();
-    }
+    if (e.target === this) closeImageModal();
 });
 
-// Keyboard accessibility for emoji picker
+// Keyboard emoji accessibility
 document.querySelectorAll('.emoji-item').forEach(item => {
     item.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -2893,15 +2403,11 @@ document.querySelectorAll('.emoji-item').forEach(item => {
     });
 });
 
-// Close modals with Escape key
+// Escape key closes modals
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        if (document.getElementById('editModal').classList.contains('open')) {
-            closeEditModal();
-        }
-        if (document.getElementById('imageModal').classList.contains('open')) {
-            closeImageModal();
-        }
+        if (document.getElementById('editModal').classList.contains('open')) closeEditModal();
+        if (document.getElementById('imageModal').classList.contains('open')) closeImageModal();
         if (document.getElementById('emojiPicker').classList.contains('active')) {
             document.getElementById('emojiPicker').classList.remove('active');
         }
@@ -2912,16 +2418,15 @@ document.addEventListener('keydown', function(e) {
 </html>
 
 <?php
-// Helper function to render a post
 function renderPost($post, $sid, $student) {
     $time = formatTimeAgo($post['created_at']);
     $initial = strtoupper(substr($post['full_name'], 0, 1));
-    $profileImg = $post['profile_photo'] 
+    $profileImg = $post['profile_photo']
         ? '<img src="' . htmlspecialchars($post['profile_photo']) . '" alt="' . htmlspecialchars($post['full_name']) . '">'
         : $initial;
     $isOwner = $post['student_id'] == $sid;
     $likedClass = $post['has_liked'] ? 'liked' : '';
-    
+
     echo '<div class="post-card" data-post-id="' . $post['id'] . '">';
     echo '<div class="post-header">';
     echo '<div class="post-avatar">' . $profileImg . '</div>';
@@ -2940,35 +2445,36 @@ function renderPost($post, $sid, $student) {
         echo '<div class="option-item danger" onclick="deletePost(' . $post['id'] . ')"><i class="fas fa-trash"></i> Delete Post</div>';
     }
     echo '</div></div></div>';
-    
+
+    // Render stored HTML content directly (TinyMCE produces HTML)
     if ($post['content']) {
-        echo '<div class="post-content">' . nl2br(htmlspecialchars($post['content'])) . '</div>';
+        echo '<div class="post-content">' . $post['content'] . '</div>';
     }
-    
+
     if ($post['media_path']) {
         echo '<div class="post-media">';
         if ($post['media_type'] === 'image') {
-            echo '<img src="' . htmlspecialchars($post['media_path']) . '" alt="Post image" onclick="openImageModal(\'' . htmlspecialchars($post['media_path']) . '\')">';
+            $mp = htmlspecialchars($post['media_path']);
+            echo '<img src="' . $mp . '" alt="Post image" onclick="openImageModal(\'' . $mp . '\')">';
         } elseif ($post['media_type'] === 'video') {
             echo '<video controls><source src="' . htmlspecialchars($post['media_path']) . '" type="video/mp4"></video>';
         }
         echo '</div>';
     }
-    
+
     echo '<div class="post-stats">';
     echo '<div class="stat-item"><i class="fas fa-heart" style="color:var(--o5);"></i> ';
     echo $post['likes_count'] . ' ' . ($post['likes_count'] == 1 ? 'Like' : 'Likes') . '</div>';
     echo '<div class="stat-item comment-count">' . $post['comments_count'] . ' ' . ($post['comments_count'] == 1 ? 'Comment' : 'Comments') . '</div>';
     echo '</div>';
-    
+
     echo '<div class="post-interactions">';
     echo '<button class="interaction-btn like-btn ' . $likedClass . '" onclick="toggleLike(' . $post['id'] . ')" aria-label="Like post">';
     echo '<i class="fas fa-heart"></i> <span class="like-count">' . $post['likes_count'] . '</span></button>';
     echo '<button class="interaction-btn" onclick="toggleComments(' . $post['id'] . ')" aria-label="Comment on post">';
     echo '<i class="fas fa-comment"></i> Comment</button>';
     echo '</div>';
-    
-    // Comments section
+
     echo '<div class="comments-section" id="comments-' . $post['id'] . '">';
     echo '<div class="comment-input-wrap">';
     echo '<div class="comment-avatar">';
@@ -2984,7 +2490,7 @@ function renderPost($post, $sid, $student) {
     echo '</div></div>';
     echo '<div class="comments-list"></div>';
     echo '</div>';
-    
+
     echo '</div>';
 }
 
@@ -2992,12 +2498,12 @@ function formatTimeAgo($dateStr) {
     $date = new DateTime($dateStr);
     $now = new DateTime();
     $diff = $now->getTimestamp() - $date->getTimestamp();
-    
+
     if ($diff < 60) return 'Just now';
     if ($diff < 3600) return floor($diff / 60) . 'm ago';
     if ($diff < 86400) return floor($diff / 3600) . 'h ago';
     if ($diff < 604800) return floor($diff / 86400) . 'd ago';
-    
+
     return $date->format('M d, Y');
 }
 ?>
