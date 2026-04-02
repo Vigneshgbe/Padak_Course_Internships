@@ -652,9 +652,88 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
         exit;
     }
 
+    // ────────────────── CERTIFICATE MANAGEMENT ───────────────────────
+    // ── Issue New Certificate ──────────────────────────────────────
+    if (isset($_POST['issue_certificate'])) {
+        $student_id           = (int)$_POST['student_id'];
+        $batch_id             = !empty($_POST['batch_id']) ? (int)$_POST['batch_id'] : null;
+        $certificate_number   = $db->real_escape_string(trim($_POST['certificate_number'] ?? ''));
+        $issued_date          = !empty($_POST['issued_date']) ? $db->real_escape_string($_POST['issued_date']) : null;
+        $completion_grade     = $db->real_escape_string($_POST['completion_grade'] ?? 'Good');
+        $total_points_earned  = (int)($_POST['total_points_earned'] ?? 0);
+        $certificate_url      = $db->real_escape_string(trim($_POST['certificate_url'] ?? ''));
+        $certificate_file     = $db->real_escape_string(trim($_POST['certificate_file'] ?? ''));
+        $is_issued            = (int)($_POST['is_issued'] ?? 0);
+    
+        $batch_val    = $batch_id ? $batch_id : 'NULL';
+        $date_val     = $issued_date ? "'$issued_date'" : 'NULL';
+        $url_val      = $certificate_url ? "'$certificate_url'" : 'NULL';
+        $file_val     = $certificate_file ? "'$certificate_file'" : 'NULL';
+        $certnum_val  = $certificate_number ? "'$certificate_number'" : 'NULL';
+    
+        $db->query("INSERT INTO internship_certificates
+            (student_id, batch_id, certificate_number, issued_date, completion_grade,
+            total_points_earned, is_issued, certificate_url, certificate_file, created_at)
+            VALUES
+            ($student_id, $batch_val, $certnum_val, $date_val, '$completion_grade',
+            $total_points_earned, $is_issued, $url_val, $file_val, NOW())
+        ");
+    
+        ob_end_clean();
+        header('Location: admin.php?module=certificates_manage&msg=cert_issued');
+        exit;
+    }
+    
+    // ── Mark Certificate as Issued ────────────────────────────────
+    if (isset($_POST['mark_cert_issued'])) {
+        $cert_id = (int)$_POST['cert_id'];
+        $db->query("UPDATE internship_certificates SET is_issued=1, issued_date=COALESCE(issued_date, CURDATE()) WHERE id=$cert_id");
+        ob_end_clean();
+        header('Location: admin.php?module=certificates_manage&msg=cert_issued');
+        exit;
+    }
+    
+    // ── Revoke Certificate (set back to pending) ──────────────────
+    if (isset($_POST['revoke_certificate'])) {
+        $cert_id = (int)$_POST['cert_id'];
+        $db->query("UPDATE internship_certificates SET is_issued=0 WHERE id=$cert_id");
+        ob_end_clean();
+        header('Location: admin.php?module=certificates_manage&msg=cert_revoked');
+        exit;
+    }
+    
+    // ── Quick Update Certificate ──────────────────────────────────
+    if (isset($_POST['update_certificate'])) {
+        $cert_id             = (int)$_POST['cert_id'];
+        $issued_date         = !empty($_POST['issued_date']) ? "'" . $db->real_escape_string($_POST['issued_date']) . "'" : 'NULL';
+        $completion_grade    = $db->real_escape_string($_POST['completion_grade'] ?? 'Good');
+        $certificate_file    = $db->real_escape_string(trim($_POST['certificate_file'] ?? ''));
+        $total_points_earned = (int)($_POST['total_points_earned'] ?? 0);
+        $file_val            = $certificate_file ? "'$certificate_file'" : 'NULL';
+    
+        $db->query("UPDATE internship_certificates SET
+            issued_date = $issued_date,
+            completion_grade = '$completion_grade',
+            certificate_file = $file_val,
+            total_points_earned = $total_points_earned
+            WHERE id = $cert_id
+        ");
+        ob_end_clean();
+        header('Location: admin.php?module=certificates_manage&msg=cert_updated');
+        exit;
+    }
+    
+    // ── Delete Certificate ────────────────────────────────────────
+    if (isset($_POST['delete_certificate'])) {
+        $cert_id = (int)$_POST['cert_id'];
+        $db->query("DELETE FROM internship_certificates WHERE id=$cert_id");
+        ob_end_clean();
+        header('Location: admin.php?module=certificates_manage&msg=cert_deleted');
+        exit;
+    }
+
 }
 // ── END EARLY POST HANDLERS ──────────────────────────────────────────────
-
 
 define('ADMIN_USERNAME', 'admin');
 define('ADMIN_PASSWORD', 'vigneshg091002');
