@@ -10,7 +10,7 @@ class PadakDatabase {
     private $conn;
 
     private function __construct() {
-        $this->conn = new mysqli(PADAK_DB_HOST, PADAK_DB_USER, PADAK_DB_PASS, PADAK_DB_NAME);
+        $this->conn = new mysqli('p:' . PADAK_DB_HOST, PADAK_DB_USER, PADAK_DB_PASS, PADAK_DB_NAME);
         if ($this->conn->connect_error) {
             die(json_encode(['error' => 'DB connection failed: ' . $this->conn->connect_error]));
         }

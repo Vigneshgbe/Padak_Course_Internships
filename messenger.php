@@ -1310,7 +1310,7 @@ function updateReactions(el,reactions){
     });
 }
 
-if(ROOM_ID) setInterval(pollMessages,3000);
+if(ROOM_ID) setInterval(pollMessages,8000);
 
 // ─── TEXTAREA AUTO-RESIZE ─────────────────────────────────────
 const msgInput=document.getElementById('msgInput');
