@@ -322,6 +322,8 @@ select.cm-ctrl{cursor:pointer;}
     <div class="cm-panel-body">
         <form method="POST" action="admin.php">
             <input type="hidden" name="issue_certificate" value="1">
+            <!-- CRITICAL FIX: Add tab parameter to maintain section after form submission -->
+            <input type="hidden" name="tab" value="certificates">
 
             <div class="cm-grid-2">
                 <div class="cm-fg">
@@ -506,6 +508,8 @@ select.cm-ctrl{cursor:pointer;}
                                       onsubmit="return confirm('Issue this certificate now?')">
                                     <input type="hidden" name="mark_cert_issued" value="1">
                                     <input type="hidden" name="cert_id" value="<?php echo $cert['id']; ?>">
+                                    <!-- CRITICAL FIX: Add tab parameter -->
+                                    <input type="hidden" name="tab" value="certificates">
                                     <button type="submit" class="cm-btn cm-btn-success cm-btn-sm" title="Mark as Issued">
                                         <i class="fas fa-check"></i> Issue
                                     </button>
@@ -515,6 +519,8 @@ select.cm-ctrl{cursor:pointer;}
                                       onsubmit="return confirm('Revoke / set back to pending?')">
                                     <input type="hidden" name="revoke_certificate" value="1">
                                     <input type="hidden" name="cert_id" value="<?php echo $cert['id']; ?>">
+                                    <!-- CRITICAL FIX: Add tab parameter -->
+                                    <input type="hidden" name="tab" value="certificates">
                                     <button type="submit" class="cm-btn cm-btn-warning cm-btn-sm" title="Revoke">
                                         <i class="fas fa-undo"></i>
                                     </button>
@@ -526,6 +532,8 @@ select.cm-ctrl{cursor:pointer;}
                                       onsubmit="return confirm('Permanently delete this certificate? This cannot be undone.')">
                                     <input type="hidden" name="delete_certificate" value="1">
                                     <input type="hidden" name="cert_id" value="<?php echo $cert['id']; ?>">
+                                    <!-- CRITICAL FIX: Add tab parameter -->
+                                    <input type="hidden" name="tab" value="certificates">
                                     <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -555,6 +563,9 @@ select.cm-ctrl{cursor:pointer;}
             <form method="POST" action="admin.php" id="cmQuickEditForm">
                 <input type="hidden" name="update_certificate" value="1">
                 <input type="hidden" name="cert_id" id="cmEditId">
+                <!-- CRITICAL FIX: Add tab parameter -->
+                <input type="hidden" name="tab" value="certificates">
+                
                 <div class="cm-grid-2" style="margin-bottom:14px;">
                     <div class="cm-fg" style="margin:0;">
                         <label class="cm-label"><i class="fas fa-calendar"></i> Issued Date</label>
