@@ -30,8 +30,8 @@ if ($certificatesQuery) {
     }
 }
 
-// Get certificate stats
-$statsQuery = $db->query("SELECT 
+// Get certificate stats - FIX: Handle null values from SUM() when table is empty
+$statsResult = $db->query("SELECT 
     COUNT(*) as total,
     SUM(CASE WHEN is_issued = 1 THEN 1 ELSE 0 END) as issued,
     SUM(CASE WHEN completion_grade = 'Outstanding' THEN 1 ELSE 0 END) as outstanding,
@@ -40,10 +40,23 @@ $statsQuery = $db->query("SELECT
     FROM internship_certificates 
     WHERE student_id = $sid
 ");
-$stats = $statsQuery->fetch_assoc();
+$stats = $statsResult ? $statsResult->fetch_assoc() : null;
 
+// Ensure all stat values are integers (handle null from SUM on empty table)
 if (!$stats || $stats['total'] == 0) {
-    $stats = ['total'=>0,'issued'=>0,'outstanding'=>0,'excellent'=>0,'total_points'=>0];
+    $stats = [
+        'total' => 0,
+        'issued' => 0,
+        'outstanding' => 0,
+        'excellent' => 0,
+        'total_points' => 0
+    ];
+} else {
+    $stats['total'] = (int)($stats['total'] ?? 0);
+    $stats['issued'] = (int)($stats['issued'] ?? 0);
+    $stats['outstanding'] = (int)($stats['outstanding'] ?? 0);
+    $stats['excellent'] = (int)($stats['excellent'] ?? 0);
+    $stats['total_points'] = (int)($stats['total_points'] ?? 0);
 }
 ?>
 <!DOCTYPE html>
@@ -396,7 +409,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                             <i class="fas fa-star fa-xs"></i> <?php echo htmlspecialchars($cert['completion_grade']); ?>
                         </span>
                         <?php if (!empty($cert['total_points_earned'])): ?>
-                        <span class="cert-visual-grade-text"><?php echo number_format($cert['total_points_earned']); ?> pts</span>
+                        <span class="cert-visual-grade-text"><?php echo number_format((int)$cert['total_points_earned']); ?> pts</span>
                         <?php endif; ?>
                     </div>
                     <?php endif; ?>
@@ -451,7 +464,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                             <div class="cert-detail-icon"><i class="fas fa-coins"></i></div>
                             <div class="cert-detail-text">
                                 <div class="cert-detail-label">Points Earned</div>
-                                <div class="cert-detail-value"><?php echo number_format($cert['total_points_earned'] ?? 0); ?> points</div>
+                                <div class="cert-detail-value"><?php echo number_format((int)($cert['total_points_earned'] ?? 0)); ?> points</div>
                             </div>
                         </div>
                     </div>

@@ -28,15 +28,33 @@ $certsRes = $db->query("
 $allCerts = [];
 while ($row = $certsRes->fetch_assoc()) $allCerts[] = $row;
 
-// Stats
-$certStats = $db->query("SELECT
+// Stats - FIX: Handle null values from SUM() when table is empty
+$certStatsResult = $db->query("SELECT
     COUNT(*) as total,
     SUM(CASE WHEN is_issued=1 THEN 1 ELSE 0 END) as issued,
     SUM(CASE WHEN is_issued=0 THEN 1 ELSE 0 END) as pending,
     SUM(CASE WHEN completion_grade='Outstanding' THEN 1 ELSE 0 END) as outstanding,
     SUM(CASE WHEN completion_grade='Excellent' THEN 1 ELSE 0 END) as excellent
     FROM internship_certificates
-")->fetch_assoc();
+");
+$certStats = $certStatsResult ? $certStatsResult->fetch_assoc() : null;
+
+// Ensure all stat values are integers (handle null from SUM on empty table)
+if (!$certStats || $certStats['total'] == 0) {
+    $certStats = [
+        'total' => 0,
+        'issued' => 0,
+        'pending' => 0,
+        'outstanding' => 0,
+        'excellent' => 0
+    ];
+} else {
+    $certStats['total'] = (int)($certStats['total'] ?? 0);
+    $certStats['issued'] = (int)($certStats['issued'] ?? 0);
+    $certStats['pending'] = (int)($certStats['pending'] ?? 0);
+    $certStats['outstanding'] = (int)($certStats['outstanding'] ?? 0);
+    $certStats['excellent'] = (int)($certStats['excellent'] ?? 0);
+}
 ?>
 
 <style>
@@ -484,7 +502,7 @@ select.cm-ctrl{cursor:pointer;}
                             <span class="cm-na">—</span>
                             <?php endif; ?>
                         </td>
-                        <td class="cm-date"><?php echo number_format($cert['total_points_earned'] ?? 0); ?></td>
+                        <td class="cm-date"><?php echo number_format((int)($cert['total_points_earned'] ?? 0)); ?></td>
                         <td>
                             <span class="cm-status <?php echo $isIssued ? 'issued' : 'pending'; ?>">
                                 <?php echo $isIssued ? 'Issued' : 'Pending'; ?>
