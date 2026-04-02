@@ -42,15 +42,8 @@ $statsQuery = $db->query("SELECT
 ");
 $stats = $statsQuery->fetch_assoc();
 
-// Set default values if no certificates exist
 if (!$stats || $stats['total'] == 0) {
-    $stats = [
-        'total' => 0,
-        'issued' => 0,
-        'outstanding' => 0,
-        'excellent' => 0,
-        'total_points' => 0
-    ];
+    $stats = ['total'=>0,'issued'=>0,'outstanding'=>0,'excellent'=>0,'total_points'=>0];
 }
 ?>
 <!DOCTYPE html>
@@ -82,10 +75,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 }
 .topbar-hamburger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:7px;}
 .topbar-title{font-size:1rem;font-weight:600;color:var(--text);flex:1;}
-
 .main-content{padding:24px 28px;flex:1;max-width:1400px;width:100%;margin:0 auto;}
 
-/* Header */
+/* ── Header ── */
 .cert-header{
     background:linear-gradient(135deg,var(--purple) 0%,var(--blue) 100%);
     border-radius:16px;padding:28px 32px;margin-bottom:24px;
@@ -106,7 +98,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .cert-header h1{font-size:1.8rem;font-weight:800;margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,0.1);}
 .cert-header p{font-size:.9rem;opacity:.9;}
 
-/* Stats Cards */
+/* ── Stats ── */
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{
     background:var(--card);border-radius:12px;padding:18px;
@@ -123,11 +115,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .stat-card.gold::before{background:var(--gold);}
 .stat-card.green::before{background:var(--green);}
 .stat-card.orange::before{background:var(--o5);}
-.stat-icon{
-    width:36px;height:36px;border-radius:9px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:.9rem;margin-bottom:10px;
-}
+.stat-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.9rem;margin-bottom:10px;}
 .stat-card.purple .stat-icon{background:rgba(139,92,246,0.12);color:var(--purple);}
 .stat-card.blue .stat-icon{background:rgba(59,130,246,0.12);color:var(--blue);}
 .stat-card.gold .stat-icon{background:rgba(251,191,36,0.12);color:var(--gold);}
@@ -136,7 +124,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .stat-value{font-size:1.4rem;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;}
 .stat-label{font-size:.76rem;color:var(--text2);font-weight:500;}
 
-/* Certificate Grid */
+/* ── Certificate Grid ── */
 .cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;margin-bottom:24px;}
 .cert-card{
     background:var(--card);border-radius:14px;
@@ -147,6 +135,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .cert-card.issued{border-color:var(--green);}
 .cert-card.pending{border-color:var(--yellow);}
 
+/* ── Certificate Visual — upgraded with watermark pattern ── */
 .cert-visual{
     height:200px;position:relative;
     background:linear-gradient(135deg,var(--purple) 0%,var(--blue) 100%);
@@ -157,37 +146,78 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     content:'';position:absolute;inset:0;
     background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
-.cert-icon-big{
-    font-size:4rem;color:rgba(255,255,255,0.3);
-    position:relative;z-index:1;
+
+/* Decorative ring behind icon */
+.cert-visual-ring{
+    position:absolute;
+    width:110px;height:110px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.15);
+    display:flex;align-items:center;justify-content:center;
+    z-index:1;
 }
+.cert-visual-ring::before{
+    content:'';position:absolute;
+    width:84px;height:84px;border-radius:50%;
+    border:1.5px dashed rgba(255,255,255,0.2);
+}
+.cert-icon-big{
+    font-size:2.8rem;color:rgba(255,255,255,0.85);
+    position:relative;z-index:2;
+    filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+}
+
+/* Grade ribbon on issued cards */
+.cert-visual-grade{
+    position:absolute;bottom:0;left:0;right:0;
+    padding:8px 16px;
+    background:linear-gradient(to top,rgba(0,0,0,0.55),transparent);
+    display:flex;align-items:center;justify-content:space-between;
+    z-index:3;
+}
+.cert-visual-grade-text{
+    font-size:.72rem;font-weight:700;color:rgba(255,255,255,0.9);
+    text-transform:uppercase;letter-spacing:.06em;
+}
+
 .cert-badge{
-    position:absolute;top:16px;right:16px;
-    padding:6px 14px;border-radius:20px;
-    font-size:.72rem;font-weight:700;
+    position:absolute;top:14px;right:14px;
+    padding:5px 12px;border-radius:20px;
+    font-size:.7rem;font-weight:700;
     backdrop-filter:blur(8px);
     display:flex;align-items:center;gap:5px;
+    z-index:4;
 }
-.cert-badge.issued{background:rgba(34,197,94,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.3);}
-.cert-badge.pending{background:rgba(234,179,8,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.3);}
+.cert-badge.issued{background:rgba(34,197,94,0.25);color:#fff;border:1.5px solid rgba(255,255,255,0.3);}
+.cert-badge.pending{background:rgba(234,179,8,0.25);color:#fff;border:1.5px solid rgba(255,255,255,0.3);}
 
 .cert-body{padding:20px;}
-.cert-batch{font-size:.8rem;color:var(--text3);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
-.cert-number{font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:12px;}
+.cert-batch{font-size:.78rem;color:var(--text3);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.cert-number{
+    font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;
+    padding:8px 12px;
+    background:var(--bg);border-radius:8px;
+    border:1px solid var(--border);
+    font-family:'Courier New',monospace;letter-spacing:.04em;
+}
+.cert-number i{color:var(--text3);font-size:.8rem;}
+
 .cert-details{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
 .cert-detail-item{display:flex;align-items:center;gap:10px;font-size:.84rem;}
 .cert-detail-icon{
-    width:32px;height:32px;border-radius:8px;
+    width:30px;height:30px;border-radius:8px;
     background:var(--bg);display:flex;align-items:center;justify-content:center;
-    font-size:.8rem;color:var(--text3);
+    font-size:.78rem;color:var(--text3);flex-shrink:0;
 }
 .cert-detail-text{flex:1;}
-.cert-detail-label{font-size:.72rem;color:var(--text3);margin-bottom:2px;}
-.cert-detail-value{font-weight:600;color:var(--text);}
+.cert-detail-label{font-size:.7rem;color:var(--text3);margin-bottom:2px;font-weight:500;}
+.cert-detail-value{font-weight:600;color:var(--text);font-size:.84rem;}
+
 .grade-badge{
     display:inline-flex;align-items:center;gap:4px;
-    padding:4px 10px;border-radius:6px;
-    font-size:.75rem;font-weight:700;
+    padding:3px 9px;border-radius:6px;
+    font-size:.73rem;font-weight:700;
 }
 .grade-badge.outstanding{background:rgba(251,191,36,0.15);color:#ca8a04;}
 .grade-badge.excellent{background:rgba(34,197,94,0.15);color:#16a34a;}
@@ -196,10 +226,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 .cert-actions{display:flex;gap:8px;}
 .btn-cert{
-    flex:1;padding:10px 16px;border-radius:9px;
-    font-size:.84rem;font-weight:600;cursor:pointer;
+    flex:1;padding:10px 14px;border-radius:9px;
+    font-size:.82rem;font-weight:600;cursor:pointer;
     transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;
-    text-decoration:none;border:none;
+    text-decoration:none;border:none;font-family:inherit;
 }
 .btn-download{
     background:linear-gradient(135deg,var(--purple),var(--blue));
@@ -207,8 +237,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 }
 .btn-download:hover{opacity:.9;transform:translateY(-2px);}
 .btn-verify{
-    background:var(--card);border:1.5px solid var(--border);
-    color:var(--text2);
+    background:var(--card);border:1.5px solid var(--border);color:var(--text2);
 }
 .btn-verify:hover{background:var(--bg);border-color:var(--purple);color:var(--purple);}
 .btn-pending{
@@ -216,7 +245,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     color:var(--text3);cursor:not-allowed;
 }
 
-/* Empty State */
+/* ── Empty State ── */
 .empty-state{
     text-align:center;padding:80px 20px;
     background:var(--card);border-radius:14px;
@@ -234,7 +263,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 }
 .empty-state .btn-primary:hover{opacity:.9;transform:translateY(-2px);}
 
-/* Verification Modal */
+/* ── Modal ── */
 .modal-bg{
     display:none;position:fixed;inset:0;
     background:rgba(0,0,0,0.6);z-index:999;
@@ -249,41 +278,30 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     animation:modalSlide .3s ease;
 }
 @keyframes modalSlide{from{opacity:0;transform:scale(0.9);}to{opacity:1;transform:scale(1);}}
-.modal h3{font-size:1.2rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
-.modal p{font-size:.88rem;color:var(--text2);margin-bottom:20px;}
+.modal h3{font-size:1.1rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.modal p{font-size:.875rem;color:var(--text2);margin-bottom:20px;}
 .verify-input-group{margin-bottom:20px;}
-.verify-input-group label{display:block;font-size:.84rem;font-weight:600;color:var(--text);margin-bottom:8px;}
+.verify-input-group label{display:block;font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:8px;}
 .verify-input{
     width:100%;padding:12px 14px;
     border:2px solid var(--border);border-radius:10px;
     font-size:.95rem;font-family:'Courier New',monospace;
-    font-weight:600;letter-spacing:1px;
-    text-transform:uppercase;color:var(--text);
-    background:var(--card);outline:none;
+    font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    color:var(--text);background:var(--card);outline:none;
     transition:border-color .2s,box-shadow .2s;
 }
-.verify-input:focus{
-    border-color:var(--purple);
-    box-shadow:0 0 0 3px rgba(139,92,246,0.1);
-}
+.verify-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,0.1);}
 .verify-result{
-    padding:16px;border-radius:10px;
-    font-size:.88rem;font-weight:600;
-    display:none;align-items:center;gap:10px;
-    margin-bottom:20px;
+    padding:14px 16px;border-radius:10px;
+    font-size:.875rem;font-weight:600;
+    display:none;align-items:center;gap:10px;margin-bottom:20px;
 }
-.verify-result.success{
-    background:#f0fdf4;border:1.5px solid #bbf7d0;color:#166534;
-    display:flex;
-}
-.verify-result.error{
-    background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b;
-    display:flex;
-}
+.verify-result.success{background:#f0fdf4;border:1.5px solid #bbf7d0;color:#166534;display:flex;}
+.verify-result.error{background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b;display:flex;}
 .modal-actions{display:flex;gap:10px;}
 .btn-modal{
-    flex:1;padding:12px 20px;border-radius:10px;
-    font-size:.88rem;font-weight:600;cursor:pointer;
+    flex:1;padding:11px 20px;border-radius:10px;
+    font-size:.875rem;font-weight:600;cursor:pointer;
     transition:all .2s;border:none;font-family:inherit;
 }
 .btn-modal-primary{
@@ -291,9 +309,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     color:#fff;box-shadow:0 4px 12px rgba(139,92,246,0.3);
 }
 .btn-modal-primary:hover{opacity:.9;transform:translateY(-2px);}
-.btn-modal-secondary{
-    background:var(--card);border:1.5px solid var(--border);color:var(--text2);
-}
+.btn-modal-secondary{background:var(--card);border:1.5px solid var(--border);color:var(--text2);}
 .btn-modal-secondary:hover{background:var(--bg);}
 
 @media(max-width:1200px){
@@ -305,6 +321,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     .topbar-hamburger{display:flex;}
     .stats-grid{grid-template-columns:repeat(2,1fr);}
     .cert-grid{grid-template-columns:1fr;}
+    .main-content{padding:16px;}
 }
 </style>
 </head>
@@ -317,6 +334,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
 
     <div class="main-content">
+
         <!-- Header -->
         <div class="cert-header">
             <div class="cert-header-content">
@@ -354,42 +372,56 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             </div>
         </div>
 
-        <!-- Certificates Grid -->
+        <!-- Certificates -->
         <?php if (empty($certificates)): ?>
         <div class="empty-state">
             <i class="fas fa-certificate"></i>
             <h3>No Certificates Yet</h3>
             <p>Complete your internship tasks to earn certificates!</p>
-            <a href="tasks.php" class="btn-primary">
-                <!-- <i class="fas fa-tasks"></i> --> View Tasks
-            </a>
+            <a href="tasks.php" class="btn-primary"><i class="fas fa-tasks"></i> View Tasks</a>
         </div>
         <?php else: ?>
         <div class="cert-grid">
             <?php foreach ($certificates as $cert): ?>
-            <div class="cert-card <?php echo $cert['is_issued'] ? 'issued' : 'pending'; ?>">
+            <?php $isIssued = (bool)$cert['is_issued']; ?>
+            <div class="cert-card <?php echo $isIssued ? 'issued' : 'pending'; ?>">
                 <div class="cert-visual">
-                    <i class="fas fa-certificate cert-icon-big"></i>
-                    <div class="cert-badge <?php echo $cert['is_issued'] ? 'issued' : 'pending'; ?>">
-                        <?php if ($cert['is_issued']): ?>
+                    <div class="cert-visual-ring">
+                        <i class="fas fa-certificate cert-icon-big"></i>
+                    </div>
+
+                    <?php if (!empty($cert['completion_grade']) && $isIssued): ?>
+                    <div class="cert-visual-grade">
+                        <span class="cert-visual-grade-text">
+                            <i class="fas fa-star fa-xs"></i> <?php echo htmlspecialchars($cert['completion_grade']); ?>
+                        </span>
+                        <?php if (!empty($cert['total_points_earned'])): ?>
+                        <span class="cert-visual-grade-text"><?php echo number_format($cert['total_points_earned']); ?> pts</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="cert-badge <?php echo $isIssued ? 'issued' : 'pending'; ?>">
+                        <?php if ($isIssued): ?>
                             <i class="fas fa-check-circle"></i> Issued
                         <?php else: ?>
                             <i class="fas fa-clock"></i> Pending
                         <?php endif; ?>
                     </div>
                 </div>
+
                 <div class="cert-body">
                     <?php if (!empty($cert['batch_name'])): ?>
                     <div class="cert-batch"><?php echo htmlspecialchars($cert['batch_name']); ?></div>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($cert['certificate_number'])): ?>
                     <div class="cert-number">
-                        <i class="fas fa-id-card fa-sm" style="color:var(--text3);"></i>
+                        <i class="fas fa-id-card"></i>
                         <?php echo htmlspecialchars($cert['certificate_number']); ?>
                     </div>
                     <?php endif; ?>
-                    
+
                     <div class="cert-details">
                         <?php if (!empty($cert['issued_date'])): ?>
                         <div class="cert-detail-item">
@@ -400,7 +432,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                             </div>
                         </div>
                         <?php endif; ?>
-                        
+
                         <?php if (!empty($cert['completion_grade'])): ?>
                         <div class="cert-detail-item">
                             <div class="cert-detail-icon"><i class="fas fa-star"></i></div>
@@ -414,7 +446,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                             </div>
                         </div>
                         <?php endif; ?>
-                        
+
                         <div class="cert-detail-item">
                             <div class="cert-detail-icon"><i class="fas fa-coins"></i></div>
                             <div class="cert-detail-text">
@@ -423,9 +455,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="cert-actions">
-                        <?php if ($cert['is_issued']): ?>
+                        <?php if ($isIssued): ?>
                             <?php if (!empty($cert['certificate_file'])): ?>
                             <a href="<?php echo htmlspecialchars($cert['certificate_file']); ?>" target="_blank" class="btn-cert btn-download">
                                 <i class="fas fa-download"></i> Download
@@ -447,6 +479,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
+
     </div>
 </div>
 
@@ -455,12 +488,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <div class="modal" onclick="event.stopPropagation()">
         <h3><i class="fas fa-shield-alt" style="color:var(--purple);"></i> Verify Certificate</h3>
         <p>Enter a certificate number to verify its authenticity</p>
-        
         <div class="verify-input-group">
             <label for="certNumber">Certificate Number</label>
             <input type="text" id="certNumber" class="verify-input" placeholder="CERT-XXXX-XXXX" autocomplete="off">
         </div>
-        
         <div class="verify-result success" id="verifySuccess">
             <i class="fas fa-check-circle fa-lg"></i>
             <div>
@@ -468,12 +499,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                 <div style="font-size:.8rem;font-weight:500;opacity:.8;" id="verifyDetails"></div>
             </div>
         </div>
-        
         <div class="verify-result error" id="verifyError">
             <i class="fas fa-times-circle fa-lg"></i>
             <div>Please check the verify certificate section!</div>
         </div>
-        
         <div class="modal-actions">
             <button class="btn-modal btn-modal-secondary" onclick="closeVerifyModal()">Cancel</button>
             <button class="btn-modal btn-modal-primary" onclick="verifyCertificate()">
@@ -489,30 +518,19 @@ function openVerifyModal(certNumber = '') {
     document.getElementById('certNumber').value = certNumber;
     document.getElementById('verifySuccess').style.display = 'none';
     document.getElementById('verifyError').style.display = 'none';
-    if (certNumber) {
-        verifyCertificate();
-    }
+    if (certNumber) verifyCertificate();
 }
-
 function closeVerifyModal() {
     document.getElementById('verifyModal').classList.remove('open');
     document.getElementById('certNumber').value = '';
     document.getElementById('verifySuccess').style.display = 'none';
     document.getElementById('verifyError').style.display = 'none';
 }
-
 function verifyCertificate() {
     const certNumber = document.getElementById('certNumber').value.trim().toUpperCase();
-    if (!certNumber) {
-        alert('Please enter a certificate number');
-        return;
-    }
-    
-    // Hide previous results
+    if (!certNumber) { alert('Please enter a certificate number'); return; }
     document.getElementById('verifySuccess').style.display = 'none';
     document.getElementById('verifyError').style.display = 'none';
-    
-    // Make AJAX call to verify
     fetch('verify_certificate.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -521,24 +539,17 @@ function verifyCertificate() {
     .then(r => r.json())
     .then(data => {
         if (data.valid) {
-            document.getElementById('verifyDetails').innerHTML = 
+            document.getElementById('verifyDetails').innerHTML =
                 `Issued to <strong>${data.student_name}</strong> on ${data.issued_date}`;
             document.getElementById('verifySuccess').style.display = 'flex';
         } else {
             document.getElementById('verifyError').style.display = 'flex';
         }
     })
-    .catch(err => {
-        console.error('Verification error:', err);
-        document.getElementById('verifyError').style.display = 'flex';
-    });
+    .catch(() => { document.getElementById('verifyError').style.display = 'flex'; });
 }
-
-// Allow Enter key to verify
 document.getElementById('certNumber').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        verifyCertificate();
-    }
+    if (e.key === 'Enter') verifyCertificate();
 });
 </script>
 </body>
