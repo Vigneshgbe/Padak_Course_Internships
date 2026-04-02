@@ -378,7 +378,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
             <i class="fas fa-certificate"></i>
             <h3>No Certificates Yet</h3>
             <p>Complete your internship tasks to earn certificates!</p>
-            <a href="tasks.php" class="btn-primary"><i class="fas fa-tasks"></i> View Tasks</a>
+            <a href="tasks.php" class="btn-primary"> View Tasks</a>
         </div>
         <?php else: ?>
         <div class="cert-grid">

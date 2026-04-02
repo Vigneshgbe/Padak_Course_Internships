@@ -991,6 +991,9 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
             <button class="tab" data-tab="all_submissions">
                 <i class="fas fa-inbox"></i> Submissions
             </button>
+            <button class="tab" data-tab="certificates">
+                <i class="fas fa-certificate"></i> Certificates
+            </button>
             <button class="tab" data-tab="announcements">
                 <i class="fas fa-bullhorn"></i> Announcements
             </button>
@@ -998,7 +1001,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 <i class="fas fa-calendar-check"></i> Attendance
             </button>
             <button class="tab" data-tab="users">
-                <i class="fas fa-users"></i> User Management
+                <i class="fas fa-users"></i> Users
             </button>
             <button class="tab" data-tab="badges">
                 <i class="fas fa-burst"></i> Badges
@@ -1022,6 +1025,10 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
 
         <div id="tab-all_submissions" class="tab-content">
             <?php include 'admin_modules/admin_all_submissions.php'; ?>
+        </div>
+
+        <div id="tab-certificates" class="tab-content">
+            <?php include 'admin_modules/admin_certificates_manage.php'; ?>
         </div>
         
         <div id="tab-announcements" class="tab-content">
