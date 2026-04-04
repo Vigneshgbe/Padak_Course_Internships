@@ -23,8 +23,11 @@ $logoUploadsUrl = 'uploads/group_logos';
 if (!is_dir($uploadsDir))    mkdir($uploadsDir,    0755, true);
 if (!is_dir($logoUploadsDir)) mkdir($logoUploadsDir, 0755, true);
 
-// Update online status
-$db->query("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id=$sid");
+// Update online status - use prepared statement to reduce connection overhead
+$updateOnlineStmt = $db->prepare("UPDATE internship_students SET is_online=1, last_seen=NOW() WHERE id=?");
+$updateOnlineStmt->bind_param("i", $sid);
+$updateOnlineStmt->execute();
+$updateOnlineStmt->close();
 
 // =============================================
 // AJAX HANDLERS
@@ -45,6 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'upload_max_filesize'=> ini_get('upload_max_filesize'),
             'post_max_size'     => ini_get('post_max_size'),
             'php_version'       => PHP_VERSION,
+            'server_timezone'   => date_default_timezone_get(),
+            'current_time'      => date('Y-m-d H:i:s'),
         ]);
         exit;
     }
@@ -64,7 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $chk = $db->prepare("SELECT id FROM chat_room_members WHERE room_id=? AND student_id=?");
         $chk->bind_param("ii", $roomId, $sid);
         $chk->execute();
-        if ($chk->get_result()->num_rows === 0) { echo json_encode(['success'=>false,'error'=>'Not a member']); exit; }
+        if ($chk->get_result()->num_rows === 0) { 
+            $chk->close();
+            echo json_encode(['success'=>false,'error'=>'Not a member']); 
+            exit; 
+        }
+        $chk->close();
 
         $attachmentPath = $attachmentType = $attachmentName = null;
 
@@ -150,20 +160,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $stmt = $db->prepare("INSERT INTO chat_messages (room_id,sender_id,message,reply_to_id,attachment_path,attachment_type,attachment_name) VALUES (?,?,?,?,?,?,?)");
         $stmt->bind_param("iisisss", $roomId, $sid, $msg, $replyToId, $attachmentPath, $attachmentType, $attachmentName);
-        if (!$stmt->execute()) { echo json_encode(['success'=>false,'error'=>'DB error: '.$stmt->error]); exit; }
+        if (!$stmt->execute()) { 
+            $error = $stmt->error;
+            $stmt->close();
+            echo json_encode(['success'=>false,'error'=>'DB error: '.$error]); 
+            exit; 
+        }
 
         $msgId = $db->insert_id;
+        $stmt->close();
+        
         $replyMsg = null;
         if ($replyToId) {
             $rs = $db->prepare("SELECT cm.message,cm.attachment_type,s.full_name FROM chat_messages cm JOIN internship_students s ON s.id=cm.sender_id WHERE cm.id=?");
-            $rs->bind_param("i", $replyToId); $rs->execute();
+            $rs->bind_param("i", $replyToId); 
+            $rs->execute();
             $replyMsg = $rs->get_result()->fetch_assoc();
+            $rs->close();
         }
 
+        // Return current server timestamp in ISO 8601 format for proper JS parsing
         echo json_encode([
             'success'         => true,
             'msg_id'          => $msgId,
-            'time'            => date('Y-m-d H:i:s'), // return full timestamp for JS to format
+            'time'            => gmdate('Y-m-d\TH:i:s\Z'), // UTC timestamp in ISO format
             'attachment_path' => $attachmentPath,
             'attachment_type' => $attachmentType,
             'attachment_name' => $attachmentName,
@@ -197,7 +217,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $stmt->execute();
         $res = $stmt->get_result();
         $allRows = [];
-        while ($r = $res->fetch_assoc()) $allRows[] = $r;
+        while ($r = $res->fetch_assoc()) {
+            // Convert timestamp to ISO 8601 UTC format
+            $r['created_at'] = gmdate('Y-m-d\TH:i:s\Z', strtotime($r['created_at']));
+            $allRows[] = $r;
+        }
         $stmt->free_result(); $stmt->close();
 
         $reactStmt = $db->prepare("SELECT emoji,student_id,s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
@@ -218,7 +242,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $reactStmt->close();
 
         $upd = $db->prepare("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=? AND student_id=?");
-        $upd->bind_param("ii", $roomId, $sid); $upd->execute();
+        $upd->bind_param("ii", $roomId, $sid); 
+        $upd->execute();
+        $upd->close();
 
         echo json_encode(['messages'=>$msgs,'typing'=>[]]);
         exit;
@@ -232,15 +258,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $emoji = trim($_POST['emoji'] ?? '');
         if ($msgId && $emoji) {
             $checkStmt = $db->prepare("SELECT id FROM message_reactions WHERE message_id=? AND student_id=? AND emoji=?");
-            $checkStmt->bind_param("iis", $msgId, $sid, $emoji); $checkStmt->execute();
+            $checkStmt->bind_param("iis", $msgId, $sid, $emoji); 
+            $checkStmt->execute();
             $exists = $checkStmt->get_result()->num_rows > 0;
+            $checkStmt->close();
+            
             if ($exists) {
                 $del = $db->prepare("DELETE FROM message_reactions WHERE message_id=? AND student_id=? AND emoji=?");
-                $del->bind_param("iis", $msgId, $sid, $emoji); $del->execute();
+                $del->bind_param("iis", $msgId, $sid, $emoji); 
+                $del->execute();
+                $del->close();
                 echo json_encode(['success'=>true,'action'=>'removed']);
             } else {
                 $ins = $db->prepare("INSERT INTO message_reactions (message_id,student_id,emoji) VALUES (?,?,?)");
-                $ins->bind_param("iis", $msgId, $sid, $emoji); $ins->execute();
+                $ins->bind_param("iis", $msgId, $sid, $emoji); 
+                $ins->execute();
+                $ins->close();
                 echo json_encode(['success'=>true,'action'=>'added']);
             }
             exit;
@@ -254,21 +287,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'start_dm') {
         $targetId = (int)($_POST['target_id'] ?? 0);
         if ($targetId && $targetId != $sid) {
-            $pair = $db->query("SELECT room_id FROM direct_message_pairs WHERE (student1_id=$sid AND student2_id=$targetId) OR (student1_id=$targetId AND student2_id=$sid)")->fetch_assoc();
+            $pairStmt = $db->prepare("SELECT room_id FROM direct_message_pairs WHERE (student1_id=? AND student2_id=?) OR (student1_id=? AND student2_id=?)");
+            $pairStmt->bind_param("iiii", $sid, $targetId, $targetId, $sid);
+            $pairStmt->execute();
+            $pair = $pairStmt->get_result()->fetch_assoc();
+            $pairStmt->close();
+            
             if ($pair) { echo json_encode(['success'=>true,'room_id'=>$pair['room_id']]); exit; }
-            $targetUser = $db->query("SELECT full_name FROM internship_students WHERE id=$targetId")->fetch_assoc();
-            $roomName = $targetUser['full_name']; $type = 'direct';
+            
+            $targetStmt = $db->prepare("SELECT full_name FROM internship_students WHERE id=?");
+            $targetStmt->bind_param("i", $targetId);
+            $targetStmt->execute();
+            $targetUser = $targetStmt->get_result()->fetch_assoc();
+            $targetStmt->close();
+            
+            $roomName = $targetUser['full_name'] ?? 'Unknown'; 
+            $type = 'direct';
             $stmt = $db->prepare("INSERT INTO chat_rooms (room_name,room_type,created_by) VALUES (?,?,?)");
             $stmt->bind_param("ssi", $roomName, $type, $sid);
             if ($stmt->execute()) {
                 $roomId = $db->insert_id;
+                $stmt->close();
+                
                 $addStmt = $db->prepare("INSERT INTO chat_room_members (room_id,student_id) VALUES (?,?)");
                 $addStmt->bind_param("ii", $roomId, $sid); $addStmt->execute();
                 $addStmt->bind_param("ii", $roomId, $targetId); $addStmt->execute();
-                $pairStmt = $db->prepare("INSERT INTO direct_message_pairs (room_id,student1_id,student2_id) VALUES (?,?,?)");
-                $pairStmt->bind_param("iii", $roomId, $sid, $targetId); $pairStmt->execute();
+                $addStmt->close();
+                
+                $pairInsStmt = $db->prepare("INSERT INTO direct_message_pairs (room_id,student1_id,student2_id) VALUES (?,?,?)");
+                $pairInsStmt->bind_param("iii", $roomId, $sid, $targetId); 
+                $pairInsStmt->execute();
+                $pairInsStmt->close();
+                
                 echo json_encode(['success'=>true,'room_id'=>$roomId]); exit;
             }
+            $stmt->close();
         }
         echo json_encode(['success'=>false]); exit;
     }
@@ -285,14 +338,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt->bind_param("ssi", $name, $type, $sid);
             if ($stmt->execute()) {
                 $roomId  = $db->insert_id;
+                $stmt->close();
+                
                 $addStmt = $db->prepare("INSERT IGNORE INTO chat_room_members (room_id,student_id) VALUES (?,?)");
                 $addStmt->bind_param("ii", $roomId, $sid); $addStmt->execute();
                 foreach ($memberIds as $mid) {
                     $mid = (int)$mid;
                     if ($mid > 0 && $mid != $sid) { $addStmt->bind_param("ii", $roomId, $mid); $addStmt->execute(); }
                 }
+                $addStmt->close();
+                
                 echo json_encode(['success'=>true,'room_id'=>$roomId]); exit;
             }
+            $stmt->close();
         }
         echo json_encode(['success'=>false]); exit;
     }
@@ -305,10 +363,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $roomName = trim($_POST['room_name'] ?? '');
         if (!$roomId || !$roomName) { echo json_encode(['success'=>false,'error'=>'Room ID and name required']); exit; }
 
-        // Only group creator or any member can edit (adjust if you want creator-only)
         $chk = $db->prepare("SELECT id FROM chat_room_members WHERE room_id=? AND student_id=?");
         $chk->bind_param("ii", $roomId, $sid); $chk->execute();
-        if ($chk->get_result()->num_rows === 0) { echo json_encode(['success'=>false,'error'=>'Not authorized']); exit; }
+        if ($chk->get_result()->num_rows === 0) { 
+            $chk->close();
+            echo json_encode(['success'=>false,'error'=>'Not authorized']); 
+            exit; 
+        }
+        $chk->close();
 
         $logoPath = null;
         $hasLogo  = isset($_FILES['room_logo']) && $_FILES['room_logo']['error'] !== UPLOAD_ERR_NO_FILE;
@@ -349,9 +411,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         if ($stmt->execute()) {
+            $stmt->close();
             echo json_encode(['success'=>true,'room_name'=>$roomName,'room_logo'=>$logoPath]);
         } else {
-            echo json_encode(['success'=>false,'error'=>'DB error']);
+            $error = $stmt->error;
+            $stmt->close();
+            echo json_encode(['success'=>false,'error'=>'DB error: '.$error]);
         }
         exit;
     }
@@ -367,6 +432,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $res = $stmt->get_result();
         $members = [];
         while ($r = $res->fetch_assoc()) $members[] = $r;
+        $stmt->close();
         echo json_encode(['success'=>true,'members'=>$members]); exit;
     }
 
@@ -378,7 +444,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $targetId = (int)($_POST['target_id'] ?? 0);
         if (!$roomId || !$targetId) { echo json_encode(['success'=>false,'error'=>'Invalid params']); exit; }
         $stmt = $db->prepare("INSERT IGNORE INTO chat_room_members (room_id,student_id) VALUES (?,?)");
-        $stmt->bind_param("ii", $roomId, $targetId); $stmt->execute();
+        $stmt->bind_param("ii", $roomId, $targetId); 
+        $stmt->execute();
+        $stmt->close();
         echo json_encode(['success'=>true]); exit;
     }
 
@@ -389,11 +457,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $roomId   = (int)($_POST['room_id'] ?? 0);
         $targetId = (int)($_POST['target_id'] ?? 0);
         if (!$roomId || !$targetId) { echo json_encode(['success'=>false,'error'=>'Invalid params']); exit; }
-        // Don't remove the creator
-        $creatorRes = $db->query("SELECT created_by FROM chat_rooms WHERE id=$roomId")->fetch_assoc();
-        if ($creatorRes && $creatorRes['created_by'] == $targetId) { echo json_encode(['success'=>false,'error'=>'Cannot remove group creator']); exit; }
+        
+        $creatorStmt = $db->prepare("SELECT created_by FROM chat_rooms WHERE id=?");
+        $creatorStmt->bind_param("i", $roomId);
+        $creatorStmt->execute();
+        $creatorRes = $creatorStmt->get_result()->fetch_assoc();
+        $creatorStmt->close();
+        
+        if ($creatorRes && $creatorRes['created_by'] == $targetId) { 
+            echo json_encode(['success'=>false,'error'=>'Cannot remove group creator']); 
+            exit; 
+        }
+        
         $stmt = $db->prepare("DELETE FROM chat_room_members WHERE room_id=? AND student_id=?");
-        $stmt->bind_param("ii", $roomId, $targetId); $stmt->execute();
+        $stmt->bind_param("ii", $roomId, $targetId); 
+        $stmt->execute();
+        $stmt->close();
         echo json_encode(['success'=>true]); exit;
     }
 
@@ -406,9 +485,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (strlen($query) >= 2) {
             $q    = '%'.$query.'%';
             $stmt = $db->prepare("SELECT id,full_name,email,profile_photo,domain_interest,is_online FROM internship_students WHERE id!=? AND is_active=1 AND (full_name LIKE ? OR email LIKE ?) LIMIT 20");
-            $stmt->bind_param("iss", $sid, $q, $q); $stmt->execute();
+            $stmt->bind_param("iss", $sid, $q, $q); 
+            $stmt->execute();
             $res = $stmt->get_result();
             while ($r = $res->fetch_assoc()) $users[] = $r;
+            $stmt->close();
         }
         echo json_encode($users); exit;
     }
@@ -417,34 +498,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // =============================================
-// PAGE DATA LOADING
+// PAGE DATA LOADING - Optimized queries
 // =============================================
 $rooms = [];
-$res = $db->query("SELECT cr.*,
+$roomsStmt = $db->prepare("SELECT cr.*,
     (SELECT cm2.message FROM chat_messages cm2 WHERE cm2.room_id=cr.id AND cm2.is_deleted=0 ORDER BY cm2.id DESC LIMIT 1) as last_msg,
     (SELECT cm2.created_at FROM chat_messages cm2 WHERE cm2.room_id=cr.id AND cm2.is_deleted=0 ORDER BY cm2.id DESC LIMIT 1) as last_msg_time,
     (SELECT COUNT(*) FROM chat_messages cm2
-        JOIN chat_room_members crm2 ON crm2.room_id=cm2.room_id AND crm2.student_id=$sid
-        WHERE cm2.room_id=cr.id AND cm2.sender_id!=$sid AND cm2.is_deleted=0
+        JOIN chat_room_members crm2 ON crm2.room_id=cm2.room_id AND crm2.student_id=?
+        WHERE cm2.room_id=cr.id AND cm2.sender_id!=? AND cm2.is_deleted=0
         AND (crm2.last_read_at IS NULL OR cm2.created_at > crm2.last_read_at)) as unread,
     (SELECT s.full_name FROM internship_students s
         JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id)
-        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_name,
+        WHERE dmp.room_id=cr.id AND s.id!=? LIMIT 1) as dm_partner_name,
     (SELECT s.profile_photo FROM internship_students s
         JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id)
-        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_photo,
+        WHERE dmp.room_id=cr.id AND s.id!=? LIMIT 1) as dm_partner_photo,
     (SELECT s.is_online FROM internship_students s
         JOIN direct_message_pairs dmp ON (dmp.student1_id=s.id OR dmp.student2_id=s.id)
-        WHERE dmp.room_id=cr.id AND s.id!=$sid LIMIT 1) as dm_partner_online
+        WHERE dmp.room_id=cr.id AND s.id!=? LIMIT 1) as dm_partner_online
     FROM chat_rooms cr
-    JOIN chat_room_members crm ON crm.room_id=cr.id AND crm.student_id=$sid
+    JOIN chat_room_members crm ON crm.room_id=cr.id AND crm.student_id=?
     WHERE cr.is_active=1
     ORDER BY COALESCE(last_msg_time, cr.created_at) DESC LIMIT 50");
-
-if ($res) while ($r = $res->fetch_assoc()) {
-    if ($r['room_type'] === 'direct' && $r['dm_partner_name']) $r['room_name'] = $r['dm_partner_name'];
-    $rooms[] = $r;
+$roomsStmt->bind_param("iiiiii", $sid, $sid, $sid, $sid, $sid, $sid);
+$roomsStmt->execute();
+$roomsResult = $roomsStmt->get_result();
+if ($roomsResult) {
+    while ($r = $roomsResult->fetch_assoc()) {
+        if ($r['room_type'] === 'direct' && $r['dm_partner_name']) $r['room_name'] = $r['dm_partner_name'];
+        $rooms[] = $r;
+    }
 }
+$roomsStmt->close();
 
 $activeRoomId = (int)($_GET['room'] ?? ($rooms[0]['id'] ?? 0));
 $activeRoom   = null;
@@ -453,47 +539,71 @@ foreach ($rooms as $r) { if ($r['id'] == $activeRoomId) { $activeRoom = $r; brea
 $messages  = [];
 $lastMsgId = 0;
 if ($activeRoomId) {
-    $res = $db->query("SELECT cm.*, s.full_name, s.profile_photo,
+    $msgStmt = $db->prepare("SELECT cm.*, s.full_name, s.profile_photo,
         rm.message as reply_message, rm.attachment_type as reply_attachment_type,
         rs.full_name as reply_sender_name
         FROM chat_messages cm
         JOIN internship_students s ON s.id=cm.sender_id
         LEFT JOIN chat_messages rm ON rm.id=cm.reply_to_id
         LEFT JOIN internship_students rs ON rs.id=rm.sender_id
-        WHERE cm.room_id=$activeRoomId AND cm.is_deleted=0
+        WHERE cm.room_id=? AND cm.is_deleted=0
         ORDER BY cm.created_at ASC LIMIT 100");
+    $msgStmt->bind_param("i", $activeRoomId);
+    $msgStmt->execute();
+    $msgResult = $msgStmt->get_result();
     $allMsgRows = [];
-    if ($res) while ($r = $res->fetch_assoc()) $allMsgRows[] = $r;
-
-    $reactStmt = $db->prepare("SELECT emoji,student_id,s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
-    foreach ($allMsgRows as $r) {
-        $reactions = [];
-        $reactStmt->bind_param("i", $r['id']); $reactStmt->execute();
-        $reactRes = $reactStmt->get_result();
-        while ($react = $reactRes->fetch_assoc()) {
-            if (!isset($reactions[$react['emoji']])) $reactions[$react['emoji']] = ['count'=>0,'users'=>[],'has_reacted'=>false];
-            $reactions[$react['emoji']]['count']++;
-            $reactions[$react['emoji']]['users'][] = $react['full_name'];
-            if ($react['student_id'] == $sid) $reactions[$react['emoji']]['has_reacted'] = true;
+    if ($msgResult) {
+        while ($r = $msgResult->fetch_assoc()) {
+            // Convert to ISO 8601 UTC format for consistent JS parsing
+            $r['created_at'] = gmdate('Y-m-d\TH:i:s\Z', strtotime($r['created_at']));
+            $allMsgRows[] = $r;
         }
-        $reactRes->free();
-        $r['reactions'] = $reactions;
-        $messages[]     = $r;
-        $lastMsgId      = max($lastMsgId, $r['id']);
     }
-    if ($reactStmt) $reactStmt->close();
-    $db->query("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=$activeRoomId AND student_id=$sid");
+    $msgStmt->close();
+
+    if (!empty($allMsgRows)) {
+        $reactStmt = $db->prepare("SELECT emoji,student_id,s.full_name FROM message_reactions mr JOIN internship_students s ON s.id=mr.student_id WHERE mr.message_id=?");
+        foreach ($allMsgRows as $r) {
+            $reactions = [];
+            $reactStmt->bind_param("i", $r['id']); $reactStmt->execute();
+            $reactRes = $reactStmt->get_result();
+            while ($react = $reactRes->fetch_assoc()) {
+                if (!isset($reactions[$react['emoji']])) $reactions[$react['emoji']] = ['count'=>0,'users'=>[],'has_reacted'=>false];
+                $reactions[$react['emoji']]['count']++;
+                $reactions[$react['emoji']]['users'][] = $react['full_name'];
+                if ($react['student_id'] == $sid) $reactions[$react['emoji']]['has_reacted'] = true;
+            }
+            $reactRes->free();
+            $r['reactions'] = $reactions;
+            $messages[]     = $r;
+            $lastMsgId      = max($lastMsgId, $r['id']);
+        }
+        $reactStmt->close();
+    }
+    
+    $updateReadStmt = $db->prepare("UPDATE chat_room_members SET last_read_at=NOW() WHERE room_id=? AND student_id=?");
+    $updateReadStmt->bind_param("ii", $activeRoomId, $sid);
+    $updateReadStmt->execute();
+    $updateReadStmt->close();
 }
 
 $roomMembers = [];
 if ($activeRoomId) {
-    $rm = $db->query("SELECT s.id,s.full_name,s.domain_interest,s.profile_photo,s.is_online,s.last_seen FROM internship_students s JOIN chat_room_members crm ON crm.student_id=s.id WHERE crm.room_id=$activeRoomId ORDER BY s.full_name");
-    if ($rm) while ($r = $rm->fetch_assoc()) $roomMembers[] = $r;
+    $rmStmt = $db->prepare("SELECT s.id,s.full_name,s.domain_interest,s.profile_photo,s.is_online,s.last_seen FROM internship_students s JOIN chat_room_members crm ON crm.student_id=s.id WHERE crm.room_id=? ORDER BY s.full_name");
+    $rmStmt->bind_param("i", $activeRoomId);
+    $rmStmt->execute();
+    $rmResult = $rmStmt->get_result();
+    if ($rmResult) while ($r = $rmResult->fetch_assoc()) $roomMembers[] = $r;
+    $rmStmt->close();
 }
 
 $allStudents = [];
-$allRes = $db->query("SELECT id,full_name,email,domain_interest,profile_photo,is_online FROM internship_students WHERE id!=$sid AND is_active=1 ORDER BY full_name LIMIT 100");
-if ($allRes) while ($r = $allRes->fetch_assoc()) $allStudents[] = $r;
+$allStmt = $db->prepare("SELECT id,full_name,email,domain_interest,profile_photo,is_online FROM internship_students WHERE id!=? AND is_active=1 ORDER BY full_name LIMIT 100");
+$allStmt->bind_param("i", $sid);
+$allStmt->execute();
+$allResult = $allStmt->get_result();
+if ($allResult) while ($r = $allResult->fetch_assoc()) $allStudents[] = $r;
+$allStmt->close();
 
 $initials = strtoupper(substr($student['full_name'], 0, 1));
 ?>
@@ -835,7 +945,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                             <?php endif; ?>
                             <?php if ($msg['message']): ?>
                                 <?php 
-                                // Render as HTML (TinyMCE content) — strip dangerous tags but keep formatting
                                 $allowedTags = '<p><br><strong><b><em><i><u><ul><ol><li><a><span>';
                                 echo strip_tags($msg['message'], $allowedTags);
                                 ?>
@@ -870,7 +979,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
                             <?php endforeach; ?>
                         </div>
                         <?php endif; ?>
-                        <!-- TIME: use data-ts for JS formatting to fix timezone -->
                         <div class="msg-time" data-ts="<?php echo htmlspecialchars($msg['created_at']); ?>"></div>
                     </div>
                 </div>
@@ -1044,16 +1152,15 @@ let selectedFile         = null;
 let currentReactionMsgId = null;
 let selectedLogoFile     = null;
 
-// ─── TIMING FIX: format timestamps using local browser time ──
-// Server stores UTC or server-local time; we parse as-is and display
-// using toLocaleTimeString so the browser renders in user's local timezone.
+// ═══════════════════════════════════════════════════════════════════
+// ✅ TIMESTAMP FIX: Parse ISO 8601 UTC timestamps correctly
+// ═══════════════════════════════════════════════════════════════════
 function formatMsgTime(ts) {
     if (!ts) return '';
-    // MySQL datetime: "2024-01-15 14:30:00" — treat as local by replacing space with T
-    // If server is UTC, append 'Z'; if server matches user TZ, leave as-is.
-    // Most common fix: parse the string directly — browser interprets without 'Z' as local.
-    const d = new Date(ts.replace(' ', 'T'));
-    if (isNaN(d.getTime())) return ts;
+    // Server sends ISO 8601 UTC: "2024-04-04T16:50:00Z"
+    // JavaScript Date() will parse this correctly in user's local timezone
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts; // Fallback if invalid
     return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:true});
 }
 
@@ -1091,7 +1198,6 @@ tinymce.init({
     branding: false,
     paste_as_text: false,
     smart_paste: true,
-    // Enter sends, Shift+Enter is new line
     setup: function(editor) {
         editor.on('focus', function() {
             document.querySelector('.tinymce-chat-wrap').style.borderColor = 'var(--o5)';
@@ -1191,7 +1297,7 @@ function sendMessage(){
                     message: msg,
                     full_name: <?php echo json_encode($student['full_name']); ?>,
                     profile_photo: <?php echo json_encode($student['profile_photo'] ?? null); ?>,
-                    created_at: d.time, // full timestamp from server
+                    created_at: d.time, // ISO 8601 UTC timestamp from server
                     sender_id: MY_ID,
                     attachment_path: d.attachment_path,
                     attachment_type: d.attachment_type,
@@ -1207,7 +1313,6 @@ function sendMessage(){
                 removeAttachmentPreview();
             } else {
                 alert('❌ '+(d.error||'Failed to send'));
-                // Restore content on failure
                 if(editor && msg) editor.setContent(msg);
             }
         })
@@ -1250,7 +1355,6 @@ function appendMessage(msg, isMe){
         }
     }
 
-    // msg.message is HTML from TinyMCE — render directly
     const msgHtml = msg.message || '';
     const senderFirst = escHtml(msg.full_name.split(' ')[0]);
     const escapedName = msg.full_name.replace(/'/g,"\\'");
@@ -1273,9 +1377,7 @@ function appendMessage(msg, isMe){
     scrollToBottom();
 }
 
-// Strip HTML tags for reply preview in JS
 function strip_tags_js(html){ return html.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim(); }
-
 function escHtml(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
 
 // ─── REPLY ────────────────────────────────────────────────────
@@ -1436,9 +1538,7 @@ function searchGroupMembers(q){
 // ─── GROUP EDIT MODAL ─────────────────────────────────────────
 function openGroupEditModal(){
     selectedLogoFile = null;
-    // Set current name
     document.getElementById('editGroupName').value = document.getElementById('chatRoomNameDisplay').textContent.trim();
-    // Set current logo in preview
     const headImg = document.getElementById('chatHeadImg');
     const logoCircle = document.getElementById('logoPreviewCircle');
     if(headImg && headImg.src){
@@ -1446,7 +1546,6 @@ function openGroupEditModal(){
     } else {
         logoCircle.innerHTML = '<i class="fas fa-users"></i>';
     }
-    // Load members
     loadGroupMembers();
     document.getElementById('addMemberSearch').value = '';
     document.getElementById('addMemberResults').innerHTML = '';
@@ -1517,7 +1616,7 @@ function addMemberToGroup(targetId, name, el){
         if(d.success){
             el.style.opacity='.4'; el.style.pointerEvents='none';
             el.querySelector('i').className='fas fa-check'; el.querySelector('i').style.color='var(--green)';
-            loadGroupMembers(); // refresh member list
+            loadGroupMembers();
         } else alert(d.error||'Failed to add');
     }).catch(()=>alert('Error'));
 }
@@ -1538,9 +1637,7 @@ function saveGroupChanges(){
 
     fetch('messenger.php',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
         if(d.success){
-            // Update header name
             document.getElementById('chatRoomNameDisplay').textContent = d.room_name;
-            // Update header logo
             if(d.room_logo){
                 const headAvatar = document.getElementById('chatHeadAvatar');
                 let img = document.getElementById('chatHeadImg');
