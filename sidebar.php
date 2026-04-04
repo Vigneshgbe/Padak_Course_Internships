@@ -129,9 +129,10 @@ $navInternship = [
     ['key'=>'earnings',     'label'=>'My Earnings',    'icon'=>'fas fa-gift',         'href'=>'earnings.php', 'badge'=>$earningsCount],
     ['key'=>'certificate',  'label'=>'Certificate',    'icon'=>'fas fa-certificate',  'href'=>'certificate.php', 'badge'=>$certificateReady],
     ['key'=>'attendance',   'label'=>'Attendance',     'icon'=>'fas fa-book',         'href'=>'attendance.php'],
-    ['key'=>'verify certificate', 'label'=>'Verify Certificate', 'icon'=>'fas fa-id-card', 'href'=>'verify_certificate.php'],
+    ['key'=>'resources',    'label'=>'Resources',      'icon'=>'fas fa-file',      'href'=>'resources.php'],
     ['key'=>'announcements','label'=>'Announcements',  'icon'=>'fas fa-bullhorn',     'href'=>'announcements.php', 'badge'=>$announcementsCount],
     ['key'=>'game',         'label'=>'Gamer Hub',      'icon'=>'fas fa-gamepad',      'href'=>'game.php'],
+    ['key'=>'verify certificate', 'label'=>'Verify Certificate', 'icon'=>'fas fa-id-card', 'href'=>'verify_certificate.php'],
 ];
 
 $navAccount = [
