@@ -27,7 +27,7 @@ if (!is_dir($uploadsDir)) {
 // ADMIN AUTHENTICATION
 // =============================================
 $isAdmin = false;
-$adminPassword = 'Admin123';
+$adminPassword = 'vigneshg091002';
 
 if (isset($_POST['admin_auth'])) {
     if ($_POST['admin_password'] === $adminPassword) {
