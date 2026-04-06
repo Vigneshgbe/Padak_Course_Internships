@@ -575,7 +575,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['certificate_number'])
                 class="cert-input"
                 type="text"
                 id="certNumber"
-                placeholder="e.g. PADAK2024001"
+                placeholder="e.g. CERT-20260406000"
                 autocomplete="off"
                 spellcheck="false"
             >
