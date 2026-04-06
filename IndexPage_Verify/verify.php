@@ -594,7 +594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['certificate_number'])
 
         <div class="hint">
             <i class="fas fa-circle-info"></i>
-            <p>Enter the unique certificate number printed on your Padak internship certificate. The number typically starts with <strong>PADAK</strong> followed by the year and a serial number.</p>
+            <p>Enter the unique certificate number printed on your Padak internship certificate.</p>
         </div>
     </div>
 
