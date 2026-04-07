@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Padak Portal</title>
+    <title>Privacy Policy - Padak Pvt Ltd</title>
     <link rel="icon" type="image/x-icon" href="https://github.com/Vigneshgbe/Padak-Marketing-Website/blob/main/frontend/src/assets/padak_p.png?raw=true">
     <style>
         * {
@@ -507,7 +507,7 @@
                     </div>
                 </div>
                 <p class="header-description">
-                    At Padak Internship Portal, we are committed to protecting your privacy and ensuring 
+                    At Padak, we are committed to protecting your privacy and ensuring 
                     the security of your personal information while delivering our educational and digital services.
                 </p>
                 <div class="header-meta">
